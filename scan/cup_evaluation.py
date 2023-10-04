@@ -1,5 +1,6 @@
 import sys,time, copy, yaml
 import open3d as o3d
+from matplotlib import cm
 
 sys.path.append('../toolbox/')
 from utils import *
@@ -48,6 +49,12 @@ def collapse(left_pc,right_pc,target_points):
         collapsed_surface.append(left_pc[i]-v1+(v1+v2)/2)
     
     return np.sum(width,axis=1), collapsed_surface
+
+def error_map_gen(collapsed_surface,target_points):
+    error_map=np.zeros(len(collapsed_surface))
+    for i in range(len(collapsed_surface)):
+        error_map[i]=np.linalg.norm(target_points-collapsed_surface[i],axis=1).min()
+    return error_map
 
 def visualize_pcd(show_pcd_list,point_show_normal=False):
 
@@ -148,3 +155,19 @@ o3d.visualization.draw_geometries([target_points,collapsed_surface_pc,highlight_
 
 print('error max: ',error_off.max(),'error avg: ',np.mean(error_off))
 print(error_miss.max(),np.mean(error_miss))
+
+error_map=error_map_gen(collapsed_surface,target_points_transform)
+print(error_map)
+error_map_normalized=error_map/np.max(error_map)
+#convert normalized error map to color heat map
+error_map_color=cm.inferno(error_map_normalized)[:,:3]
+collapsed_surface_pc.colors=o3d.utility.Vector3dVector(error_map_color)
+
+
+z_rng = np.arange(error_map.max(), error_map.min(), (error_map.min()-error_map.max())/100)
+ax = plt.subplot()
+im = ax.imshow(np.vstack((z_rng, z_rng, z_rng, z_rng)).T, extent=(0,  (error_map.max()-error_map.min())/20, error_map.min(), error_map.max()), cmap='inferno')
+plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+plt.ylabel('error [mm]')
+plt.show()
+o3d.visualization.draw_geometries([collapsed_surface_pc])
