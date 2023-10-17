@@ -5,7 +5,6 @@ import copy
 import pickle
 import wave
 from matplotlib import pyplot as plt
-from pathlib import Path
 
 class WeldRRSensor(object):
 	def __init__(self,weld_service=None,\
@@ -27,7 +26,7 @@ class WeldRRSensor(object):
 		if cam_service:
 			self.ir_image_consts = RRN.GetConstants('com.robotraconteur.image', self.cam_ser)
 
-			self.cam_ser.setf_param("focus_pos", RR.VarValue(int(1600),"int32"))
+			self.cam_ser.setf_param("focus_pos", RR.VarValue(int(1900),"int32"))
 			self.cam_ser.setf_param("object_distance", RR.VarValue(0.4,"double"))
 			self.cam_ser.setf_param("reflected_temperature", RR.VarValue(291.15,"double"))
 			self.cam_ser.setf_param("atmospheric_temperature", RR.VarValue(293.15,"double"))
@@ -84,12 +83,12 @@ class WeldRRSensor(object):
 			self.start_current_cb=True
 	
 	def clear_all_sensors(self):
-		if self.mic_service:
-			self.clean_mic_record()
 		if self.weld_service:
 			self.clean_weld_record()
 		if self.cam_ser:
 			self.clean_ir_record()
+		if self.mic_service:
+			self.clean_mic_record()
 		if self.current_service:
 			self.clean_current_record()
 
@@ -130,6 +129,12 @@ class WeldRRSensor(object):
 			first_channel = np.concatenate(self.audio_recording)
 			first_channel_int16=(first_channel*32767).astype(np.int16)
 			plt.plot(first_channel_int16)
+			plt.title("Microphone data")
+			plt.show()
+		if self.current_service:
+			print("Current data length:",len(self.current))
+			plt.plot(self.current_timestamp,self.current)
+			plt.title("Current data")
 			plt.show()
 	
 	def clean_weld_record(self):
@@ -205,22 +210,24 @@ class WeldRRSensor(object):
 
 		with open(filedir+'ir_recording.pickle','wb') as file:
 				pickle.dump(np.array(self.ir_recording),file)
-		np.savetxt(filedir + "ir_stamps.csv",np.array(self.ir_timestamp)-self.ir_timestamp[0],delimiter=',')
+		np.savetxt(filedir + "ir_stamps.csv",self.ir_timestamp-self.ir_timestamp[0],delimiter=',')
 	
 	def clean_mic_record(self):
+
 		self.audio_recording=[]
 	
 	def microphone_cb(self,pipe_ep):
 
 		#Loop to get the newest frame
 		while (pipe_ep.Available > 0):
+			audio = pipe_ep.ReceivePacket().audio_data
 			if self.start_mic_cb:
 				#Receive the packet
-				self.audio_recording.extend(pipe_ep.ReceivePacket().audio_data)
+				self.audio_recording.extend(audio)
 	
 	def save_mic_file(self,filedir):
 
-		# print("Mic length:",len(self.audio_recording))
+		print("Mic length:",len(self.audio_recording))
 
 		try:
 			first_channel = np.concatenate(self.audio_recording)
