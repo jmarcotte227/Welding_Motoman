@@ -122,10 +122,10 @@ def visualize_pcd(show_pcd_list,point_show_normal=False):
 
     
 data_dir='../data/blade0.1/'
-scanned_dir='../../evaluation/Blade_ER4043/'
+scanned_dir='../../evaluation/Blade_ER70S6/'
 ######## read the scanned stl
 target_mesh = o3d.io.read_triangle_mesh(data_dir+'surface.stl')
-scanned_mesh = o3d.io.read_triangle_mesh(scanned_dir+'ER4043_blade_optimized.stl')
+scanned_mesh = o3d.io.read_triangle_mesh(scanned_dir+'ER70S6_blade_optimized.stl')
 target_mesh.compute_vertex_normals()
 scanned_mesh.compute_vertex_normals()
 
@@ -184,25 +184,21 @@ error=calc_error_projected(target_points_transform,collapsed_surface)
 
 highlight_pc=o3d.geometry.PointCloud()
 highlight_pc.points=o3d.utility.Vector3dVector([collapsed_surface[error.argmax()]])
-highlight_pc.paint_uniform_color([1.0, 0.0, 0.0])
+highlight_pc.paint_uniform_color([0.0, 1.0, 0.0])
 o3d.visualization.draw_geometries([target_mesh,collapsed_surface_pc,highlight_pc])
 
 
 print('error max: ',error.max(),'error avg: ',np.mean(error))
-
-
-
-error_map=error_map_gen(collapsed_surface,target_points_transform)
-box,mat=color_bar([error_map.min(),error_map.max()])
-
-error_map_normalized=error_map/np.max(error_map)
+error_display_max=2.2
+error_normalized=error/error_display_max
 #convert normalized error map to color heat map
-error_map_color=cm.inferno(error_map_normalized)[:,:3]
-collapsed_surface_pc.colors=o3d.utility.Vector3dVector(error_map_color)
+error_color=cm.inferno(error_normalized)[:,:3]
+collapsed_surface_pc.colors=o3d.utility.Vector3dVector(error_color)
 
-z_rng = np.arange(error_map.max(), error_map.min(), (error_map.min()-error_map.max())/100)
+
+z_rng = np.arange(error.max(), error.min(), (error.min()-error.max())/100)
 ax = plt.subplot()
-im = ax.imshow(np.vstack((z_rng, z_rng, z_rng, z_rng)).T, extent=(0,  (error_map.max()-error_map.min())/20, error_map.min(), error_map.max()), cmap='inferno')
+im = ax.imshow(np.vstack((z_rng, z_rng, z_rng, z_rng)).T, extent=(0,  error_display_max/20, 0,error_display_max), cmap='inferno')
 plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 plt.ylabel('error [mm]')
 plt.show()
