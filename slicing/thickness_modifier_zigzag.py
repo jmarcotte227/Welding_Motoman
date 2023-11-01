@@ -6,11 +6,26 @@ import os
 
 #ONLY WORKS FOR WALL
 #Tunable Parameters
-width_of_bead = 10 #mm
+width_of_bead = 20 #mm
 wavelength = 10 #mm
+
+num_interpol_points = 30  #points interpolated between peaks and middle
+
 
 def magnitude(vector): 
     return math.sqrt(sum(pow(element, 2) for element in vector))
+
+def interpolatePoints(start, end, num_points):
+    #interpolate points from prev_point to peak_point
+    comp_dif = end-start
+    dist_to_next_point = comp_dif/(num_points+1)
+    points_buffer = [start]
+    
+    for i in range(num_points):
+        curr_point = points_buffer[i]
+        points_buffer.append(curr_point+dist_to_next_point)
+ 
+    return points_buffer
 
 if __name__ == "__main__":
     os.makedirs('curve_sliced_thick', exist_ok=True)
@@ -20,7 +35,7 @@ if __name__ == "__main__":
     ax.axes.set_ylim3d(bottom=-10, top=10) 
     ax.axes.set_zlim3d(bottom=0, top=100)
 
-    for file in glob.glob('curve_sliced_relative/*.csv'): 
+    for file in glob.glob('curve_sliced/*.csv'): 
         curve=np.loadtxt(file,delimiter=',')
         thick_curve = []
         #define start point at end of wall
@@ -46,11 +61,17 @@ if __name__ == "__main__":
                 if peak_dir == False: peak_point = [prev_point[0] + component_dif[0]/2, width_of_bead/-2, 
                                                     prev_point[2], prev_point[3], prev_point[4], prev_point[5]]
                 peak_dir = not peak_dir
-                #append peak_point but to the side and at same z as both
-                thick_curve.append(peak_point)
-                thick_curve.append(next_point)
+
+                interpol_points = interpolatePoints(prev_point, peak_point, num_interpol_points)
+                for j in interpol_points: thick_curve.append(j)
+                #thick_curve.append(peak_point)
+                interpol_points = interpolatePoints(peak_point, next_point, num_interpol_points)
+                for j in interpol_points: thick_curve.append(j)
+                #thick_curve.append(next_point)
+
+
             except IndexError as e:
-                print('End of layer')
+                pass
                 
         np_thick_curve = np.asarray(thick_curve, dtype=np.float32)
         print(file)
@@ -59,6 +80,7 @@ if __name__ == "__main__":
         vis_step=1
         
         ax.plot3D(np_thick_curve[::vis_step,0],np_thick_curve[::vis_step,1],np_thick_curve[::vis_step,2],'r.-')
+        ax.plot3D([0, 100], [0,0], zs=0, zdir='z')
         #ax.quiver(np_thick_curve[::vis_step,0],np_thick_curve[::vis_step,1],np_thick_curve[::vis_step,2],np_thick_curve[::vis_step,3],np_thick_curve[::vis_step,4],np_thick_curve[::vis_step,5],length=1, normalize=True)
         break
     plt.show()

@@ -71,9 +71,9 @@ while z<total_height:
 	curve_dense.append([np.hstack((points,normal))])
 
 
-for i in range(len(curve_dense)):
-	for x in range(len(curve_dense[i])):
-		np.savetxt('circular_slice/curve_sliced/slice%i_%i.csv'%(i,x),curve_dense[i][x],delimiter=',')
+#for i in range(len(curve_dense)):
+	#for x in range(len(curve_dense[i])):
+		#np.savetxt('circular_slice/curve_sliced/slice%i_%i.csv'%(i,x),curve_dense[i][x],delimiter=',')
 ax.set_box_aspect([1, 1, 1])  # Adjust the values as needed
 
 plt.show()

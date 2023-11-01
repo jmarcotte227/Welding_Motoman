@@ -1,0 +1,14 @@
+num_layers: 11
+num_baselayers: 0
+line_resolution: 0.1
+baselayer_thickness: 0
+point_distance: 2.7042506506506576 
+old_point_distance: 0.323496
+smooth_filter: False
+q_positioner_seed: 
+  - -0.261799387799149
+  - 1.5708
+
+
+
+

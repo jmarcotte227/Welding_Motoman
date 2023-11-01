@@ -342,7 +342,7 @@ def post_process(slice_all,point_distance=0.5):       ###postprocess the sliced 
 
 def main():
     # Load the STL file
-    filename = '../data/blade0.1/surface.stl'
+    filename = '../data/blade0.1/blade_modified.stl'
     your_mesh = mesh.Mesh.from_file(filename)
     # Get the number of facets in the STL file
     num_facets = len(your_mesh)
