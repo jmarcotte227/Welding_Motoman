@@ -7,8 +7,8 @@ from robot_def import *
 
 
 def main():
-	dataset='wall_copy/'
-	sliced_alg='dense_slice/'
+	dataset='bent_wall/'
+	sliced_alg='slice/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
@@ -17,10 +17,10 @@ def main():
 	curve_sliced=[]
 	for i in range(slicing_meta['num_layers']):
 		###get number of disconnected sections
-		num_sections=len(glob.glob(data_dir+'curve_sliced_thick_long/slice'+str(i)+'_*.csv'))
+		num_sections=len(glob.glob(data_dir+'curve_sliced/slice'+str(i)+'_*.csv'))
 		curve_sliced_ith_layer=[]
 		for x in range(num_sections):
-			curve_sliced_ith_layer.append(np.loadtxt(data_dir+'curve_sliced_thick_long/slice'+str(i)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6)))
+			curve_sliced_ith_layer.append(np.loadtxt(data_dir+'curve_sliced/slice'+str(i)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6)))
 
 		curve_sliced.append(curve_sliced_ith_layer)
 

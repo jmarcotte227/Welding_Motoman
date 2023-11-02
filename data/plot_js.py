@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 
 def main():
-	dataset='blade0.1/'
-	sliced_alg='auto_slice/'
+	dataset='bent_wall/'
+	sliced_alg='slice/'
 	data_dir='../data/'+dataset+sliced_alg
 	num_layers=757
 	num_baselayers=2
@@ -29,7 +29,7 @@ def main():
 
 	plt.plot(positioner_js,label=('q1','q2'))
 	plt.legend()
-	plt.title('0.1 blade first '+str(num_layers)+' slices')
+	plt.title('bent wall first '+str(num_layers)+' slices')
 	plt.show()
 
 
