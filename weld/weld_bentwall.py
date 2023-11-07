@@ -46,7 +46,7 @@ positioner=positioner_obj('D500B',def_path='../config/D500B_robot_extended_confi
 	pulse2deg_file_path='../config/D500B_pulse2deg_real.csv',base_transformation_file='../config/D500B_pose.csv')
 
 client=MotionProgramExecClient()
-#ws=WeldSend(client)
+ws=WeldSend(client)
 
 # ###set up control parameters
 # job_offset=200 		###200 for Aluminum ER4043, 300 for Steel Alloy ER70S-6, 400 for Stainless Steel ER316L
@@ -99,7 +99,8 @@ vd_relative=nominal_vd_relative
 feedrate_gain=0.5
 feedrate_min=80
 feedrate_max=300
-nominal_slice_increment=int(1.251/slicing_meta['line_resolution']) # changed this based on mean in wall_gen
+#not sure if this nominal slice increment setting will work
+nominal_slice_increment= 1 # int(1/slicing_meta['line_resolution']) # changed this based on mean in wall_gen
 slice_inc_gain=3.
 vd_max=10
 feedrate_cmd_adjustment=0
@@ -159,7 +160,7 @@ vd_relative_adjustment=0
 
 
 ###########################################layer welding############################################
-num_layer_start=int(0*nominal_slice_increment)	###modify layer num here
+num_layer_start=int(29*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(70*nominal_slice_increment,slicing_meta['num_layers'])
 
 # q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -170,8 +171,10 @@ if num_layer_start<=1*nominal_slice_increment:
 else:
 	num_sections=1
 
+print("start layer: ", num_layer_start)
+print("end layer: ", num_layer_end)
+print("nominal_slice_increment", nominal_slice_increment)
 for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
-	print("current layer: ", layer)
 	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
 
 	num_sections_prev=num_sections
@@ -199,14 +202,16 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		###########################################velocity profile#########################################
 		dh_max = slicing_meta['dh_max']
 		dh_min = slicing_meta['dh_min']
-
 		height_profile = np.linspace(dh_max, dh_min, len(curve_sliced_js))
 		velocity_profile = weld_dh2v.dh2v_loglog(height_profile, 130, '316L')
+		'''
 		for segment in breakpoints: # fix this loop next time
-			s1,s2=calc_individual_speed(velocity_profile[segment],lam1[segment],lam2[segment],lam_relative,segment)
+			print("Segment: ", segment)
+			s1,s2=calc_individual_speed(velocity_profile[segment],lam1,lam2,lam_relative,[segment])
 			s1_all.append(s1)
 			s2_all.append(s2)
-			
+		'''
+		s1_all,s2_all = calc_profile_speed(velocity_profile,lam1,lam2,lam_relative,breakpoints)
 		###move to intermidieate waypoint for collision avoidance if multiple section
 		if num_sections!=num_sections_prev:
 			waypoint_pose=robot.fwd(curve_sliced_js[breakpoints[0]])
@@ -229,4 +234,4 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			primitives.append('movel')
 		q_prev=positioner_js[breakpoints[-1]]
 
-		#timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
