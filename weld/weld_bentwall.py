@@ -36,7 +36,7 @@ data_dir='../data/'+dataset+sliced_alg
 with open(data_dir+'slicing.yml', 'r') as file:
 	slicing_meta = yaml.safe_load(file)
 # recorded_dir='recorded_data/cup_ER316L/'
-waypoint_distance=1
+waypoint_distance=1.5
 layer_width_num=int(3/slicing_meta['line_resolution'])
 
 
@@ -160,7 +160,7 @@ vd_relative_adjustment=0
 
 
 ###########################################layer welding############################################
-num_layer_start=int(29*nominal_slice_increment)	###modify layer num here
+num_layer_start=int(1*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(70*nominal_slice_increment,slicing_meta['num_layers'])
 
 # q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -204,6 +204,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		dh_min = slicing_meta['dh_min']
 		height_profile = np.linspace(dh_max, dh_min, len(curve_sliced_js))
 		velocity_profile = weld_dh2v.dh2v_loglog(height_profile, 130, '316L')
+		print(velocity_profile)
 		'''
 		for segment in breakpoints: # fix this loop next time
 			print("Segment: ", segment)
@@ -234,4 +235,4 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			primitives.append('movel')
 		q_prev=positioner_js[breakpoints[-1]]
 
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
+		#timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
