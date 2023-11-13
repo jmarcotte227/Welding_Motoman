@@ -7,7 +7,7 @@ from robot_def import *
 
 
 def main():
-	dataset='bent_wall/'
+	dataset='bent_tube/'
 	sliced_alg='slice_ER_4043/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
@@ -51,7 +51,7 @@ def main():
 	np.savetxt(data_dir+'curve_pose.csv',H,delimiter=',')
 
 	###convert curve slices to positioner TCP frame
-	vis_step=5
+	vis_step=1
 	fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 	
 

@@ -1,0 +1,15 @@
+num_layers: 30
+num_baselayers: 1
+line_resolution: 0.1
+baselayer_thickness: 0
+point_distance: 3.141592653589793
+dh_max: 2.468475190539253
+dh_min: 1.4860946104132609
+smooth_filter: False
+q_positioner_seed: 
+  - -0.261799387799149
+  - 1.5708
+
+
+
+
