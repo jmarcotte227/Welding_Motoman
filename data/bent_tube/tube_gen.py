@@ -53,7 +53,7 @@ def main():
 
     #rotation criteria
     layer_angle = np.arcsin((max_dH-min_dH)/tube_diameter)
-    rot_point = max_dH/np.tan(layer_angle)
+    rot_point = max_dH/np.tan(layer_angle)-tube_diameter/2
     print('Layer Angle:', np.rad2deg(layer_angle))
     print('Final Angle:', np.rad2deg(layer_angle)*num_layers)
     print('Point of Rotation:', rot_point)
@@ -67,6 +67,7 @@ def main():
     #layer gen
     curve_curved=np.zeros((num_layers*points_per_layer,6))
     base_layer = np.zeros((points_per_layer,6))
+    
 
     circle_points = PointsInCircum(tube_diameter/2, points_per_layer)
 
@@ -76,7 +77,8 @@ def main():
         base_layer[i,0]=circle_points[i][0]
         base_layer[i,1]=circle_points[i][1]
         base_layer[i,-1]=-1
-    np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    #np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+
     #first layer
     for i in range(len(circle_points)-1):
         curve_curved[i,0]=circle_points[i][0]
@@ -91,7 +93,10 @@ def main():
     for layer in range(num_layers-1):
         for point in range(points_per_layer):
               #rotate x coordinates
-              dx,dz = rotate([rot_point, 0], (curve_curved[layer*points_per_layer+point,0],curve_curved[layer*points_per_layer+point,2]),-layer_angle)
+              dx,dz = rotate([rot_point, vertical_shift], 
+                             (curve_curved[layer*points_per_layer+point,0],curve_curved[layer*points_per_layer+point,2])
+                             ,-layer_angle)
+              
               curve_curved[(layer+1)*points_per_layer+point,0] = dx
               curve_curved[(layer+1)*points_per_layer+point,2] = dz            
 
@@ -105,11 +110,11 @@ def main():
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
     ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
+    ax.set_aspect('equal')
     plt.show()
 
     for layer in range(num_layers):
-	    np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
-        
+	    np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
 
 
 if __name__ == '__main__':

@@ -91,6 +91,7 @@ def main():
 
 
 	plt.title(dataset[:-1]+' first '+str(slicing_meta['num_layers'])+' slices')
+	ax.set_aspect('equal')
 	plt.show()
 
 
