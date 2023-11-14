@@ -134,13 +134,17 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			primitives.append('movel')
 
 		q_prev=positioner_js[breakpoints[-1]]
-		#timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=True)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=False)
+		ws.jog_single(robot,np.zeros(6),10)
+		input("-------Base Layer Finished-------")
+
 
 
 
 
 ###########################################layer welding############################################
-num_layer_start=int(1*nominal_slice_increment)	###modify layer num here
+print('----------Normal Layers-----------')
+num_layer_start=int(2*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(70*nominal_slice_increment,slicing_meta['num_layers'])
 
 #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -154,6 +158,9 @@ else:
 print("start layer: ", num_layer_start)
 print("end layer: ", num_layer_end)
 print("nominal_slice_increment", nominal_slice_increment)
+
+start_dir = True # Alternate direction that the layer starts from
+
 for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
 
@@ -161,7 +168,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 	num_sections=len(glob.glob(data_dir+'curve_sliced_relative/slice'+str(layer)+'_*.csv'))
 
 	####################DETERMINE CURVE ORDER##############################################
-	start_dir = True # Alternate direction that the layer starts from
+	
 
 	for x in range(0,num_sections,layer_width_num):
 		curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
@@ -194,15 +201,13 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			point = np.array((curve_sliced[i,0],curve_sliced[i,2]))
 			dist = np.linalg.norm(point-point_of_rotation)
 			dist_to_por.append(dist)
-		print(dist_to_por)
+		
 		
 		
 		height_profile = [] 
 		for distance in dist_to_por:height_profile.append(distance*np.sin(layer_angle*np.pi/180))
-		print(height_profile)
 		velocity_profile = weld_dh2v.dh2v_loglog(height_profile, feedrate_cmd, 'ER_4043')
-		print(velocity_profile)
-		exit()
+
 		###move to intermidieate waypoint for collision avoidance if multiple section
 		if num_sections!=num_sections_prev:
 			waypoint_pose=robot.fwd(curve_sliced_js[breakpoints[0]])
@@ -210,7 +215,6 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			q1=robot.inv(waypoint_pose.p,waypoint_pose.R,curve_sliced_js[breakpoints[0]])[0]
 			q2=positioner_js[breakpoints[0]]
 			ws.jog_dual(robot,positioner,q1,q2,v=100)
-		print(breakpoints)
 		q1_all=[curve_sliced_js[breakpoints[0]]]
 		q2_all=[positioner_js[breakpoints[0]]]
 		v1_all=[1]
@@ -225,8 +229,8 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			v2_all.append(min(100,100*positioner_w/positioner.joint_vel_limit[1]))
 			primitives.append('movel')
 		q_prev=positioner_js[breakpoints[-1]]
-		print('V1: ', v1_all)
+		
 
-		#timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
-		#ws.jog_single(robot,np.zeros(6),10)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
+		ws.jog_single(robot,np.zeros(6),10)
 		input("-------Layer Finished-------")

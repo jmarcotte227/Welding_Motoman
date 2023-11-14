@@ -1,5 +1,5 @@
 num_layers: 30
-num_baselayers: 1
+num_baselayers: 0
 line_resolution: 0.1
 baselayer_thickness: 3
 point_distance: 3.141592653589793

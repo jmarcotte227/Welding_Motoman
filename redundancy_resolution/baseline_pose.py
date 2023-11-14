@@ -87,7 +87,7 @@ def main():
 			ax.plot3D(curve_sliced_relative_base[i][x][::vis_step,0],curve_sliced_relative_base[i][x][::vis_step,1],curve_sliced_relative_base[i][x][::vis_step,2],'r.-')
 			ax.quiver(curve_sliced_relative_base[i][x][::vis_step,0],curve_sliced_relative_base[i][x][::vis_step,1],curve_sliced_relative_base[i][x][::vis_step,2],curve_sliced_relative_base[i][x][::vis_step,3],curve_sliced_relative_base[i][x][::vis_step,4],curve_sliced_relative_base[i][x][::vis_step,5],length=0.3, normalize=True)
 	
-			np.savetxt(data_dir+'curve_sliced_relative/baselayer'+str(i)+'_'+str(x)+'.csv',curve_sliced_relative_base[i][x],delimiter=',')
+			#np.savetxt(data_dir+'curve_sliced_relative/baselayer'+str(i)+'_'+str(x)+'.csv',curve_sliced_relative_base[i][x],delimiter=',')
 
 
 	plt.title(dataset[:-1]+' first '+str(slicing_meta['num_layers'])+' slices')
