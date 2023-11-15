@@ -3,6 +3,7 @@ sys.path.append('../toolbox/')
 from robot_def import *
 from WeldSend import *
 from dx200_motion_program_exec_client import *
+import general_robotics_toolbox as rox
 
 robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/torch.csv',\
 	pulse2deg_file_path='../config/MA2010_A0_pulse2deg_real.csv',d=15)
@@ -10,14 +11,14 @@ robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.y
 R=np.array([[-0.7071, 0.7071, -0.    ],
             [ 0.7071, 0.7071,  0.    ],
             [0.,      0.,     -1.    ]])
-p_start=np.array([1630,-840,-260])
-p_end=np.array([1630,-780,-260])
+p_start=np.array([1656,-752,-260])
+p_end=np.array([1656,-872,-260])
 q_seed=np.radians([-35.4291,56.6333,40.5194,4.5177,-52.2505,-11.6546])
 
 client=MotionProgramExecClient()
 ws=WeldSend(client)
 
-feedrate=70
+feedrate=250
 base_layer_height=2
 layer_height=1.0
 q_all=[]
@@ -25,7 +26,7 @@ v_all=[]
 cond_all=[]
 primitives=[]
 
-for i in range(1,2):
+for i in range(2,3):
 	if i%2==0:
 		p1=p_start+np.array([0,0,i*base_layer_height])
 		p2=p_end+np.array([0,0,i*base_layer_height])
@@ -43,9 +44,9 @@ for i in range(1,2):
 	# q_mid2=robot.inv(p_mid2,R,q_seed)[0]
 
 	q_all.extend([q_init,q_end])
-	v_all.extend([1,10])
+	v_all.extend([1,5])
 	primitives.extend(['movej','movel'])
-	cond_all.extend([0,feedrate/10+200])
+	cond_all.extend([0,int(feedrate/10+200)])
 
 # for i in range(2,3):
 # 	if i%2==0:
@@ -63,4 +64,4 @@ for i in range(1,2):
 # 	cond_all.extend([0,210])
 
 
-ws.weld_segment_single(primitives,robot,q_all,v_all,cond_all,arc=False,wait=0.)
+ws.weld_segment_single(primitives,robot,q_all,v_all,cond_all,arc=True,wait=0.)

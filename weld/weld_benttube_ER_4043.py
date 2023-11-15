@@ -88,55 +88,56 @@ vd_relative_adjustment=0
 
 
 ###########################################BASE layer welding############################################
-num_layer_start=int(0*nominal_slice_increment)	###modify layer num here
-num_layer_end=int(1*nominal_slice_increment)
-#q_prev=client.getJointAnglesDB(positioner.pulse2deg)
-q_prev=np.array([9.53E-02,-2.71E+00])	###for motosim tests only
+# num_layer_start=int(0*nominal_slice_increment)	###modify layer num here
+# num_layer_end=int(1*nominal_slice_increment)
+# #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
+# q_prev=np.array([9.53E-02,-2.71E+00])	###for motosim tests only
 
-for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
-	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
+# for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
+# 	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
 
-	num_sections=len(glob.glob(data_dir+'curve_sliced_relative/slice'+str(layer)+'_*.csv'))
+# 	num_sections=len(glob.glob(data_dir+'curve_sliced_relative/slice'+str(layer)+'_*.csv'))
 
-	####################DETERMINE CURVE ORDER##############################################
-	for x in range(0,num_sections,layer_width_num):
-		curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
-		if len(curve_sliced_js)<2:
-			continue
-		positioner_js=np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-		curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+# 	####################DETERMINE CURVE ORDER##############################################
+# 	for x in range(0,num_sections,layer_width_num):
+# 		curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
+# 		if len(curve_sliced_js)<2:
+# 			continue
+# 		positioner_js=np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+# 		curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
 
-		lam1=calc_lam_js(curve_sliced_js,robot)
-		lam2=calc_lam_js(positioner_js,positioner)
-		lam_relative=calc_lam_cs(curve_sliced_relative)
+# 		lam1=calc_lam_js(curve_sliced_js,robot)
+# 		lam2=calc_lam_js(positioner_js,positioner)
+# 		lam_relative=calc_lam_cs(curve_sliced_relative)
 
-		num_points_layer=max(2,int(lam_relative[-1]/waypoint_distance))
+# 		num_points_layer=max(2,int(lam_relative[-1]/waypoint_distance))
 
-		###find which end to start depending on how close to joint limit
-		if positioner.upper_limit[1]-q_prev[1]>q_prev[1]-positioner.lower_limit[1]:
-			breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
-		else:
-			breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
+# 		###find which end to start depending on how close to joint limit
+# 		if positioner.upper_limit[1]-q_prev[1]>q_prev[1]-positioner.lower_limit[1]:
+# 			breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
+# 		else:
+# 			breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
 
-		#s1_all,s2_all=calc_individual_speed(base_vd,lam1,lam2,lam_relative,breakpoints)
+# 		#s1_all,s2_all=calc_individual_speed(base_vd,lam1,lam2,lam_relative,breakpoints)
 
-		q1_all=[curve_sliced_js[breakpoints[0]]]
-		q2_all=[positioner_js[breakpoints[0]]]
-		v1_all=[1]
-		v2_all=[10]
-		primitives=['movej']
-		for j in range(1,len(breakpoints)):
-			q1_all.append(curve_sliced_js[breakpoints[j]])
-			q2_all.append(positioner_js[breakpoints[j]])
-			v1_all.append(max(base_vd,0.1))
-			positioner_w=vd_relative/np.linalg.norm(curve_sliced_relative[breakpoints[j]][:2])
-			v2_all.append(min(100,100*positioner_w/positioner.joint_vel_limit[1]))
-			primitives.append('movel')
+# 		q1_all=[curve_sliced_js[breakpoints[0]]]
+# 		q2_all=[positioner_js[breakpoints[0]]]
+# 		v1_all=[1]
+# 		v2_all=[10]
+# 		primitives=['movej']
+# 		for j in range(1,len(breakpoints)):
+# 			q1_all.append(curve_sliced_js[breakpoints[j]])
+# 			q2_all.append(positioner_js[breakpoints[j]])
+# 			v1_all.append(max(base_vd,0.1))
+# 			positioner_w=vd_relative/np.linalg.norm(curve_sliced_relative[breakpoints[j]][:2])
+# 			v2_all.append(min(100,100*positioner_w/positioner.joint_vel_limit[1]))
+# 			primitives.append('movel')
 
-		q_prev=positioner_js[breakpoints[-1]]
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=False)
-		ws.jog_single(robot,np.zeros(6),10)
-		input("-------Base Layer Finished-------")
+# 		q_prev=positioner_js[breakpoints[-1]]
+# 		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=True)
+# 		ws.jog_single(robot,np.zeros(6),4)
+# 		input("-------Base Layer Finished-------")
+
 
 
 
@@ -144,7 +145,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 
 ###########################################layer welding############################################
 print('----------Normal Layers-----------')
-num_layer_start=int(2*nominal_slice_increment)	###modify layer num here
+num_layer_start=int(1*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(70*nominal_slice_increment,slicing_meta['num_layers'])
 
 #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -154,6 +155,7 @@ if num_layer_start<=1*nominal_slice_increment:
 	num_sections=len(glob.glob(data_dir+'curve_sliced_relative/slice0_*.csv'))
 else:
 	num_sections=1
+
 
 print("start layer: ", num_layer_start)
 print("end layer: ", num_layer_end)
@@ -207,7 +209,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		height_profile = [] 
 		for distance in dist_to_por:height_profile.append(distance*np.sin(layer_angle*np.pi/180))
 		velocity_profile = weld_dh2v.dh2v_loglog(height_profile, feedrate_cmd, 'ER_4043')
-
+		print(velocity_profile)
 		###move to intermidieate waypoint for collision avoidance if multiple section
 		if num_sections!=num_sections_prev:
 			waypoint_pose=robot.fwd(curve_sliced_js[breakpoints[0]])
@@ -230,7 +232,6 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			primitives.append('movel')
 		q_prev=positioner_js[breakpoints[-1]]
 		
-
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
-		ws.jog_single(robot,np.zeros(6),10)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True)
+		ws.jog_single(robot,np.zeros(6),4)
 		input("-------Layer Finished-------")

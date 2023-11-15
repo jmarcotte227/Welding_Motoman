@@ -140,7 +140,7 @@ vd_relative_adjustment=0
 
 
 ###########################################layer welding############################################
-num_layer_start=int(29*nominal_slice_increment)	###modify layer num here
+num_layer_start=int(1*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(70*nominal_slice_increment,slicing_meta['num_layers'])
 
 #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -209,6 +209,6 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		q_prev=positioner_js[breakpoints[-1]]
 		print('V1: ', v1_all)
 
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
-		#ws.jog_single(robot,np.zeros(6),5)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True)
+		ws.jog_single(robot,np.zeros(6),5)
 		input("-------Layer Finished-------")
