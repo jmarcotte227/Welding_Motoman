@@ -1,5 +1,6 @@
 import numpy as np
 import sys, traceback, time, copy, glob
+import matplotlib.pyplot as plt
 from general_robotics_toolbox import *
 from redundancy_resolution import *
 sys.path.append('../toolbox')
@@ -60,7 +61,7 @@ def main():
 		for x in range(len(positioner_js_base[i])):
 			np.savetxt(data_dir+'curve_sliced_js/D500B_base_js'+str(i)+'_'+str(x)+'.csv',positioner_js_base[i][x],delimiter=',')
 			np.savetxt(data_dir+'curve_sliced_js/MA2010_base_js'+str(i)+'_'+str(x)+'.csv',curve_sliced_js_base[i][x],delimiter=',')
-
+	print(positioner_js[0:4])
 
 if __name__ == '__main__':
 	main()
