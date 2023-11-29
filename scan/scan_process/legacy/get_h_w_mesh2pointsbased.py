@@ -221,7 +221,7 @@ for z in np.arange(z_height_start,z_max+resolution_z,resolution_z):
         plt.xlabel('x-axis (mm)',fontsize=16)
         plt.legend()
         plt.show()
-    # exit()
+    exit()
 
 pickle.dump(all_welds_width, open(data_dir+'all_welds_width.pickle','wb'))
 pickle.dump(all_welds_height, open(data_dir+'all_welds_height.pickle','wb'))
