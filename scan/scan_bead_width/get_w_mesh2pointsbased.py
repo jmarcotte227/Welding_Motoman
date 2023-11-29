@@ -108,7 +108,7 @@ visualize_pcd([scanned_points,x_axis_mesh,bbox_mesh])
 ##################### get welding pieces end ########################
 
 ##### plot
-plot_flag=True
+plot_flag=False
 
 ##### store cross section data
 all_welds_width=[]
@@ -134,6 +134,7 @@ all_x_max=[]
 
 ##### get projection of each z height
 z_max=np.max(np.asarray(scanned_points.points)[:,2])
+print(np.arange(z_height_start,z_max+resolution_z,resolution_z))
 for z in np.arange(z_height_start,z_max+resolution_z,resolution_z):
     print(z)
     #### crop z height
@@ -172,7 +173,7 @@ for z in np.arange(z_height_start,z_max+resolution_z,resolution_z):
                 # all_welds_width[weld_i][z][x]=0
                 # all_welds_height[weld_i][z][x]=0
                 continue
-            # visualize_pcd([welds_points_x])
+            #visualize_pcd([welds_points_x])
             ### get the width
             sort_y=np.argsort(np.asarray(welds_points_x.points)[:,1])
             y_min_index=sort_y[:use_points_num]
@@ -229,7 +230,7 @@ for z in np.arange(z_height_start,z_max+resolution_z,resolution_z):
         plt.xlabel('x-axis (mm)',fontsize=16)
         plt.legend()
         plt.show()
-    exit()
+    
 
 pickle.dump(all_welds_width, open(data_dir+'all_welds_width.pickle','wb'))
 pickle.dump(all_welds_height, open(data_dir+'all_welds_height.pickle','wb'))
