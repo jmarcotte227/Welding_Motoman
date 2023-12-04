@@ -22,14 +22,14 @@ import pickle
 
 table_colors = list(mcolors.TABLEAU_COLORS.values())
 
-data_dir='../../data/model_devel_files/Scan_Data/L1/'
+data_dir='../../data/model_devel_files/Scan_Data/L17/'
 config_dir='../../config/'
 
 ######## read the combined point clouds
-scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'160_1.stl')
+scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'160_17.stl')
 
 scanned_points = scanned_points_mesh.sample_points_uniformly(number_of_points=1110000)
-#visualize_pcd([scanned_points_mesh,scanned_points])
+visualize_pcd([scanned_points_mesh,scanned_points])
 
 ###################### get the welding pieces ##################
 # This part will be replaced by welding path in the future
@@ -57,7 +57,7 @@ scanned_points.transform(Transz0_H)
 # Trans_plane = Transform(rot([0,0,1], np.radians(x_correction)),[0,0,0])
 # Trans_plane_H=H_from_RT(Trans_plane.R,Trans_plane.p)
 # scanned_points.transform(Trans_plane_H)
-# visualize_pcd([scanned_points])
+visualize_pcd([scanned_points])
 
 # x-axis box
 x_axis_mesh = o3d.geometry.TriangleMesh.create_box(width=200, height=0.1, depth=10)
@@ -76,12 +76,12 @@ Trans_zaxis[:3,3]=translation_p
 scanned_points.transform(Trans_zaxis)
 
 # bbox for each weld
-bbox_height = 10
+bbox_height = 36
 
 bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=85, height=20, depth=0.1)
 box_move=np.eye(4)
 box_move[0,3]=-55 # x-axis
-box_move[1,3]=-10 # y-axis
+box_move[1,3]=-8 # y-axis
 box_move[2,3]=bbox_height
 bbox_mesh.transform(box_move)
 
@@ -118,7 +118,7 @@ for weld_i in range(len(boxes_min)):
     all_welds_height.append({})
 
 ##### cross section parameters
-z_height_start=7
+z_height_start=bbox_height
 
 
 resolution_z=0.1
@@ -231,6 +231,6 @@ for z in np.arange(z_height_start,z_max+resolution_z,resolution_z):
         plt.legend()
         plt.show()
     
-
+print("all weld width: ", all_welds_width)
 pickle.dump(all_welds_width, open(data_dir+'all_welds_width.pickle','wb'))
 pickle.dump(all_welds_height, open(data_dir+'all_welds_height.pickle','wb'))
