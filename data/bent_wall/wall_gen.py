@@ -40,8 +40,9 @@ def main():
     #wall characteristics
     wall_length = 100
     points_distance=0.5
-    num_layers = 30
+    num_layers = 31
     points_per_layer=int(wall_length/points_distance)
+    vertical_shift = 3 #mm
 
 
     #rotation criteria
@@ -56,10 +57,18 @@ def main():
 
     #layer gen
     curve_curved=np.zeros((num_layers*points_per_layer,6))
+    base_layer = np.zeros((points_per_layer,6))
+
+    #base layer
+    base_layer[0:points_per_layer,0]=np.linspace(0,wall_length,points_per_layer)
+    base_layer[0:points_per_layer,2]=0
+    base_layer[0:points_per_layer,-1]=-np.ones(points_per_layer)
+
+    np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
     #first layer
     curve_curved[0:points_per_layer,0]=np.linspace(0,wall_length,points_per_layer)
-    curve_curved[0:points_per_layer,2]=0
+    curve_curved[0:points_per_layer,2]=vertical_shift
     curve_curved[0:points_per_layer,-1]=-np.ones(points_per_layer)
 
 
@@ -81,8 +90,8 @@ def main():
     ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     plt.show()
 
-    # for layer in range(num_layers):
-	#     np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+    for layer in range(num_layers):
+	    np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
         
 
 

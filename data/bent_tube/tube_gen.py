@@ -40,7 +40,7 @@ def main():
     print('Mean dH: ', mean_dH)
     print('------------------------')
 
-    #wall characteristics
+    #tube characteristics
     tube_diameter = 50
     num_layers = 30
     points_per_layer=50
