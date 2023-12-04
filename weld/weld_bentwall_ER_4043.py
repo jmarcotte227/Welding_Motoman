@@ -124,7 +124,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 
 		q1_all=[curve_sliced_js[breakpoints[0]]]
 		q2_all=[positioner_js[breakpoints[0]]]
-		v1_all=[1]
+		v1_all=[4]
 		v2_all=[10]
 		primitives=['movej']
 		for j in range(1,len(breakpoints)):
@@ -211,7 +211,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		#print("breakpoints: ",breakpoints)
 		q1_all=[curve_sliced_js[breakpoints[0]]]
 		q2_all=[positioner_js[breakpoints[0]]]
-		v1_all=[1]
+		v1_all=[4]
 		v2_all=[10]
 		primitives=['movej']
 		for j in range(0,len(breakpoints)):
@@ -223,8 +223,9 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			v2_all.append(min(100,100*positioner_w/positioner.joint_vel_limit[1]))
 			primitives.append('movel')
 		q_prev=positioner_js[breakpoints[-1]]
-		#print('V1: ', v1_all)
+		print('V1: ', v1_all)
 		#print("layer: ", layer)
 		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True)
-		ws.jog_single(robot,np.zeros(6),5)
+		q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
+		ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 		input(f"-------Layer {layer} Finished-------")
