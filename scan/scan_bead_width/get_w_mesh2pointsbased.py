@@ -41,7 +41,7 @@ plane_model, inliers = scanned_points.segment_plane(distance_threshold=0.75,
 #display_inlier_outlier(scanned_points,inliers)
 ## Transform the plane to z=0
 
-plain_norm = -plane_model[:3]/np.linalg.norm(plane_model[:3])
+plain_norm = plane_model[:3]/np.linalg.norm(plane_model[:3])
 k = np.cross(plain_norm,[0,0,1])
 k = k/np.linalg.norm(k)
 theta = np.arccos(plain_norm[2])

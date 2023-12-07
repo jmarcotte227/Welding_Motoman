@@ -64,7 +64,7 @@ def main():
     base_layer[0:points_per_layer,2]=0
     base_layer[0:points_per_layer,-1]=-np.ones(points_per_layer)
 
-    np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    #np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
     #first layer
     curve_curved[0:points_per_layer,0]=np.linspace(0,wall_length,points_per_layer)
@@ -75,7 +75,7 @@ def main():
     for layer in range(num_layers-1):
         for point in range(points_per_layer):
               dx,dz = rotate([rot_point, 0], (curve_curved[layer*points_per_layer+point,0],curve_curved[layer*points_per_layer+point,2]),-layer_angle)
-              print(dx,dz)
+              #print(dx,dz)
               curve_curved[(layer+1)*points_per_layer+point,0] = dx
               curve_curved[(layer+1)*points_per_layer+point,2] = dz
 
@@ -90,8 +90,8 @@ def main():
     ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     plt.show()
 
-    for layer in range(num_layers):
-	    np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+    #for layer in range(num_layers):
+	    #np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
         
 
 
