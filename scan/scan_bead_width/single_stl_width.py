@@ -78,7 +78,7 @@ scanned_points.transform(Trans_zaxis)
 # bbox for each weld
 bbox_height = 3
 
-bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=110 , height=20, depth=0.1)
+bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=110 , height=20, depth=1)
 box_move=np.eye(4)
 box_move[0,3]=17 # x-axis
 box_move[1,3]=-85 # y-axis
@@ -106,26 +106,50 @@ bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=bbox_1_min,max_bound=bbox_1
 # scanned_points=scanned_points.crop(bbox)
 
 
-#create bounding box on top of bent wall part
-top_bbox = deepcopy(bbox_mesh) #copy of original bounding box
+#create bounding box at base
+slice_min = np.zeros((3,1))
+slice_max = np.array([110,20,1])
+slice_bbox = o3d.geometry.AxisAlignedBoundingBox(slice_min,slice_max) #copy of original bounding box
+slice_bbox = o3d.geometry.OrientedBoundingBox.create_from_axis_aligned_bounding_box(slice_bbox)
+slice_bbox = slice_bbox.translate(box_move[0:3,3])
+
+#visualize_pcd([scanned_points, slice_bbox])
+
 rot_point = [-251.26, 0, 3]
 return_dist = [x *-1 for x in rot_point]
 print("return_dist: ", return_dist)
-rot_angle = 17.44
-to_rotpoint = Transform(np.eye(3),rot_point)
-to_rotpoint_H=H_from_RT(to_rotpoint.R,to_rotpoint.p)
-rot_plane = Transform(rot([0,1,0], np.radians(rot_angle)),[0,0,0])
-rot_plane_H=H_from_RT(rot_plane.R,rot_plane.p)
-return_rotpoint = Transform(np.eye(3),return_dist)
-return_rotpoint_H=H_from_RT(return_rotpoint.R,return_rotpoint.p)
-top_bbox.transform(to_rotpoint_H)
-top_bbox.transform(rot_plane_H)
-top_bbox.transform(return_rotpoint_H)
+final_rot_angle = 17.44           # from wall generation script
+
+#list of angles to take data at
+num_samples = 29
+rot_angles = np.linspace(0,final_rot_angle,num_samples)
+#list of bounding box objects
+bboxes = []
+
+for angle in rot_angles:
+    top_bbox = o3d.geometry.OrientedBoundingBox(slice_bbox) #copy of original bounding box
+    to_rotpoint = Transform(np.eye(3),rot_point)
+    to_rotpoint_H=H_from_RT(to_rotpoint.R,to_rotpoint.p)
+    rot_plane = Transform(rot([0,1,0], np.radians(angle)),[0,0,0])
+    rot_plane_H=H_from_RT(rot_plane.R,rot_plane.p)
+    return_rotpoint = Transform(np.eye(3),return_dist)
+    return_rotpoint_H=H_from_RT(return_rotpoint.R,return_rotpoint.p)
+    '''
+    top_bbox.transform(to_rotpoint_H)
+    top_bbox.transform(rot_plane_H)
+    top_bbox.transform(return_rotpoint_H)
+    '''
+    top_bbox.translate(to_rotpoint.p)
+    top_bbox.rotate(rot_plane.R,[0,0,0])
+    top_bbox.translate(return_rotpoint.p)
+
+    bboxes.append(top_bbox)
 
 
 #visualize_pcd([scanned_points,x_axis_mesh,bbox_mesh])
-visualize_pcd([scanned_points, bbox_mesh, top_bbox])
-exit()
+#bboxes.append(scanned_points)
+#visualize_pcd(bboxes)
+
 ##################### get welding pieces end ########################
 
 ##### plot
@@ -152,6 +176,23 @@ use_points_num=5 # use the largest/smallest N to compute w
 width_thres=0.8 # prune width that is too close
 all_x_min=[]
 all_x_max=[]
+
+#create scanned points object by cropping each bounding box
+layer_points = []
+for box in bboxes: layer_points.append(scanned_points.crop(box))
+#visualize_pcd(layer_points)
+
+#translate and rotate back to origin
+for i in range(len(layer_points)):
+    layer_points[i].translate(to_rotpoint.p)
+    layer_points[i].rotate(rot([0,1,0], -1*np.radians(rot_angles[i])),[0,0,0])
+    layer_points[i].translate(return_rotpoint.p)
+    layer_points[i].translate(-1*box_move[0:3,3])
+visualize_pcd(layer_points[:25]+[o3d.geometry.TriangleMesh.create_box(width=100 , height=20, depth=0.1)])
+exit()
+
+
+
 
 ##### get projection of each z height
 z_max=np.max(np.asarray(scanned_points.points)[:,2])

@@ -2,7 +2,8 @@ import pickle
 import matplotlib.pyplot as plt
 
 
-data_dir='../../data/model_devel_files/Scan_Data/L5/'
+#data_dir='../../data/model_devel_files/Scan_Data/L5/'
+data_dir = ''
 config_dir='../../config/'
 graph = True
 def average_dict_val(dict):
