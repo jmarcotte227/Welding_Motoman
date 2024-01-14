@@ -153,7 +153,7 @@ for angle in rot_angles:
 ##################### get welding pieces end ########################
 
 ##### plot
-plot_flag=False
+plot_flag=True
 
 ##### store cross section data
 all_welds_width=[]
@@ -191,27 +191,29 @@ for i in range(len(layer_points)):
     layer_points[i].translate(-1*box_move[0:3,3])
     #visualize_pcd([layer_points[i]])
 #visualize_pcd(layer_points[4:25]+[o3d.geometry.TriangleMesh.create_box(width=100 , height=20, depth=0.1)])
-
-for layer in layer_points:
+f, axw = plt.subplots(1, 1)
+all_welds_width={}
+for idx, layer in enumerate(layer_points[4:25]):
     print(layer)
     #### plot w h
-    f, (axw, axh) = plt.subplots(2, 1, sharex=True)
+    
     #### crop weld
+    all_welds_points = o3d.geometry.PointCloud()
         #### get width with x-direction scanning
-    all_welds_width[weld_i][layer]={}
-    if len(all_x_min)<=weld_i:
-        all_x_min.append(boxes_min[weld_i][0])
-        all_x_max.append(boxes_max[weld_i][0])
-    for x in np.arange(all_x_min[weld_i],all_x_max[weld_i]+resolution_x,resolution_x):
+    
+    x_min = 25
+    x_max = 85
+    all_welds_width[idx]={}
+    for x in np.arange(x_min,x_max+resolution_x,resolution_x):
         min_bound = (x-windows_x/2,-1e5,-1e5)
         max_bound = (x+windows_x/2,1e5,1e5)
         bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=min_bound,max_bound=max_bound)
-        welds_points_x = welds_points.crop(bbox)
+        welds_points_x = layer.crop(bbox)
+        #visualize_pcd([layer, bbox])
         if len(welds_points_x.points)<stop_thres_w:
             # all_welds_width[weld_i][z][x]=0
             # all_welds_height[weld_i][z][x]=0
             continue
-        #visualize_pcd([welds_points_x])
         ### get the width
         sort_y=np.argsort(np.asarray(welds_points_x.points)[:,1])
         y_min_index=sort_y[:use_points_num]
@@ -238,140 +240,29 @@ for layer in layer_points:
             y_min=np.mean(actual_y_min_all)
 
         this_width=y_max-y_min
-        all_welds_width[weld_i][layer][x]=this_width
+        all_welds_width[idx][x]=this_width
         z_height_ave = np.mean(np.asarray(welds_points_x.points)[np.append(y_min_index,y_max_index),2])
-        all_welds_height[weld_i][layer][x]=z_height_ave
     ### get all zx coord
-    x_coord=np.array(list(all_welds_width[weld_i][layer].keys()))
-    x_width=np.array(list(all_welds_width[weld_i][layer].values()))
-    x_height=np.array(list(all_welds_height[weld_i][layer].values()))
+    x_coord=np.array(list(all_welds_width[idx].keys()))
+    x_width=np.array(list(all_welds_width[idx].values()))
     if plot_flag:
-        ### plot width and height
-        axw.plot(x_coord,x_width,marker='o',color=table_colors[weld_i],label='Weld Number '+str(weld_i))
-        axh.plot(x_coord,x_height,marker='o',color=table_colors[weld_i],label='Weld Number '+str(weld_i))
+        ### plot width
+        axw.plot(x_coord,x_width,marker='o', label='Layer'+str(idx))
     
-    welds_points.paint_uniform_color(mcolors.to_rgb(table_colors[weld_i]))
-    all_welds_points+=welds_points
+    layer.paint_uniform_color(mcolors.to_rgb(table_colors[weld_i]))
+    all_welds_points+=layer
 
-    if plot_flag:
-        # points_proj.paint_uniform_color([1, 0, 0])
-        # welds_points.paint_uniform_color([0, 0.8, 0])
-        visualize_pcd([all_welds_points])
-        axw.set_ylim([0, axw.get_ylim()[1]+axw.get_ylim()[1]/5])
-        axw.tick_params(axis="x", labelsize=14) 
-        axw.tick_params(axis="y", labelsize=14) 
-        axw.set_ylabel('width (mm)',fontsize=16)
-        axh.set_ylim([0, axh.get_ylim()[1]+axh.get_ylim()[1]/5])
-        axh.tick_params(axis="x", labelsize=14) 
-        axh.tick_params(axis="y", labelsize=14) 
-        axh.set_ylabel('height (mm)',fontsize=16)
-        plt.xlabel('x-axis (mm)',fontsize=16)
-        plt.legend()
-        plt.show()
-
-exit()
-
-
-
-##### get projection of each z height
-z_max=np.max(np.asarray(scanned_points.points)[:,2])
-print(np.arange(z_height_start,z_max+resolution_z,resolution_z))
-for layer in np.arange(z_height_start,z_max+resolution_z,resolution_z):
-    print(layer)
-    #### crop z height
-    min_bound = (-1e5,-1e5,layer-windows_z/2)
-    max_bound = (1e5,1e5,layer+windows_z/2)
-    bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=min_bound,max_bound=max_bound)
-    points_proj=scanned_points.crop(bbox)
-    ##################
-
-    #### plot w h
-    f, (axw, axh) = plt.subplots(2, 1, sharex=True)
-    #### crop welds
-    all_welds_points = o3d.geometry.PointCloud()
-    for weld_i in range(len(boxes_min)):
-        print('Weld i',weld_i)
-        min_bound = boxes_min[weld_i]
-        max_bound = boxes_max[weld_i]
-        bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=min_bound,max_bound=max_bound)
-        welds_points=points_proj.crop(bbox)
-
-        #### get width with x-direction scanning
-        if len(welds_points.points)<stop_thres:
-            continue
-        all_welds_width[weld_i][layer]={}
-        all_welds_height[weld_i][layer]={}
-
-        if len(all_x_min)<=weld_i:
-            all_x_min.append(boxes_min[weld_i][0])
-            all_x_max.append(boxes_max[weld_i][0])
-        for x in np.arange(all_x_min[weld_i],all_x_max[weld_i]+resolution_x,resolution_x):
-            min_bound = (x-windows_x/2,-1e5,-1e5)
-            max_bound = (x+windows_x/2,1e5,1e5)
-            bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=min_bound,max_bound=max_bound)
-            welds_points_x = welds_points.crop(bbox)
-            if len(welds_points_x.points)<stop_thres_w:
-                # all_welds_width[weld_i][z][x]=0
-                # all_welds_height[weld_i][z][x]=0
-                continue
-            #visualize_pcd([welds_points_x])
-            ### get the width
-            sort_y=np.argsort(np.asarray(welds_points_x.points)[:,1])
-            y_min_index=sort_y[:use_points_num]
-            y_max_index=sort_y[-use_points_num:]
-            
-            ### get y and prune y that is too closed
-            y_min_all = np.asarray(welds_points_x.points)[y_min_index,1]
-            y_min = np.mean(y_min_all)
-            y_max_all = np.asarray(welds_points_x.points)[y_max_index,1]
-            y_max = np.mean(y_max_all)
-
-            actual_y_min_all=[]
-            actual_y_max_all=[]
-            for num_i in range(use_points_num):
-                if (y_max-y_min_all[num_i])>width_thres:
-                    actual_y_min_all.append(y_min_all[num_i])
-                if (y_max_all[num_i]-y_min)>width_thres:
-                    actual_y_max_all.append(y_max_all[num_i])
-            #########
-            y_max=0
-            y_min=0
-            if len(actual_y_max_all)!=0 and len(actual_y_min_all)!=0:
-                y_max=np.mean(actual_y_max_all)
-                y_min=np.mean(actual_y_min_all)
-
-            this_width=y_max-y_min
-            all_welds_width[weld_i][layer][x]=this_width
-            z_height_ave = np.mean(np.asarray(welds_points_x.points)[np.append(y_min_index,y_max_index),2])
-            all_welds_height[weld_i][layer][x]=z_height_ave
-        ### get all zx coord
-        x_coord=np.array(list(all_welds_width[weld_i][layer].keys()))
-        x_width=np.array(list(all_welds_width[weld_i][layer].values()))
-        x_height=np.array(list(all_welds_height[weld_i][layer].values()))
-        if plot_flag:
-            ### plot width and height
-            axw.plot(x_coord,x_width,marker='o',color=table_colors[weld_i],label='Weld Number '+str(weld_i))
-            axh.plot(x_coord,x_height,marker='o',color=table_colors[weld_i],label='Weld Number '+str(weld_i))
-        
-        welds_points.paint_uniform_color(mcolors.to_rgb(table_colors[weld_i]))
-        all_welds_points+=welds_points
-
-    if plot_flag:
-        # points_proj.paint_uniform_color([1, 0, 0])
-        # welds_points.paint_uniform_color([0, 0.8, 0])
-        visualize_pcd([all_welds_points])
-        axw.set_ylim([0, axw.get_ylim()[1]+axw.get_ylim()[1]/5])
-        axw.tick_params(axis="x", labelsize=14) 
-        axw.tick_params(axis="y", labelsize=14) 
-        axw.set_ylabel('width (mm)',fontsize=16)
-        axh.set_ylim([0, axh.get_ylim()[1]+axh.get_ylim()[1]/5])
-        axh.tick_params(axis="x", labelsize=14) 
-        axh.tick_params(axis="y", labelsize=14) 
-        axh.set_ylabel('height (mm)',fontsize=16)
-        plt.xlabel('x-axis (mm)',fontsize=16)
-        plt.legend()
-        plt.show()
+if plot_flag:
+    # points_proj.paint_uniform_color([1, 0, 0])
+    # welds_points.paint_uniform_color([0, 0.8, 0])
+    #visualize_pcd([all_welds_points])
+    #axw.set_ylim([0, axw.get_ylim()[1]+axw.get_ylim()[1]/5])
+    #axw.tick_params(axis="x", labelsize=14) 
+    #axw.tick_params(axis="y", labelsize=14) 
+    plt.ylabel('width (mm)',fontsize=16)
+    plt.xlabel('x-axis (mm)',fontsize=16)
+    #plt.legend()
+    plt.show()
     
-print("all weld width: ", all_welds_width)
-pickle.dump(all_welds_width, open(data_dir+'all_welds_width.pickle','wb'))
-pickle.dump(all_welds_height, open(data_dir+'all_welds_height.pickle','wb'))
+print("all layer width: ", all_welds_width)
+pickle.dump(all_welds_width, open(data_dir+'all_layer_width.pickle','wb'))
