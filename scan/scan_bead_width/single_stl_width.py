@@ -108,7 +108,7 @@ bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=bbox_1_min,max_bound=bbox_1
 
 #create bounding box at base
 slice_min = np.zeros((3,1))
-slice_max = np.array([110,20,1])
+slice_max = np.array([110,20,0.5])
 slice_bbox = o3d.geometry.AxisAlignedBoundingBox(slice_min,slice_max) #copy of original bounding box
 slice_bbox = o3d.geometry.OrientedBoundingBox.create_from_axis_aligned_bounding_box(slice_bbox)
 slice_bbox = slice_bbox.translate(box_move[0:3,3])
@@ -121,7 +121,7 @@ print("return_dist: ", return_dist)
 final_rot_angle = 17.44           # from wall generation script
 
 #list of angles to take data at
-num_samples = 29
+num_samples = 100
 rot_angles = np.linspace(0,final_rot_angle,num_samples)
 #list of bounding box objects
 bboxes = []
@@ -147,8 +147,8 @@ for angle in rot_angles:
 
 
 #visualize_pcd([scanned_points,x_axis_mesh,bbox_mesh])
-#bboxes.append(scanned_points)
-#visualize_pcd(bboxes)
+# bboxes.append(scanned_points)
+# visualize_pcd(bboxes)
 
 ##################### get welding pieces end ########################
 
@@ -193,7 +193,7 @@ for i in range(len(layer_points)):
 #visualize_pcd(layer_points[4:25]+[o3d.geometry.TriangleMesh.create_box(width=100 , height=20, depth=0.1)])
 f, axw = plt.subplots(1, 1)
 all_welds_width={}
-for idx, layer in enumerate(layer_points[4:25]):
+for idx, layer in enumerate(layer_points[30:-30]):
     print(layer)
     #### plot w h
     
@@ -264,5 +264,5 @@ if plot_flag:
     #plt.legend()
     plt.show()
     
-print("all layer width: ", all_welds_width)
-pickle.dump(all_welds_width, open(data_dir+'all_layer_width.pickle','wb'))
+#print("all layer width: ", all_welds_width)
+pickle.dump(all_welds_width, open(data_dir+'all_layer_width_high_res.pickle','wb'))

@@ -61,7 +61,7 @@ material_param['316L'] = {
 def v2dh_loglog(v,mode=140,material='ER_4043'):
     
     mode=int(mode)
-    print(str(mode)+'ipm')
+    #print(str(mode)+'ipm')
     param = material_param[material][str(mode)+'ipm']
     logdh = param[0]*np.log(v)+param[1]
     
