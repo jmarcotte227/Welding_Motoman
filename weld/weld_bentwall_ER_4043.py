@@ -10,8 +10,8 @@ import weld_dh2v
 import matplotlib.pyplot as plt
 
 
-dataset='bent_wall/'
-sliced_alg='slice_ER_4043/'
+dataset='speed_ref_wall/'
+sliced_alg='slice_ER_4043_13/'
 data_dir='../data/'+dataset+sliced_alg
 with open(data_dir+'slicing.yml', 'r') as file:
 	slicing_meta = yaml.safe_load(file)

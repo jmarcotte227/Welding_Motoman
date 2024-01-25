@@ -73,10 +73,10 @@ def main():
 	ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
 	plt.show()
 
-	for layer in range(num_layers):
-		np.savetxt('slice_ER_4043_13/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+	# for layer in range(num_layers):
+	# 	np.savetxt('slice_ER_4043_13/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
 	
-	np.savetxt('slice_ER_4043_13/curve_sliced/slice0_0.csv',base_layer,delimiter=',')  
+	# np.savetxt('slice_ER_4043_13/curve_sliced/slice0_0.csv',base_layer,delimiter=',')  
 
 
 if __name__ == '__main__':
