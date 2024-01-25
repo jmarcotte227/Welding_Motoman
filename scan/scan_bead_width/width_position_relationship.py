@@ -12,15 +12,17 @@ def lin(x, a, b):
 def quad(x, a, b, c):
     return a*x**2+b*x+c
 
-width_data_file = open('all_layer_width.pickle', 'rb')
+width_data_file = open('all_layer_width_high_res.pickle', 'rb')
 width_data = pickle.loads(width_data_file.read())
 
 widths = []
 widths_avg = []
 x_coord = []
 
-for key in width_data:
+plot_flag = True
 
+##Lump data for all layer widths
+for key in width_data:
     x_coord.extend(list(width_data[key].keys()))
     widths.extend(list(width_data[key].values()))
 widths = np.array(widths)
@@ -32,12 +34,39 @@ fig,ax = plt.subplots(1,1)
 popt, pcov = curve_fit(lin, x_coord, widths)
 x_data = np.linspace (20, 90)
 ax.plot(x_data, lin(x_data, *popt), 'r')
-ax.scatter(x_coord,widths,)
-plt.title("Speed vs Bead Width | Cropped | Quadratic")
-plt.xlabel("Torch Speed (mm/s)")
-plt.ylabel("Bead Width (mm/s)")
+print(*popt)
+ax.scatter(x_coord,widths)
+plt.title("All Layer Width Data | Linear")
+plt.xlabel("x position (mm/s)")
+plt.ylabel("Bead Width (mm)")
 plt.show()
 
+slopes = []
+intercepts = [] 
+#Individual layer analysis
+fig,ax = plt.subplots(1,1)
+for key in width_data:
+    x_coord = list(width_data[key].keys())
+    widths = list(width_data[key].values())
+    popt, pcov = curve_fit(lin, x_coord, widths)
+
+    slopes.append(popt[0])
+    intercepts.append(popt[1])
+
+    if plot_flag:
+        
+        x_data = np.linspace (20, 90)
+        ax.plot(x_data, lin(x_data, *popt), label = str(key))
+        #ax.scatter(x_coord,widths)
+        plt.title("All Layer Width Data | Linear")
+        plt.xlabel("x position (mm/s)")
+        plt.ylabel("Bead Width (mm)")
+plt.legend()
+plt.show()
+
+fig,ax = plt.subplots(1,1)
+ax.plot(slopes)
+plt.show()
 # Log-Log Linear
 # speeds_log = np.log(speeds)
 # widths_log = np.log(widths)
@@ -49,5 +78,4 @@ plt.show()
 # plt.ylabel("log Bead Width")
 # plt.show()
 
-
-print(popt)
+plt.close()
