@@ -52,8 +52,14 @@ def overlap_distance(h_1, w_1, h_2, w_2):
     
     # finding zeros
     f = S_BEC-S_AED
-    equality_points = sym.solveset(f,d).args[0].args[0]
-    return equality_points, bead_a, bead_b, x1, x2_gen, y1, y2, d
+    equality_points = float(sym.solveset(f,d).args[0].args[0])
+    bead_b = bead_b.subs(d, equality_points)
+    x1 = x1.subs(d, equality_points)
+    x2_gen = x2_gen.subs(d, equality_points)
+    y1 = y1.subs(d, equality_points)
+    y2 = y2.subs(d, equality_points)
+    
+    return equality_points, bead_a, bead_b, x1, x2_gen, y1, y2
 
 if __name__=="__main__":
     h1 = 1.48609461041326
@@ -61,13 +67,13 @@ if __name__=="__main__":
     h2 = 1.53421587430785
     w2 = 4.95234504814499
 
-    dist, a, b, x_1, x_2, y_1, y_2, d = overlap_distance(h1, w1, h2, w2)
+    dist, a, b, x_1, x_2, y_1, y_2 = overlap_distance(h1, w1, h2, w2)
 
-    b = b.subs(d, dist)
-    x_1 = x_1.subs(d, dist)
-    x_2 = x_2.subs(d, dist)
-    y_1 = y_1.subs(d, dist)
-    y_2 = y_2.subs(d, dist)
+    # b = b.subs(d, dist)
+    # x_1 = x_1.subs(d, dist)
+    # x_2 = x_2.subs(d, dist)
+    # y_1 = y_1.subs(d, dist)
+    # y_2 = y_2.subs(d, dist)
 
     slope = (y_2-y_1)/(x_2-x_1)
 
