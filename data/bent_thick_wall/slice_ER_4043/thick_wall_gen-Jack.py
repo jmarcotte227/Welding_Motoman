@@ -85,7 +85,6 @@ def main():
     fig_sim, ax_sim = plt.subplots(1,1)
     ax_sim.set_xlim(-5, 105)
     ax_sim.set_ylim(0, 3.5)
-    ax_sim.set_aspect('equal')
     x_sim = np.linspace(-5,wall_length+5, 1010)
     #setting first known element of vel profile
     vel_profile = [dh2v_loglog(min_dH, feed_speed, material)]

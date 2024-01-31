@@ -180,7 +180,7 @@ all_x_max=[]
 #create scanned points object by cropping each bounding box
 layer_points = []
 for box in bboxes: layer_points.append(scanned_points.crop(box))
-#visualize_pcd(layer_points)
+visualize_pcd(layer_points)
 
 #translate and rotate back to origin
 print("number of points: ", len(layer_points))
