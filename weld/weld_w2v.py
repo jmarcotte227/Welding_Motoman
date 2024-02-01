@@ -3,7 +3,7 @@ import numpy as np
 material_param = {}
 material_param['ER_4043'] = {
     #ER 4043
-    "160ipm": [-0.5363354,  3.01528108], #update with better estimate once found
+    "160ipm": [-0.55863074,  3.01451518], #update with better estimate once found error: -0.009853848161215595
 }
 
 def w2v_loglog(w, mode = 160, material='ER_4043'):
