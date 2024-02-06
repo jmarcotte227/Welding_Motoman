@@ -198,8 +198,12 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		###########################################velocity profile#########################################
 		dh_max = slicing_meta['dh_max']
 		dh_min = slicing_meta['dh_min']
-		height_profile = np.linspace(dh_max, dh_min, len(curve_sliced_js))
-		velocity_profile = weld_dh2v.dh2v_loglog(height_profile, feedrate_cmd, 'ER_4043')
+		with open(data_dir+'vel_profile.pkl', 'rb') as file:
+			velocity_profile = pickle.load(file)
+		
+		# height_profile = np.zeros(len(curve_sliced_js))
+		# height_profile = np.linspace(dh_max, dh_min, len(curve_sliced_js))
+		# velocity_profile = weld_dh2v.dh2v_loglog(height_profile, feedrate_cmd, 'ER_4043')
 
 		print("velocity profile: ",velocity_profile)
 		#pickle.dump(velocity_profile, open(data_dir+'layer_velocity_profile.pickle','wb'))
@@ -227,7 +231,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		q_prev=positioner_js[breakpoints[-1]]
 		print('V1: ', v1_all)
 		print("layer: ", layer)
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
 		q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 		ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 		input(f"-------Layer {layer} Finished-------")

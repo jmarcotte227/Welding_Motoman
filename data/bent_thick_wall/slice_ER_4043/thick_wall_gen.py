@@ -2,7 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import sys
+import pickle
 from scipy.spatial.transform import Rotation as R
+from math import ceil
 
 sys.path.append('../../weld/')
 from weld_dh2v import v2dh_loglog, dh2v_loglog
@@ -54,6 +56,16 @@ def main():
     points_per_segment=int(wall_width/points_distance)
     vertical_shift = 3 #mm
 
+    #base layer characteristics
+    base_bead_width = 9.15 #mm for baselayer feed 300, vel 5
+    len_add = 10 #mm distance added to baselayer above wall
+    width_add = 10
+    base_points_per_segment = int((wall_length+len_add)/points_distance, )
+    base_bead_distance = base_bead_width*0.738
+    w_start = -width_add/2
+    l_start = -len_add/2
+    l_end = wall_length+len_add/2
+
     #other parameters
     prof_increment = 0.1
     vel_increment = 0.05
@@ -72,12 +84,33 @@ def main():
     # curve_curved=np.zeros((num_layers**points_per_layer,6))
     # base_layer = np.zeros((points_per_layer,6))
 
-    #base layer
-    # base_layer[0:points_per_layer,0]=np.linspace(0,wall_length,points_per_layer)
-    # base_layer[0:points_per_layer,2]=0
-    # base_layer[0:points_per_layer,-1]=-np.ones(points_per_layer)
+    #############base layer###############
+    #determine number of beads
+    total_width = width_add+wall_width
+    num_beads = ceil(total_width/(base_bead_distance))+1
+    print(base_bead_distance)
 
-    #np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    base_layer = np.zeros((base_points_per_segment*num_beads,6))
+    
+    dir_flag = False
+    for i in range(num_beads):
+        if dir_flag:
+            base_layer[base_points_per_segment*(i):base_points_per_segment*(i+1),0]=np.linspace(l_start,l_end,base_points_per_segment)
+        elif not dir_flag:
+            base_layer[base_points_per_segment*(i):base_points_per_segment*(i+1),0]=np.linspace(l_end,l_start,base_points_per_segment)
+        base_layer[base_points_per_segment*(i):base_points_per_segment*(i+1),1]=w_start+base_bead_distance*i
+        base_layer[base_points_per_segment*(i):base_points_per_segment*(i+1),-1]=-np.ones(base_points_per_segment)
+
+        dir_flag = not dir_flag
+    #plotting baselayer
+    vis_step=1
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    ax.plot3D(base_layer[::vis_step,0],base_layer[::vis_step,1],base_layer[::vis_step,2],'b.-')
+    #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
+    ax.set_aspect('equal')
+    plt.show()
+
+    np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
     ############# first layer ##################
     initial_layer=np.zeros((points_per_segment*100,6))
@@ -164,7 +197,6 @@ def main():
 
     #plt.show()
     
-    
     fig, ax = plt.subplots(1,1)
     x = np.linspace(0, wall_length, 100)
     ax.plot(distance_of_height,height_profile)
@@ -181,30 +213,45 @@ def main():
     points_per_layer = end_idx*points_per_segment # update once connecting segments are interpolated
     curve_curved=np.zeros((num_layers*points_per_layer,6))
     curve_curved[:points_per_layer, :] = initial_layer[:,:]
+    dir_flag = True
     for layer in range(num_layers-1):
         for point in range(points_per_layer):
               dx,dz = rotate([rot_point, 0], (curve_curved[layer*points_per_layer+point,0],curve_curved[layer*points_per_layer+point,2]),-layer_angle)
               #print(dx,dz)
               curve_curved[(layer+1)*points_per_layer+point,0] = dx
-              curve_curved[(layer+1)*points_per_layer+point,1] = curve_curved[point,1]
+              if dir_flag:
+                curve_curved[(layer+1)*points_per_layer+point,1] = -curve_curved[point,1]+curve_curved[points_per_segment-1,1]
+              elif not dir_flag:
+                curve_curved[(layer+1)*points_per_layer+point,1] = curve_curved[point,1]
               curve_curved[(layer+1)*points_per_layer+point,2] = dz
 
               grav_dx,grav_dz = rotate((0,0), (curve_curved[layer*points_per_layer+point,3],curve_curved[layer*points_per_layer+point,5]),-layer_angle)
               curve_curved[(layer+1)*points_per_layer+point,3] = grav_dx
               curve_curved[(layer+1)*points_per_layer+point,5] = grav_dz
 
+        dir_flag = not dir_flag
 
+    #export velocity profile
+    vel_profile_export = np.zeros(points_per_layer)
+    for idx, vel in enumerate(vel_profile):
+        vel_profile_export[idx*points_per_segment:(idx+1)*points_per_segment] = vel
+    print(vel_profile_export[0])
+    print(vel_profile_export[-1])
+    with open('slice_ER_4043/vel_profile.pkl', 'wb') as file:
+        pickle.dump(vel_profile_export, file)
     vis_step=1
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    ax.plot3D(base_layer[::vis_step,0],base_layer[::vis_step,1],base_layer[::vis_step,2],'b.-')
     ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
+    
     #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     ax.set_aspect('equal')
     plt.show()
 
-    for layer in range(num_layers):
-	    np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+    # for layer in range(num_layers):
+	#     np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
         
 
 
 if __name__ == '__main__':
-      main()	
+    main()	
