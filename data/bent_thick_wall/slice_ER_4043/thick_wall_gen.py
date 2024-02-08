@@ -110,10 +110,15 @@ def main():
     ax.set_aspect('equal')
     plt.show()
 
-    np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    #np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
     ############# first layer ##################
     initial_layer=np.zeros((points_per_segment*100,6))
+
+    #sim_data_to_save
+    bead_y = []
+    lines_x = []
+    lines_y = []
 
     fig_sim, ax_sim = plt.subplots(1,1)
     ax_sim.set_xlim(-5, 105)
@@ -143,7 +148,11 @@ def main():
     prof_next_height = height_profile_func(min_dH, max_dH, wall_length, distance)
 
     #prelim plot
-    ax_sim.plot(x_sim, bead_profile(h_curr, w_curr, x_sim, 0), color='b')
+    y_vals = bead_profile(h_curr, w_curr, x_sim, 0)
+    bead_y.append(y_vals)
+    print(bead_y)
+
+    ax_sim.plot(x_sim, y_vals, color='b')
     idx = 1
     cum_distance = 0
     dir_flag = True
@@ -159,12 +168,16 @@ def main():
             print('distance:' , distance)
             prof_next_height = height_profile_func(min_dH, max_dH, wall_length, cum_distance+distance)
 
-        
-        ax_sim.plot([x_1+cum_distance, x_2+cum_distance], [y_1, y_2], color='b')
+        x_coords = [x_1+cum_distance, x_2+cum_distance]
+        y_coords = [y_1, y_2]
+        lines_x.append(x_coords[:])
+        lines_y.append(y_coords[:])
+        ax_sim.plot(x_coords, y_coords, color='b')
 
         cum_distance = cum_distance+distance
-
-        ax_sim.plot(x_sim, bead_profile(h_next, w_next, x_sim, cum_distance), color = 'b')
+        y_vals = bead_profile(h_next, w_next, x_sim, cum_distance)
+        bead_y.append(y_vals)
+        ax_sim.plot(x_sim, y_vals, color = 'b')
         vel_profile.append(next_vel)
         height_profile.append(h_next)
         distance_of_height.append(cum_distance)
@@ -196,7 +209,16 @@ def main():
         idx = idx+1
 
     #plt.show()
-    
+    #export simulation data
+    with open('slice_ER_4043/lines_x.pkl', 'wb') as file:
+        pickle.dump(lines_x, file)
+    with open('slice_ER_4043/lines_y.pkl', 'wb') as file:
+        pickle.dump(lines_y, file)    
+    with open('slice_ER_4043/x_sim.pkl', 'wb') as file:
+        pickle.dump(x_sim, file)
+    with open('slice_ER_4043/bead_data.pkl', 'wb') as file:
+        pickle.dump(bead_y, file)
+
     fig, ax = plt.subplots(1,1)
     x = np.linspace(0, wall_length, 100)
     ax.plot(distance_of_height,height_profile)
