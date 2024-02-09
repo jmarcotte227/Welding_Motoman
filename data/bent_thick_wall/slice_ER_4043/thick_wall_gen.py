@@ -119,6 +119,7 @@ def main():
     bead_y = []
     lines_x = []
     lines_y = []
+    distances = []
 
     fig_sim, ax_sim = plt.subplots(1,1)
     ax_sim.set_xlim(-5, 105)
@@ -172,6 +173,7 @@ def main():
         y_coords = [y_1, y_2]
         lines_x.append(x_coords[:])
         lines_y.append(y_coords[:])
+        distances.append(distance)
         ax_sim.plot(x_coords, y_coords, color='b')
 
         cum_distance = cum_distance+distance
@@ -218,6 +220,8 @@ def main():
         pickle.dump(x_sim, file)
     with open('slice_ER_4043/bead_data.pkl', 'wb') as file:
         pickle.dump(bead_y, file)
+    with open('slice_ER_4043/distances.pkl', 'wb') as file:
+        pickle.dump(distances, file)
 
     fig, ax = plt.subplots(1,1)
     x = np.linspace(0, wall_length, 100)
