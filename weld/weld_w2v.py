@@ -27,7 +27,7 @@ def v2w_loglog(v, mode = 160, material='ER_4043'):
 
 def main():
     #verification values
-    ver_vals = [15,14.3]
+    ver_vals = [15,5]
     vels = v2w_loglog(ver_vals)
     print("velocities: ", vels)
 

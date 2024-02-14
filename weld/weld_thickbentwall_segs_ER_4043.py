@@ -124,7 +124,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 
 		q1_all=[curve_sliced_js[breakpoints[0]]]
 		q2_all=[positioner_js[breakpoints[0]]]
-		v1_all=[4]
+		v1_all=[1]
 		v2_all=[10]
 		primitives=['movej']
 		for j in range(1,len(breakpoints)):
@@ -136,7 +136,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			primitives.append('movel')
 
 		q_prev=positioner_js[breakpoints[-1]]
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=False)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=True)
 		input(f"----------segment {x} finished----------")
 	q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 	ws.jog_single(robot,[q_0,0,0,0,0,0],4)
@@ -217,7 +217,8 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			waypoint_pose.p[-1]+=50
 			q1=robot.inv(waypoint_pose.p,waypoint_pose.R,curve_sliced_js[breakpoints[0]])[0]
 			q2=positioner_js[breakpoints[0]]
-			#ws.jog_dual(robot,positioner,q1,q2,v=4) #### can crank this speed tomorrow if nothing bad happens######################################
+			ws.jog_dual(robot,positioner,q1,q2,v=4) #### can crank this speed tomorrow if nothing bad happens######################################
+			input("-----cleared work-----")
 		#print("breakpoints: ",breakpoints)
 		q1_all=[curve_sliced_js[breakpoints[0]]]
 		q2_all=[positioner_js[breakpoints[0]]]
@@ -237,7 +238,8 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		print('V1: ', v1_all)
 		print("layer: ", layer)
 		print("length V1: ", len(v1_all))
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False)
+		input("----enter to continute----")
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True)
 		input(f"----------segment {x} finished----------")
 	q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 	ws.jog_single(robot,[q_0,0,0,0,0,0],4)
