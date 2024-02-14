@@ -128,10 +128,9 @@ if __name__=='__main__':
     # print(v2dh_loglog(75,220))
 
     # print(v2dh_loglog(5,100))
-    print(v2dh_loglog(16,160))
-    print(v2dh_loglog([15,5],160))
-    print(v2dh_loglog([5, 15],160))
-    print(v2dh_loglog([8, 12],240))
+    print(v2dh_loglog(6.6,200))
+    print(v2dh_loglog(11.6,240))
+    
 
     
     #print(v2dh_loglog(10,180))
