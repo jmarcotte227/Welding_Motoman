@@ -112,7 +112,7 @@ for layer in range(1):#range(num_layer_start,num_layer_end,nominal_slice_increme
 	vel_idx = 0
 	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
 
-	num_sections_prev=num_sections
+	num_sections_prev= 20    #####num_sections  MAY NEED TO CHANGE THIS BACK
 	num_sections=len(glob.glob(data_dir+'curve_sliced_relative/slice'+str(layer)+'_*.csv'))
 
 	####################DETERMINE CURVE ORDER##############################################
@@ -157,12 +157,12 @@ for layer in range(1):#range(num_layer_start,num_layer_end,nominal_slice_increme
 			waypoint_pose.p[-1]+=50
 			q1=robot.inv(waypoint_pose.p,waypoint_pose.R,curve_sliced_js[breakpoints[0]])[0]
 			q2=positioner_js[breakpoints[0]]
-			ws.jog_dual(robot,positioner,q1,q2,v=4) #### can crank this speed tomorrow if nothing bad happens######################################
+			ws.jog_dual(robot,positioner,q1,q2,v=0.5) #### can crank this speed tomorrow if nothing bad happens######################################
 			input("-----cleared work-----")
 		#print("breakpoints: ",breakpoints)
 		q1_all=[curve_sliced_js[breakpoints[0]]]
 		q2_all=[positioner_js[breakpoints[0]]]
-		v1_all=[4]
+		v1_all=[0.5]
 		v2_all=[10]
 		primitives=['movej']
 		for j in range(0,len(breakpoints)):
@@ -181,8 +181,8 @@ for layer in range(1):#range(num_layer_start,num_layer_end,nominal_slice_increme
 		print("length V1: ", len(v1_all))
 		input("----enter to continute----")
 		
-		#timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(bead_params[bead_id[x]][0]/10)+job_offset],arc=True)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(bead_params[bead_id[x]][0]/10)+job_offset],arc=True)
 		input(f"----------segment {x} finished----------")
-	#q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
-	#ws.jog_single(robot,[q_0,0,0,0,0,0],4)
+	q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
+	ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 	input(f"-------Layer {layer} Finished-------")
