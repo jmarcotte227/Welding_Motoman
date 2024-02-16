@@ -7,11 +7,12 @@ from robot_def import *
 
 
 def main():
-	dataset='bent_thick_wall_segs/'
-	sliced_alg='slice_ER_4043/'
+	dataset='gom_tests/'
+	sliced_alg='individual_bead/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
+		
 
 	base_thickness=0
 	curve_sliced=[]
@@ -19,6 +20,7 @@ def main():
 		###get number of disconnected sections
 		num_sections=len(glob.glob(data_dir+'curve_sliced/slice'+str(i)+'_*.csv'))
 		curve_sliced_ith_layer=[]
+		print("num_sections: ", num_sections)
 		for x in range(num_sections):
 			curve_sliced_ith_layer.append(np.loadtxt(data_dir+'curve_sliced/slice'+str(i)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6)))
 
