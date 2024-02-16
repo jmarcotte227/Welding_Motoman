@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 
 dataset='gom_tests/'
-sliced_alg='individual_bead/'
+sliced_alg='3_bead_test/'
 data_dir='../data/'+dataset+sliced_alg
 with open(data_dir+'slicing.yml', 'r') as file:
 	slicing_meta = yaml.safe_load(file)
@@ -118,7 +118,7 @@ for layer in range(1):#range(num_layer_start,num_layer_end,nominal_slice_increme
 	####################DETERMINE CURVE ORDER##############################################
 	bead_id = list(bead_params.keys())
 	print(bead_id)
-	for x in range(8,num_sections): ######change back to 0
+	for x in range(0,num_sections): ######change back to 0
 		curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
 		if len(curve_sliced_js)<2:
 			continue
@@ -181,7 +181,7 @@ for layer in range(1):#range(num_layer_start,num_layer_end,nominal_slice_increme
 		print("length V1: ", len(v1_all))
 		input("----enter to continute----")
 		
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(bead_params[bead_id[x]][0]/10)+job_offset],arc=True)
+		#timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(bead_params[bead_id[x]][0]/10)+job_offset],arc=True)
 		input(f"----------segment {x} finished----------")
 	#q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 	#ws.jog_single(robot,[q_0,0,0,0,0,0],4)

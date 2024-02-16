@@ -14,7 +14,7 @@ def main():
 		pulse2deg_file_path='../config/D500B_pulse2deg_real.csv',base_transformation_file='../config/D500B_pose.csv')
 	
 	dataset='gom_tests/'
-	sliced_alg='individual_bead/'
+	sliced_alg='3_bead_test/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
