@@ -14,12 +14,12 @@ def main():
 		pulse2deg_file_path='../config/D500B_pulse2deg_real.csv',base_transformation_file='../config/D500B_pose.csv')
 	
 	dataset='gom_tests/'
-	sliced_alg='3_bead_test/'
+	sliced_alg='individual_bead/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
 		
-
+	print(data_dir)
 	curve_sliced_relative_base=[]
 	curve_sliced_relative=[]
 	curve_sliced=[]
@@ -48,9 +48,8 @@ def main():
 			[ 0.7071, 0.7071,  0.    ],
 			[0.,      0.,     -1.    ]])
 	q_seed=np.radians([-35.4291,56.6333,40.5194,4.5177,-52.2505,-11.6546])
-
+	print(slicing_meta['q_positioner_seed'])
 	rr=redundancy_resolution(robot,positioner,curve_sliced)
-
 	positioner_js,curve_sliced_js,positioner_js_base,curve_sliced_js_base=rr.baseline_joint(R_torch,curve_sliced_relative,curve_sliced_relative_base,q_seed,slicing_meta['q_positioner_seed'],smooth_filter=slicing_meta['smooth_filter'])
 
 	for i in range(slicing_meta['num_layers']):

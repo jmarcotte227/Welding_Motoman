@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 
 dataset='gom_tests/'
-sliced_alg='3_bead_test/'
+sliced_alg='individual_bead/'
 data_dir='../data/'+dataset+sliced_alg
 with open(data_dir+'slicing.yml', 'r') as file:
 	slicing_meta = yaml.safe_load(file)
