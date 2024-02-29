@@ -132,7 +132,7 @@ if __name__ == "__main__":
     config_dir='../../config/'
 
     ######## read the combined point clouds
-    scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'240_ipm_beads.stl')
+    scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'210_ipm_beads.stl')
 
     scanned_points = scanned_points_mesh.sample_points_uniformly(number_of_points=1110000)
 
@@ -150,8 +150,8 @@ if __name__ == "__main__":
     scanned_points.transform(Transz0_H)
 
         ## Transform such that the path is in x-axis
-    rotation_theta=np.radians(-90) ## rotation angle such that path align x-axis
-    translation_p = np.array([-107,31,0]) ## CHANGE THIS TO CALIBRATE NEW SAMPLE
+    rotation_theta=np.radians(90) ## rotation angle such that path align x-axis
+    translation_p = np.array([0,31,0]) ## CHANGE THIS TO CALIBRATE NEW SAMPLE
 
     Trans_zaxis=np.eye(4)
     Trans_zaxis[:3,:3]=rot([0,0,1],rotation_theta)
@@ -179,4 +179,4 @@ if __name__ == "__main__":
         plt.plot(height[:,0],height[:,1])
     plt.show()
     
-    pickle.dump(all_heights, open(data_dir+'240_ipm_heights.pickle','wb'))
+    pickle.dump(all_heights, open(data_dir+'210_ipm_heights.pickle','wb'))
