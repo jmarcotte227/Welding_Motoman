@@ -26,7 +26,7 @@ data_dir=''
 config_dir=''
 
 ######## read the combined point clouds
-scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'single_weld_sample_1.stl')
+scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'200_ipm_beads.stl')
 
 scanned_points = scanned_points_mesh.sample_points_uniformly(number_of_points=1110000)
 visualize_pcd([scanned_points_mesh,scanned_points])
@@ -52,27 +52,38 @@ Transz0_H=H_from_RT(Transz0.R,Transz0.p)
 scanned_points.transform(Transz0_H)
 ### now the distance to plane is the z axis
 
+
+## Transform such that the path is in x-axis
+rotation_theta=np.radians(-90) ## rotation angle such that path align x-axis
+translation_p = np.array([0,0,0]) ## Translation is less matters here
+Trans_zaxis=np.eye(4)
+Trans_zaxis[:3,:3]=rot([0,0,1],rotation_theta)
+Trans_zaxis[:3,3]=translation_p
+scanned_points.transform(Trans_zaxis)
 visualize_pcd([scanned_points])
-
-## TODO:align path and scan
-
 # bbox for each weld
-bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=80, height=20, depth=0.1)
+
+box_width = 40
+box_height = 15
+x_offset = -35
+y_offset = -40
+
+bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=box_width, height=box_height, depth=0.1)
 box_move=np.eye(4)
-box_move[0,3]=-40
-box_move[1,3]=-10
+box_move[0,3]=x_offset
+box_move[1,3]=y_offset
 box_move[2,3]=0
 bbox_mesh.transform(box_move)
 
-bbox_min=(-40,-20,0)
-bbox_max=(40,20,45)
+bbox_min=(x_offset,y_offset,0)
+bbox_max=(x_offset+box_width,y_offset+box_height,45)
 
-# visualize_pcd([scanned_points,bbox_mesh])
+visualize_pcd([scanned_points,bbox_mesh])
 ##################### get welding pieces end ########################
 
 
 ##### plot
-plot_flag=False
+plot_flag=True
 
 ##### cross section parameters
 z_height_start=35

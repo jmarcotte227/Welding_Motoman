@@ -29,7 +29,7 @@ config_dir='../../config/'
 scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'200_ipm_beads.stl')
 
 scanned_points = scanned_points_mesh.sample_points_uniformly(number_of_points=1110000)
-visualize_pcd([scanned_points_mesh,scanned_points])
+# visualize_pcd([scanned_points_mesh,scanned_points])
 
 
 ###################### get the welding pieces ##################
@@ -62,7 +62,7 @@ box_move[2,3]=-5
 x_axis_mesh.transform(box_move)
 
 ## Transform such that the path is in x-axis
-rotation_theta=np.radians(0) ## rotation angle such that path align x-axis
+rotation_theta=np.radians(-90) ## rotation angle such that path align x-axis
 translation_p = np.array([0,0,0]) ## Translation is less matters here
 Trans_zaxis=np.eye(4)
 Trans_zaxis[:3,:3]=rot([0,0,1],rotation_theta)
@@ -70,15 +70,18 @@ Trans_zaxis[:3,3]=translation_p
 scanned_points.transform(Trans_zaxis)
 
 # bbox for each weld
-bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=85, height=20, depth=0.1)
+box_width = 40
+box_height = 15
+bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=box_width, height=box_height, depth=0.1)
 box_move=np.eye(4)
 box_move[0,3]=-32 # x-axis
-box_move[1,3]=-25 # y-axis
-box_move[2,3]=1
+box_move[1,3]=-40 # y-axis
+box_move[2,3]=0
 bbox_mesh.transform(box_move)
 
-bbox_1_min=(-32,-52,-10)
-bbox_1_max=(53,-32,100)
+bbox_1_min=(-32,-40,-10)
+bbox_1_max=(bbox_1_min[0]+box_width,bbox_1_min[1]+box_height, 100)
+
 
 # bbox_2_min=(1,-57,-10)
 # bbox_2_max=(86,-37,100)
@@ -111,7 +114,7 @@ for weld_i in range(len(boxes_min)):
     all_welds_height.append({})
 
 ##### cross section parameters
-z_height_start=0.5
+z_height_start=0
 
 
 resolution_z=0.1
@@ -222,7 +225,7 @@ for z in np.arange(z_height_start,z_max+resolution_z,resolution_z):
         plt.xlabel('x-axis (mm)',fontsize=16)
         plt.legend()
         plt.show()
-    exit()
+exit()
 
 pickle.dump(all_welds_width, open(data_dir+'all_welds_width.pickle','wb'))
 pickle.dump(all_welds_height, open(data_dir+'all_welds_height.pickle','wb'))

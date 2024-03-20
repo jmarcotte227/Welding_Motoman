@@ -16,7 +16,7 @@ counts_all_frames = []
 temp_all_frames = []
 all_frames = []
 data_mode = 0
-main_folder_path = '../data/wall_weld_test/moveL_100_repeat_weld_scan_2023_08_02_17_07_02'
+main_folder_path = '../../recorded_data/weld_scan_job205_v102023_07_27_12_16_49'
 for folder_name in os.listdir(main_folder_path):
     if folder_name.startswith('layer_'):
         folder_path = os.path.join(main_folder_path, folder_name)
