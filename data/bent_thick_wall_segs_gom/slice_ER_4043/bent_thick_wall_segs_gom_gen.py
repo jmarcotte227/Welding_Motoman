@@ -65,8 +65,8 @@ def main():
     num_pre_seg = 2
     base_seg_len = 100
     base_seg_min = 0
-    base_seg_max = 80
-    work_offset = 20
+    base_seg_max = 70
+    work_offset = 15
     points_per_base_seg = int(base_seg_len/points_distance)
     base_seg_curve = np.zeros((num_pre_seg*points_per_base_seg,6))
 
@@ -128,8 +128,8 @@ def main():
     vt_prev = max_speed
     vw_prev = 230
     vw_next = 230
-    vt_fill = 6.08
-    vw_fill = 240
+    vt_fill = 5
+    vw_fill = 280
 
     #initialized with first bead params
     print(min_dH)

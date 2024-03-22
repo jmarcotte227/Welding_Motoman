@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
-	dataset='bent_thick_wall/'
+	dataset='bent_thick_wall_segs_gom/'
 	sliced_alg='slice_ER_4043/'
 	data_dir='../data/'+dataset+sliced_alg
 	num_layers=757

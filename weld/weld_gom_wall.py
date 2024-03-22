@@ -181,7 +181,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		print("length V1: ", len(v1_all))
 		input("----enter to continute----")
 		
-		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=False)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=True)
 		input(f"----------segment {x} finished----------")
 	q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 	ws.jog_single(robot,[q_0,0,0,0,0,0],4)
