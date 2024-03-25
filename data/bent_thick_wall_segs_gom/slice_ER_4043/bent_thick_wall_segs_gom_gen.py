@@ -187,7 +187,7 @@ def main():
     dir_flag = True
     for layer in range(num_layers-1):
         for point in range(points_per_layer):
-              dx,dz = rotate([rot_point, 0], (curve_curved[layer*points_per_layer+point,0],curve_curved[layer*points_per_layer+point,2]),-layer_angle)
+              dx,dz = rotate([wall_length-rot_point, 0], (curve_curved[layer*points_per_layer+point,0],curve_curved[layer*points_per_layer+point,2]),layer_angle)
               #print(dx,dz)
               curve_curved[(layer+1)*points_per_layer+point,0] = dx
               if dir_flag:
@@ -196,7 +196,7 @@ def main():
                 curve_curved[(layer+1)*points_per_layer+point,1] = curve_curved[point,1]
               curve_curved[(layer+1)*points_per_layer+point,2] = dz
 
-              grav_dx,grav_dz = rotate((0,0), (curve_curved[layer*points_per_layer+point,3],curve_curved[layer*points_per_layer+point,5]),-layer_angle)
+              grav_dx,grav_dz = rotate((0,0), (curve_curved[layer*points_per_layer+point,3],curve_curved[layer*points_per_layer+point,5]),layer_angle)
               curve_curved[(layer+1)*points_per_layer+point,3] = grav_dx
               curve_curved[(layer+1)*points_per_layer+point,5] = grav_dz
 

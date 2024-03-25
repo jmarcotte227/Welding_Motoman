@@ -254,7 +254,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			q1=robot.inv(waypoint_pose.p,waypoint_pose.R,curve_sliced_js[breakpoints[0]])[0]
 			q2=positioner_js[breakpoints[0]]
 			ws.jog_dual(robot,positioner,q1,q2,v=0.5) #### can crank this speed tomorrow if nothing bad happens######################################
-			input("-----cleared work-----")
+			print("-----cleared work-----")
 		#print("breakpoints: ",breakpoints)
 		q1_all=[curve_sliced_js[breakpoints[0]]]
 		q2_all=[positioner_js[breakpoints[0]]]
@@ -275,7 +275,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		print("feedrate: ,", feed_profile[x])
 		print("layer: ", layer)
 		print("length V1: ", len(v1_all))
-		input("----enter to continute----")
+		#input("----enter to continute----")
 		
 		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feed_profile[x]/10)+job_offset],arc=True)
 		input(f"----------segment {x} finished----------")
