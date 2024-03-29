@@ -186,9 +186,9 @@ vd_relative_adjustment=0
 # 	q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 # 	ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 # 	input(f"-------Layer {layer} Finished-------")
-###########################################layer welding############################################
+# ###########################################layer welding############################################
 input("Starting Actual Layer")
-num_layer_start=int(1*nominal_slice_increment)	###modify layer num here
+num_layer_start=int(4*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(70*nominal_slice_increment,slicing_meta['num_layers'])
 
 #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -253,7 +253,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			waypoint_pose.p[-1]+=50
 			q1=robot.inv(waypoint_pose.p,waypoint_pose.R,curve_sliced_js[breakpoints[0]])[0]
 			q2=positioner_js[breakpoints[0]]
-			#ws.jog_dual(robot,positioner,q1,q2,v=0.5) #### can crank this speed tomorrow if nothing bad happens######################################
+			ws.jog_dual(robot,positioner,q1,q2,v=0.5) #### can crank this speed tomorrow if nothing bad happens######################################
 			print("-----cleared work-----")
 		#print("breakpoints: ",breakpoints)
 		q1_all=[curve_sliced_js[breakpoints[0]]]

@@ -63,11 +63,11 @@ def main():
 
     #base_seg params
     num_pre_seg = 2
-    base_seg_len = 100
+    base_seg_len = 200
     base_seg_min = 0
-    base_seg_max = 10
-    work_offset = 30
-    base_start_offset = 50
+    base_seg_max = 80
+    work_offset = 20
+    base_start_offset = 0
     points_per_base_seg = int(base_seg_len/points_distance)
     base_seg_curve = np.zeros((num_pre_seg*points_per_base_seg,6))
 
