@@ -13,7 +13,7 @@ def main():
 	positioner=positioner_obj('D500B',def_path='../config/D500B_robot_default_config.yml',tool_file_path='../config/positioner_tcp.csv',\
 		pulse2deg_file_path='../config/D500B_pulse2deg_real.csv',base_transformation_file='../config/D500B_pose.csv')
 	
-	dataset='bent_thick_wall_segs_gom/'
+	dataset='gom_wall/'
 	sliced_alg='slice_ER_4043/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
