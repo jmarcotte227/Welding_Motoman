@@ -10,8 +10,8 @@ import weld_dh2v
 import matplotlib.pyplot as plt
 
 
-dataset='speed_ref_wall/'
-sliced_alg='slice_ER_4043_13/'
+dataset='bent_wall/'
+sliced_alg='slice_ER_4043_200/'
 data_dir='../data/'+dataset+sliced_alg
 with open(data_dir+'slicing.yml', 'r') as file:
 	slicing_meta = yaml.safe_load(file)
@@ -30,7 +30,7 @@ ws=WeldSend(client)
 
 ###set up control parameters
 job_offset=200 		###200 for Aluminum ER4043, 300 for Steel Alloy ER70S-6, 400 for Stainless Steel ER316L
-nominal_feedrate=160
+nominal_feedrate=200
 nominal_vd_relative=9
 nominal_wire_length=25 #pixels
 nominal_temp_below=500
@@ -226,6 +226,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			primitives.append('movel')
 		q_prev=positioner_js[breakpoints[-1]]
 		print('V1: ', v1_all)
+		print('feedrate: ', feedrate_cmd)
 		print("layer: ", layer)
 		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True)
 		q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]

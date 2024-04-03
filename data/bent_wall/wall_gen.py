@@ -25,7 +25,7 @@ def rotate(origin, point, angle):
 def main():
     min_speed = 5
     max_speed = 15
-    feed_speed = 160
+    feed_speed = 200
     material = 'ER_4043'
 
     max_dH = weld_dh2v.v2dh_loglog(min_speed,feed_speed,material)
@@ -64,7 +64,7 @@ def main():
     base_layer[0:points_per_layer,2]=0
     base_layer[0:points_per_layer,-1]=-np.ones(points_per_layer)
 
-    #np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    np.savetxt('slice_ER_4043_200/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
     #first layer
     curve_curved[0:points_per_layer,0]=np.linspace(0,wall_length,points_per_layer)
@@ -90,8 +90,8 @@ def main():
     ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     plt.show()
 
-    #for layer in range(num_layers):
-	    #np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+    for layer in range(num_layers):
+	    np.savetxt('slice_ER_4043_200/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
         
 
 

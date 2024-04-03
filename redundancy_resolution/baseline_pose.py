@@ -7,8 +7,8 @@ from robot_def import *
 
 
 def main():
-	dataset='gom_wall/'
-	sliced_alg='slice_ER_4043/'
+	dataset='bent_wall/'
+	sliced_alg='slice_ER_4043_200/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
@@ -37,15 +37,15 @@ def main():
 	q_seed=np.radians([-35.4291,56.6333,40.5194,4.5177,-52.2505,-11.6546])
 
 	rr=redundancy_resolution(robot,positioner,curve_sliced)
-	H=rr.baseline_pose(vec=np.array([0,0]))
-
-	# try:
-	# 	H=np.array(slicing_meta['H'])
-	# except KeyError:
-	# 	try:
-	# 		H=rr.baseline_pose(vec=slicing_meta['placing_vector'])
-	# 	except KeyError:
-	# 		H=rr.baseline_pose()
+	#H=rr.baseline_pose(vec=np.array([0,0]))
+	print(curve_sliced[0])
+	try:
+		H=np.array(slicing_meta['H'])
+	except KeyError:
+		try:
+			H=rr.baseline_pose(vec=slicing_meta['placing_vector'])
+		except KeyError:
+			H=rr.baseline_pose()
 
 	
 	H[2,-1]+=slicing_meta['num_baselayers']*slicing_meta['baselayer_thickness']
