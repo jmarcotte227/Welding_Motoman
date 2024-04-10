@@ -1,4 +1,4 @@
-num_layers: 30
+num_layers: 80
 num_baselayers: 0
 line_resolution: 0.1
 baselayer_thickness: 3
@@ -11,7 +11,7 @@ tube_diameter: 50
 smooth_filter: False
 q_positioner_seed: 
   - -0.261799387799149
-  - 3.26254061
+  - 1.820263258290424790
 
 
 

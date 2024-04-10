@@ -25,7 +25,8 @@ def rotate(origin, point, angle):
 def main():
     min_speed = 5
     max_speed = 15
-    feed_speed = 200
+    feed_speed = 160
+
     material = 'ER_4043'
 
     max_dH = weld_dh2v.v2dh_loglog(min_speed,feed_speed,material)
@@ -91,7 +92,7 @@ def main():
     plt.show()
 
     for layer in range(num_layers):
-	    np.savetxt('slice_ER_4043_200/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+	    np.savetxt('slice_ER_4043_230/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
         
 
 

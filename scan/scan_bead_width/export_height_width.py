@@ -12,3 +12,5 @@ with open('height_width_data.csv','w', newline='') as file:
         row = [weld_dh2v.v2dh_loglog(vel, 160, 'ER_4043'), weld_w2v.v2w_loglog(vel, 160, 'ER_4043')]
         writer.writerow(row)
         print(row)
+
+        

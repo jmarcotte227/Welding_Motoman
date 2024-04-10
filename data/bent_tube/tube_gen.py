@@ -42,7 +42,7 @@ def main():
 
     #tube characteristics
     tube_diameter = 50
-    num_layers = 30
+    num_layers = 80
     points_per_layer=50
     point_distance = np.pi*tube_diameter/points_per_layer
     vertical_shift = 3 #mm
@@ -113,7 +113,7 @@ def main():
     vis_step=1
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
-    ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
+    #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     ax.quiver(X=rot_point,Y=-20,Z=0,U=0,V=1,W=0,length = 40,color='g')
     ax.set_aspect('equal')
     ax.set_xlabel('x (mm)')
@@ -121,8 +121,8 @@ def main():
     ax.set_zlabel('z (mm)')
     plt.show()
 
-    # for layer in range(num_layers):
-	#     np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
+    for layer in range(num_layers):
+	    np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
 
 
 if __name__ == '__main__':
