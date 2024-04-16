@@ -121,8 +121,9 @@ def main():
     ax.set_zlabel('z (mm)')
     plt.show()
 
-    for layer in range(num_layers):
-	    np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
+    #for layer in range(num_layers):
+	    #np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
+
 
 
 if __name__ == '__main__':

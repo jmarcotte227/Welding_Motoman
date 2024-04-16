@@ -7,8 +7,8 @@ from robot_def import *
 
 
 def main():
-	dataset='bent_tube/'
-	sliced_alg='slice_ER_4043/'
+	dataset='2_width_wall/'
+	sliced_alg='slice_ER4043_160_200/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
