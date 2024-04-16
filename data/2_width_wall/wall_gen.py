@@ -12,17 +12,18 @@ import weld_dh2v
 # limits of welding bead height (based on min and Max estimate speed from Eric)
     # needs to be modified based on actual limits from Eric 
 def main():
-    feed_speed_1 = 160
-    torch_speed_1 = 8
-    feed_speed_2 = 200
+    feed_speeds = [140, 160, 180, 200]
+    torch_speeds = [5]
     material = 'ER_4043'
 
-    dH = weld_dh2v.v2dh_loglog(torch_speed_1,feed_speed_1,material)
-    torch_speed_2 = weld_dh2v.dh2v_loglog(dH,feed_speed_2,material)
+    dH = weld_dh2v.v2dh_loglog(torch_speeds[0],feed_speeds[0],material)
+    for i in range(1,len(feed_speeds)): 
+          print(i)
+          torch_speeds.append(weld_dh2v.dh2v_loglog(dH,feed_speeds[i],material))
 
 
-    print('Torch Speed 1: ', torch_speed_1)
-    print('Torch Speed 2: ', torch_speed_2)
+    print('Torch Speeds: ', torch_speeds)
+    print('Feed Speed: ', feed_speeds)
     print('dH: ', dH)
     print('------------------------')
 
@@ -31,7 +32,7 @@ def main():
     points_distance=0.5
     num_layers = 31
     points_per_layer=int(wall_length/points_distance)
-    vertical_shift = 3 #mm
+    vertical_shift = 6 #mm
 
     #layer gen
     curve_curved=np.zeros((num_layers*points_per_layer,6))
@@ -44,6 +45,11 @@ def main():
 
     np.savetxt('slice_ER4043_160_200/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
+    base_layer[0:points_per_layer,0]=np.linspace(0,wall_length,points_per_layer)
+    base_layer[0:points_per_layer,2]=3
+    base_layer[0:points_per_layer,-1]=-np.ones(points_per_layer)
+
+    np.savetxt('slice_ER4043_160_200/curve_sliced/slice0_1.csv',base_layer,delimiter=',')
     #first layer
     curve_curved[0:points_per_layer,0]=np.linspace(0,wall_length,points_per_layer)
     curve_curved[0:points_per_layer,2]=vertical_shift
@@ -72,12 +78,15 @@ def main():
     
     vel_profile = np.zeros(points_per_layer)  
     feed_profile = np.zeros(points_per_layer)
-    for i in range(0,int(points_per_layer/2)):
-         vel_profile[i] = torch_speed_1
-         feed_profile[i] = feed_speed_1
-    for i in range(int(points_per_layer/2), points_per_layer):
-         vel_profile[i] = torch_speed_2
-         feed_profile[i] = feed_speed_2
+    zones = len(feed_speeds)
+    points_per_zone = int(points_per_layer/zones)
+    print(points_per_zone)
+    for i in range(zones):
+     for j in range(points_per_zone):
+         vel_profile[int(i*points_per_zone+j)] = torch_speeds[i]
+         feed_profile[int(i*points_per_zone+j)] = feed_speeds[i]
+    print(vel_profile)
+    print(feed_profile)
     
     with open('slice_ER4043_160_200/vel_profile.pkl', 'wb') as file:
          pickle.dump(vel_profile, file)

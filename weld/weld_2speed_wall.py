@@ -141,10 +141,10 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		
 		###alternate the start point on different ends
 
-		# if start_dir: breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
-		# else:
-		# 	breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
-		# start_dir = not start_dir
+		if start_dir: breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
+		else:
+			breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
+		start_dir = not start_dir
 		
 		###########################################velocity profile#########################################
 		
@@ -185,8 +185,8 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		
 		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=True)
 		input(f"----------segment {x} finished----------")
-	q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
-	ws.jog_single(robot,[q_0,0,0,0,0,0],4)
+	# q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
+	# ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 	input(f"-------Layer {layer} Finished-------")
 
 # ###########################################layer welding############################################
@@ -237,10 +237,10 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		
 		###alternate the start point on different ends
 
-		# if start_dir: breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
-		# else:
-		# 	breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
-		# start_dir = not start_dir
+		if start_dir: breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
+		else:
+			breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
+		start_dir = not start_dir
 		
 		###########################################velocity profile#########################################
 		
@@ -256,7 +256,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 			waypoint_pose.p[-1]+=50
 			q1=robot.inv(waypoint_pose.p,waypoint_pose.R,curve_sliced_js[breakpoints[0]])[0]
 			q2=positioner_js[breakpoints[0]]
-			#ws.jog_dual(robot,positioner,q1,q2,v=0.5) #### can crank this speed tomorrow if nothing bad happens######################################
+			ws.jog_dual(robot,positioner,q1,q2,v=0.5) #### can crank this speed tomorrow if nothing bad happens######################################
 			input("-----cleared work-----")
 		#print("breakpoints: ",breakpoints)
 		q1_all=[curve_sliced_js[breakpoints[0]]]
@@ -281,10 +281,10 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		print("layer: ", layer)
 		print("length V1: ", len(v1_all))
 		print("length feed: ", len(feed_send))
-		#input("----enter to continute----")
+		input("----enter to continute----")
 		
-		#timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=feed_send,arc=True)
+		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=feed_send,arc=True)
 		input(f"----------segment {x} finished----------")
-	#q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
-	#ws.jog_single(robot,[q_0,0,0,0,0,0],4)
+	# q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
+	# ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 	input(f"-------Layer {layer} Finished-------")
