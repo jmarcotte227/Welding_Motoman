@@ -12,8 +12,8 @@ import weld_dh2v
 # limits of welding bead height (based on min and Max estimate speed from Eric)
     # needs to be modified based on actual limits from Eric 
 def main():
-    feed_speeds = [140, 160, 180, 200]
-    torch_speeds = [5]
+    feed_speeds = [160,200]
+    torch_speeds = [13]
     material = 'ER_4043'
 
     dH = weld_dh2v.v2dh_loglog(torch_speeds[0],feed_speeds[0],material)

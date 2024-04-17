@@ -118,8 +118,8 @@ def v2dh_quadratic(v,mode=140):
 
 if __name__=='__main__':
     dh=np.array([-2,-1,0,1,1.2,1.4,1.8,2])
-    loglog_v=dh2v_loglog(dh,160)
-    quad_v=dh2v_quadratic(dh,160)
+    # loglog_v=dh2v_loglog(dh,160)
+    # quad_v=dh2v_quadratic(dh,160)
     # print(loglog_v)
     # print(quad_v)
 
@@ -128,8 +128,8 @@ if __name__=='__main__':
     # print(v2dh_loglog(75,220))
 
     # print(v2dh_loglog(5,100))
-    print(v2dh_loglog(6.6,200))
-    print(v2dh_loglog(11.6,240))
+    print(v2dh_loglog(10,140))
+    print(v2dh_loglog(14.16,180))
     
 
     
