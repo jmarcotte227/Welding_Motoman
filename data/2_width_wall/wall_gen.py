@@ -13,13 +13,13 @@ import weld_dh2v
     # needs to be modified based on actual limits from Eric 
 def main():
     feed_speeds = [160,200]
-    torch_speeds = [13]
+    torch_speeds = [13, 13.75]
     material = 'ER_4043'
 
     dH = weld_dh2v.v2dh_loglog(torch_speeds[0],feed_speeds[0],material)
-    for i in range(1,len(feed_speeds)): 
-          print(i)
-          torch_speeds.append(weld_dh2v.dh2v_loglog(dH,feed_speeds[i],material))
+    # for i in range(1,len(feed_speeds)): 
+    #       print(i)
+    #       torch_speeds.append(weld_dh2v.dh2v_loglog(dH,feed_speeds[i],material))
 
 
     print('Torch Speeds: ', torch_speeds)
@@ -74,7 +74,7 @@ def main():
     plt.show()
 
     for layer in range(num_layers):
-        np.savetxt('slice_ER4043_160_200/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+        np.savetxt('slice_ER4043_160_200_comp/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
     
     vel_profile = np.zeros(points_per_layer)  
     feed_profile = np.zeros(points_per_layer)
@@ -88,9 +88,9 @@ def main():
     print(vel_profile)
     print(feed_profile)
     
-    with open('slice_ER4043_160_200/vel_profile.pkl', 'wb') as file:
+    with open('slice_ER4043_160_200_comp/vel_profile.pkl', 'wb') as file:
          pickle.dump(vel_profile, file)
-    with open('slice_ER4043_160_200/feed_profile.pkl', 'wb') as file:
+    with open('slice_ER4043_160_200_comp/feed_profile.pkl', 'wb') as file:
          pickle.dump(feed_profile, file)
 
 if __name__ == '__main__':

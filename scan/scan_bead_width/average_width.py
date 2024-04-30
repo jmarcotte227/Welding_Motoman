@@ -27,7 +27,7 @@ def average_dict_val(dict):
 
     return avg
 
-all_weld_width = pickle.load(open(data_dir+'all_welds_width.pickle', 'rb'))
+all_weld_width = pickle.load(open(data_dir+'all_layer_width_high_res.pickle', 'rb'))
 average_values = []
 layers = []
 
