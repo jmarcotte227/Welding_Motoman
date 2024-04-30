@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 def main():
 	dataset='2_width_wall/'
-	sliced_alg='slice_ER4043_160_200/'
+	sliced_alg='slice_ER4043_160_200_comp/'
 	data_dir='../data/'+dataset+sliced_alg
 	num_layers=757
 	num_baselayers=2
