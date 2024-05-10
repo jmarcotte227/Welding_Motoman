@@ -16,21 +16,21 @@ def lin(x, a, b):
 def quad(x, a, b, c):
     return a*x**2+b*x+c
 
-width_data_file = open('all_layer_width_high_res.pickle', 'rb')
-velocity_profile_file = open('layer_velocity_profile.pickle', 'rb')
+width_data_file = open('200_layer_width_high_res.pickle', 'rb')
+velocity_profile_file = open('200_layer_velocity_profile.pickle', 'rb')
 width_data = pickle.loads(width_data_file.read())
 velocity_profile = pickle.loads(velocity_profile_file.read())
 
 #import calibration data
-width_7_data = open('ref_width_7.pickle', 'rb')
-cal_width_7 = pickle.loads(width_7_data.read())
+# width_7_data = open('ref_width_7.pickle', 'rb')
+# cal_width_7 = pickle.loads(width_7_data.read())
 
-width_10_data = open('ref_width_10.pickle', 'rb')
-cal_width_10 = pickle.loads(width_10_data.read())
+# width_10_data = open('ref_width_10.pickle', 'rb')
+# cal_width_10 = pickle.loads(width_10_data.read())
 
-width_13_data = open('ref_width_13.pickle', 'rb')
-cal_width_13 = pickle.loads(width_13_data.read())
-
+# width_13_data = open('ref_width_13.pickle', 'rb')
+# cal_width_13 = pickle.loads(width_13_data.read())
+print(len(velocity_profile))
 velocity_map = np.zeros((len(velocity_profile),2))
 position = 0
 point_distance = 0.5
@@ -38,10 +38,13 @@ for idx, velocity in enumerate(velocity_profile):
     velocity_map[idx,0] = position
     velocity_map[idx,1] = velocity
     position+=point_distance
-dH_min = weld_dh2v.v2dh_loglog(velocity_map[0,1], 160, "ER_4043")
-dH_max = weld_dh2v.v2dh_loglog(velocity_map[-1,1], 160, "ER_4043")
+dH_min = weld_dh2v.v2dh_loglog(velocity_map[0,1], 200, "ER_4043")
+print("Min DH: ", dH_min)
+dH_max = weld_dh2v.v2dh_loglog(velocity_map[-1,1], 200, "ER_4043")
+print("Max DH: ", dH_max)
+
 h_profile = np.linspace(dH_min, dH_max, 1000)
-vel_profile = weld_dh2v.dh2v_loglog(h_profile, 160, "ER_4043")
+vel_profile = weld_dh2v.dh2v_loglog(h_profile, 200, "ER_4043")
 
 vel_interpolate = {}
 position = 0
@@ -66,7 +69,7 @@ velocity = []
 plot_flag = True
 
 ################
-x_offset = 8
+x_offset = 0
 ################
 
 ##Lump data for all layer widths
@@ -119,15 +122,15 @@ intercepts = []
 # plt.legend()
 # plt.show()
 
-# fig,ax = plt.subplots(1,3)
+fig,ax = plt.subplots(1,3)
 # Log-Log Linear
 speeds_log = np.log(velocity)
 widths_log = np.log(widths)
 popt, pcov = curve_fit(lin, speeds_log, widths_log)
-# ax[0].plot(speeds_log, lin(speeds_log, *popt), 'r')
-# ax[0].scatter(speeds_log,widths_log)
-# ax[0].set_xlabel("log Torch Speed")
-# ax[0].set_ylabel("log Bead Width")
+ax[0].plot(speeds_log, lin(speeds_log, *popt), 'r')
+ax[0].scatter(speeds_log,widths_log)
+ax[0].set_xlabel("log Torch Speed")
+ax[0].set_ylabel("log Bead Width")
 
 # Log-Log Linear Error
 ll_mse = np.linalg.norm((widths_log-lin(speeds_log, *popt))**2)
@@ -167,11 +170,11 @@ print("popt: ", popt)
 ############################################Verification
 
 # calibration data
-cal_speed = np.array([7.0, 10.0, 13.0])
-cal_width = np.array([6.8396777716615, 5.71682659240807, 4.799368255466509])
+# cal_speed = np.array([7.0, 10.0, 13.0])
+# cal_width = np.array([6.8396777716615, 5.71682659240807, 4.799368255466509])
 
-print('Error: ', (cal_width[0]-weld_w2v.v2w_loglog(cal_speed[0]))+
-      ((cal_width[1]-weld_w2v.v2w_loglog(cal_speed[1])))+(cal_width[2]-weld_w2v.v2w_loglog(cal_speed[2])))
+# print('Error: ', (cal_width[0]-weld_w2v.v2w_loglog(cal_speed[0]))+
+#       ((cal_width[1]-weld_w2v.v2w_loglog(cal_speed[1])))+(cal_width[2]-weld_w2v.v2w_loglog(cal_speed[2])))
 
 
 fig_ver, ax_ver = plt.subplots(1,1)
@@ -186,7 +189,7 @@ ax_ver.set_ylabel('Part Width (mm)')
 
 
 locs, labels = plt.xticks()
-ax_ver.boxplot([cal_width_7, cal_width_10, cal_width_13], positions = [7, 10, 13])
+# ax_ver.boxplot([cal_width_7, cal_width_10, cal_width_13], positions = [7, 10, 13])
 plt.xticks(locs, labels)
 plt.show()
 plt.close()

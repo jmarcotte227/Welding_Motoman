@@ -25,7 +25,7 @@ def rotate(origin, point, angle):
 def main():
     min_speed = 5
     max_speed = 15
-    feed_speed = 160
+    feed_speed = 200
 
     material = 'ER_4043'
 
@@ -40,10 +40,12 @@ def main():
 
     #wall characteristics
     wall_length = 100
-    points_distance=0.5
+    points_distance=1.5
     num_layers = 31
     points_per_layer=int(wall_length/points_distance)
     vertical_shift = 3 #mm
+    print(points_per_layer)
+    
 
 
     #rotation criteria
@@ -65,7 +67,7 @@ def main():
     base_layer[0:points_per_layer,2]=0
     base_layer[0:points_per_layer,-1]=-np.ones(points_per_layer)
 
-    np.savetxt('slice_ER_4043_200/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    # np.savetxt('slice_ER_4043_200/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
     #first layer
     curve_curved[0:points_per_layer,0]=np.linspace(0,wall_length,points_per_layer)
@@ -85,14 +87,29 @@ def main():
               curve_curved[(layer+1)*points_per_layer+point,5] = grav_dz
 
 
-    vis_step=20
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
-    ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
-    plt.show()
+    # vis_step=20
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    # ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
+    # ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
+    # plt.show()
 
-    for layer in range(num_layers):
-	    np.savetxt('slice_ER_4043_230/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+    vis_step=1
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+    fig, ax = plt.subplots()
+    fig.dpi=300
+    for i in range(num_layers):
+         ax.plot(curve_curved[i*points_per_layer:(i+1)*points_per_layer:vis_step,0],curve_curved[i*points_per_layer:(i+1)*points_per_layer:vis_step,2],'r.-')
+    #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
+    ax.set_aspect('equal')
+    ax.set_xlabel('x (mm)')
+    ax.set_ylabel('z (mm)')
+    plt.show()
+    print(curve_curved.size)
+
+
+    # for layer in range(num_layers):
+	#     np.savetxt('slice_ER_4043_230/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
         
 
 

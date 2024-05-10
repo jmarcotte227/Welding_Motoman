@@ -26,7 +26,7 @@ data_dir=''
 config_dir='../../config/'
 
 ######## read the combined point clouds
-scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'variable_feed_wall.stl')
+scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'2_speed_comp.stl')
 
 scanned_points = scanned_points_mesh.sample_points_uniformly(number_of_points=1110000)
 #visualize_pcd([scanned_points_mesh,scanned_points])
@@ -80,8 +80,8 @@ bbox_height = 3
 
 bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=110 , height=20, depth=1)
 box_move=np.eye(4)
-box_move[0,3]=-60 # x-axis
-box_move[1,3]=-5 # y-axis
+box_move[0,3]=-5 # x-axis
+box_move[1,3]= -10 # y-axis
 box_move[2,3]=bbox_height
 bbox_mesh.transform(box_move)
 
@@ -248,4 +248,4 @@ print(type(layer_data[0]))
 print(layer_data[0].size)
 print(layer_data[10].size)    
 #print("all layer width: ", all_welds_width)
-pickle.dump(all_welds_width, open(data_dir+'4_speed_wall_width.pickle','wb'))
+pickle.dump(all_welds_width, open(data_dir+'2_speed_wall_width_comp.pickle','wb'))

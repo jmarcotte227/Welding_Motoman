@@ -12,7 +12,7 @@ def lin(x, a, b):
 def quad(x, a, b, c):
     return a*x**2+b*x+c
 
-width_data_file = open('all_layer_width_high_res.pickle', 'rb')
+width_data_file = open('200_layer_width_high_res.pickle', 'rb')
 width_data = pickle.loads(width_data_file.read())
 
 widths = []

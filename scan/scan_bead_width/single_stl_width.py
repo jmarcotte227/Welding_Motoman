@@ -26,7 +26,7 @@ data_dir=''
 config_dir='../../config/'
 
 ######## read the combined point clouds
-scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'bent_wall_scan_trimmed.stl')
+scanned_points_mesh = o3d.io.read_triangle_mesh(data_dir+'200IPM_bentwall.stl')
 
 scanned_points = scanned_points_mesh.sample_points_uniformly(number_of_points=1110000)
 #visualize_pcd([scanned_points_mesh,scanned_points])
@@ -49,7 +49,7 @@ Transz0 = Transform(rot(k,theta),[0,0,0])*\
 			Transform(np.eye(3),[0,0,plane_model[3]/plane_model[2]])
 Transz0_H=H_from_RT(Transz0.R,Transz0.p)
 scanned_points.transform(Transz0_H)
-#visualize_pcd([scanned_points])
+# visualize_pcd([scanned_points])
 ### now the distance to plane is the z axis
 
 #orient the x-axis
@@ -68,8 +68,8 @@ box_move[2,3]=-5
 x_axis_mesh.transform(box_move)
 
 ## Transform such that the path is in x-axis
-rotation_theta=np.radians(-27) ## rotation angle such that path align x-axis
-translation_p = np.array([0,0,0]) ## Translation is less matters here
+rotation_theta=np.radians(90) ## rotation angle such that path align x-axis
+translation_p = np.array([103,0,0]) ## Translation is less matters here
 Trans_zaxis=np.eye(4)
 Trans_zaxis[:3,:3]=rot([0,0,1],rotation_theta)
 Trans_zaxis[:3,3]=translation_p
@@ -78,10 +78,10 @@ scanned_points.transform(Trans_zaxis)
 # bbox for each weld
 bbox_height = 3
 
-bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=110 , height=20, depth=1)
+bbox_mesh = o3d.geometry.TriangleMesh.create_box(width=100 , height=20, depth=1)
 box_move=np.eye(4)
-box_move[0,3]=17 # x-axis
-box_move[1,3]=-85 # y-axis
+box_move[0,3]= 0 # x-axis
+box_move[1,3]=-10 # y-axis
 box_move[2,3]=bbox_height
 bbox_mesh.transform(box_move)
 
@@ -113,12 +113,12 @@ slice_bbox = o3d.geometry.AxisAlignedBoundingBox(slice_min,slice_max) #copy of o
 slice_bbox = o3d.geometry.OrientedBoundingBox.create_from_axis_aligned_bounding_box(slice_bbox)
 slice_bbox = slice_bbox.translate(box_move[0:3,3])
 
-#visualize_pcd([scanned_points, slice_bbox])
+visualize_pcd([scanned_points, slice_bbox])
 
-rot_point = [-251.26, 0, 3]
+rot_point = [-212.822, 0, 3]
 return_dist = [x *-1 for x in rot_point]
 print("return_dist: ", return_dist)
-final_rot_angle = 17.44           # from wall generation script
+final_rot_angle = 10.0          # from wall generation script
 
 #list of angles to take data at
 num_samples = 100
@@ -265,4 +265,4 @@ if plot_flag:
     plt.show()
     
 #print("all layer width: ", all_welds_width)
-pickle.dump(all_welds_width, open(data_dir+'all_layer_width_high_res.pickle','wb'))
+pickle.dump(all_welds_width, open(data_dir+'200_layer_width_high_res.pickle','wb'))

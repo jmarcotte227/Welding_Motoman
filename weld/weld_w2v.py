@@ -4,6 +4,7 @@ material_param = {}
 material_param['ER_4043'] = {
     #ER 4043
     "160ipm": [-0.55863074,  3.01451518], #update with better estimate once found error: -0.009853848161215595
+    "200ipm": [-0.33208935,  2.72353279]
 }
 
 def w2v_loglog(w, mode = 160, material='ER_4043'):
@@ -27,8 +28,8 @@ def v2w_loglog(v, mode = 160, material='ER_4043'):
 
 def main():
     #verification values
-    ver_vals = [15,5]
-    vels = v2w_loglog(ver_vals)
+    ver_vals = [13.75]
+    vels = v2w_loglog(ver_vals,200)
     print("velocities: ", vels)
 
 if __name__=="__main__":

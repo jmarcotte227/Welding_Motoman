@@ -93,7 +93,6 @@ def main():
     # plt.show()
     
 
-
     for layer in range(num_layers-1):
         for point in range(points_per_layer):
               #rotate x coordinates
@@ -111,14 +110,19 @@ def main():
             # assign previous layer's y coordinate
               curve_curved[(layer+1)*points_per_layer+point,1] = curve_curved[layer*points_per_layer+point,1]
     vis_step=1
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
     #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
-    ax.quiver(X=rot_point,Y=-20,Z=0,U=0,V=1,W=0,length = 40,color='g')
+    ax.quiver(X=rot_point,Y=-20,Z=0,U=0,V=1,W=0,length = 40,color='g', headlength=3.0)
+
     ax.set_aspect('equal')
     ax.set_xlabel('x (mm)')
     ax.set_ylabel('y (mm)')
     ax.set_zlabel('z (mm)')
+    plt.locator_params(axis='y', nbins=4)
+
     plt.show()
 
     #for layer in range(num_layers):

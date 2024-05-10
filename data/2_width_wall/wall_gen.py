@@ -17,16 +17,16 @@ def main():
     material = 'ER_4043'
 
     dH = weld_dh2v.v2dh_loglog(torch_speeds[0],feed_speeds[0],material)
-    # for i in range(1,len(feed_speeds)): 
-    #       print(i)
-    #       torch_speeds.append(weld_dh2v.dh2v_loglog(dH,feed_speeds[i],material))
+    for i in range(1,len(feed_speeds)): 
+          print(i)
+          torch_speeds.append(weld_dh2v.dh2v_loglog(dH,feed_speeds[i],material))
 
 
     print('Torch Speeds: ', torch_speeds)
     print('Feed Speed: ', feed_speeds)
     print('dH: ', dH)
     print('------------------------')
-
+    exit()
     #wall characteristics
     wall_length = 100
     points_distance=0.5
