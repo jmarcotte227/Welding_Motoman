@@ -1,13 +1,43 @@
 import numpy as np
 import time, copy
+from RobotRaconteur.Client import *
 
 class StreamingSend(object):
-	def __init__(self,RR_robot,RR_robot_state,RobotJointCommand,streaming_rate=125.,latency=0.1):
-		self.RR_robot=RR_robot
-		self.RR_robot_state=RR_robot_state
-		self.RobotJointCommand=RobotJointCommand
+	def __init__(self,RR_robot_sub,streaming_rate=125.,latency=0.1):
+		self.RR_robot_state = RR_robot_sub.SubscribeWire('robot_state')
+		self.RR_robot = RR_robot_sub.GetDefaultClientWait(1)
+		robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", self.RR_robot)
+		self.halt_mode = robot_const["RobotCommandMode"]["halt"]
+		self.position_mode = robot_const["RobotCommandMode"]["position_command"]
+		self.RobotJointCommand = RRN.GetStructureType("com.robotraconteur.robotics.robot.RobotJointCommand",self.RR_robot)
+		self.RR_robot_state.WireValueChanged += self.robot_state_cb
 		self.streaming_rate=streaming_rate
 		self.command_seqno=0
+
+		###data logging
+		self.joint_logging_flag=False
+		self.initialize_robot()
+	
+	def initialize_robot(self):
+		self.RR_robot.reset_errors()
+		self.RR_robot.enable()
+		self.RR_robot.command_mode = self.halt_mode
+		time.sleep(0.1)
+		self.RR_robot.command_mode = self.position_mode
+		
+
+	def start_recording(self):
+		self.joint_recording=[]
+		self.joint_logging_flag=True
+	
+	def stop_recording(self):
+		self.joint_logging_flag=False
+		return np.array(self.joint_recording)
+	
+	def robot_state_cb(self, sub, value, ts):
+		self.q_cur=value.joint_position
+		if self.joint_logging_flag:
+			self.joint_recording.append(np.hstack(([time.time()],value.joint_position)))
 
 	# def get_breakpoints(self,lam,vd):
 	# 	###get breakpoints indices with dense lam and vd
@@ -56,7 +86,7 @@ class StreamingSend(object):
 			while time.time()-start_time<1/self.streaming_rate-0.0007:
 				continue
 		
-		return float(robot_state.ts['microseconds'])/1e6, robot_state.joint_position
+		return 
 
 
 	def jog2q(self,qd,point_distance=0.2):
