@@ -14,7 +14,7 @@ template.resize((int(scale_factor*template.shape[0]),int(scale_factor*template.s
 #     ir_recording = pickle.load(file)
 
 # data_dir='../../../recorded_data/ER316L/wallbf_70ipm_v7_70ipm_v7/'
-data_dir='../../../recorded_data/ER316L/cylinderspiral_100ipm_v10/'
+data_dir='../../../recorded_data/cylinderspiral_100ipm_v10/'
 
 with open(data_dir+'/ir_recording.pickle', 'rb') as file:
     ir_recording = pickle.load(file)
