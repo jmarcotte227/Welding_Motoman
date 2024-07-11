@@ -17,4 +17,4 @@ for file in glob.glob(data_dir+'curve_sliced/*.csv'):
 	curve_normal_new=np.dot(R_curve,curve[:,3:].T).T
 
 	filename=file.split('\\')[-1]
-	np.savetxt(data_dir+solution_dir+'curve_sliced_in_base_frame/'+filename,np.hstack((curve_new,curve_normal_new)),delimiter=',')
+	#np.savetxt(data_dir+solution_dir+'curve_sliced_in_base_frame/'+filename,np.hstack((curve_new,curve_normal_new)),delimiter=',')
