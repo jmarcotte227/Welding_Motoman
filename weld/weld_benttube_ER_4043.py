@@ -10,7 +10,7 @@ import weld_dh2v
 import matplotlib.pyplot as plt
 
 
-dataset='bent_tube/'
+dataset='bent_tube_continuous/'
 sliced_alg='slice_ER_4043/'
 data_dir='../data/'+dataset+sliced_alg
 with open(data_dir+'slicing.yml', 'r') as file:

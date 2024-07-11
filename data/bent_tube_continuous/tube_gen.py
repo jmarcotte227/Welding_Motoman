@@ -31,8 +31,8 @@ def main():
     feed_speed = 160
     material = 'ER_4043'
 
-    max_dH = weld_dh2v.v2dh_loglog(min_speed,feed_speed,material)
-    min_dH = weld_dh2v.v2dh_loglog(max_speed,feed_speed,material)
+    max_dH = weld_dh2v.v2dh_loglog(min_speed,feed_speed,material)*10
+    min_dH = weld_dh2v.v2dh_loglog(max_speed,feed_speed,material)*10
     mean_dH = (max_dH+min_dH)/2
 
     print('Max dH: ', max_dH)
@@ -42,7 +42,7 @@ def main():
 
     #tube characteristics
     tube_diameter = 50
-    num_layers = 80
+    num_layers = 5
     points_per_layer=50
     point_distance = np.pi*tube_diameter/points_per_layer
     vertical_shift = 3 #mm
@@ -54,6 +54,7 @@ def main():
     #rotation criteria
     layer_angle = np.arcsin((max_dH-min_dH)/tube_diameter)
     rot_point = max_dH/np.tan(layer_angle)-tube_diameter/2
+    
     print('Layer Angle:', np.rad2deg(layer_angle))
     print('Final Angle:', np.rad2deg(layer_angle)*num_layers)
     print('Point of Rotation:', rot_point)
@@ -70,14 +71,13 @@ def main():
     
 
     circle_points = PointsInCircum(tube_diameter/2, points_per_layer)
-
     #base layer
     print(len(circle_points)-1)
     for i in range(len(circle_points)-1):
         base_layer[i,0]=circle_points[i][0]
         base_layer[i,1]=circle_points[i][1]
         base_layer[i,-1]=-1
-    #np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    
 
     #first layer
     for i in range(len(circle_points)-1):
@@ -85,12 +85,63 @@ def main():
         curve_curved[i,1]=circle_points[i][1]
         curve_curved[i,-1]=-1
         curve_curved[i,2]=vertical_shift
-    # fig,ax = plt.subplots()
-    # ax.plot(curve_curved[0:points_per_layer,0],curve_curved[0:points_per_layer,1],'r.-')
-    # ax.set_aspect('equal')
-    # ax.set_xlabel('x (mm)')
-    # ax.set_ylabel('y (mm)')
-    # plt.show()
+
+    ############# bend the trajectory by rotating and scaling
+    center_point_idx = int(points_per_layer/2)
+    center_point = circle_points[center_point_idx]
+
+    # calculate angle from outer point
+    dx_inner, dz_inner = rotate([rot_point, vertical_shift],
+                                (curve_curved[0,0], curve_curved[0,2]), -layer_angle/2)
+    adj = dx_inner - curve_curved[center_point_idx, 0]
+    hyp = np.sqrt(adj**2 + (dz_inner-vertical_shift)**2)
+    seg_rot_angle = np.arccos(adj/hyp)
+
+    # calculate scale factor
+    scale_factor = hyp/tube_diameter
+
+    # rotate downhill segment to match
+    for point in range(0, center_point_idx):
+        dx, dz = rotate([curve_curved[center_point_idx, 0], curve_curved[center_point_idx, 2]], 
+                                  (curve_curved[point,0], curve_curved[point,2]),
+                                  -seg_rot_angle)
+        
+        curve_curved[point,0] = (dx-curve_curved[center_point_idx,0])*scale_factor + curve_curved[center_point_idx,0]
+        curve_curved[point,2] = (dz-curve_curved[center_point_idx,2])*scale_factor + curve_curved[center_point_idx,2]
+
+        grav_dx,grav_dz = rotate((0,0), (curve_curved[point,3],curve_curved[point,5]),layer_angle/points_per_layer*(center_point_idx-point))
+        curve_curved[point,3] = grav_dx
+        curve_curved[point,5] = grav_dz
+
+    # rotate uphill segment
+    for point in range(center_point_idx, points_per_layer):
+        dx, dz = rotate([curve_curved[center_point_idx, 0], curve_curved[center_point_idx, 2]], 
+                                  (curve_curved[point,0], curve_curved[point,2]),
+                                  seg_rot_angle)
+        curve_curved[point,0] = (dx-curve_curved[center_point_idx,0])*scale_factor + curve_curved[center_point_idx,0]
+        curve_curved[point,2] = (dz-curve_curved[center_point_idx,2])*scale_factor + curve_curved[center_point_idx,2]
+        grav_dx,grav_dz = rotate((0,0), (curve_curved[point,3],curve_curved[point,5]),layer_angle/points_per_layer*(center_point_idx-point))
+        curve_curved[point,3] = grav_dx
+        curve_curved[point,5] = grav_dz
+
+    print("center point: ", center_point)
+    print("dx_inner: ", dx_inner)
+    print("dz_inner: ", dz_inner)
+    print("adjacent: ", adj)
+    print("hypotenuse: ", hyp)
+    print("new angle: ", seg_rot_angle)
+
+    #rotate 
+    
+
+    fig,ax = plt.subplots()
+    ax.plot(curve_curved[0:points_per_layer,0],curve_curved[0:points_per_layer,1],'r.-')
+    ax.plot(dx_inner, dz_inner)
+    ax.set_aspect('equal')
+    ax.set_xlabel('x (mm)')
+    ax.set_ylabel('y (mm)')
+    plt.show()
+    
     
 
     for layer in range(num_layers-1):
@@ -114,9 +165,10 @@ def main():
     plt.rc('font', family='serif')
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
+    #ax.plot3D(base_layer[::vis_step,0],base_layer[::vis_step,1],base_layer[::vis_step,2],'b.-')
     #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
-    ax.quiver(X=rot_point,Y=-20,Z=0,U=0,V=1,W=0,length = 40,color='g', headlength=3.0)
-
+    #ax.quiver(X=rot_point,Y=-20,Z=0,U=0,V=1,W=0,length = 40,color='g')
+    print()
     ax.set_aspect('equal')
     ax.set_xlabel('x (mm)')
     ax.set_ylabel('y (mm)')
@@ -125,9 +177,9 @@ def main():
 
     plt.show()
 
-    #for layer in range(num_layers):
-	    #np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
-
+    ######### uncomment for export ####################
+    # np.savetxt('slice_ER_4043/curve_sliced/slice1_0.csv',curve_curved,delimiter=',') 
+    # np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':
