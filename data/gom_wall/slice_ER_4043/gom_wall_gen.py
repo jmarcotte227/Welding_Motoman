@@ -63,11 +63,11 @@ def main():
 
     #base_seg params
     num_pre_seg = 2
-    base_seg_len = 200
+    base_seg_len = 100
     base_seg_min = 0
-    base_seg_max = 80
-    work_offset = 20
-    base_start_offset = 0
+    base_seg_max = 10
+    work_offset = 30
+    base_start_offset = 50
     points_per_base_seg = int(base_seg_len/points_distance)
     base_seg_curve = np.zeros((num_pre_seg*points_per_base_seg,6))
 
@@ -106,9 +106,9 @@ def main():
     ax.set_aspect('equal')
     plt.show()
     #save as individual segments
-    for seg_idx in range(num_pre_seg):
-        segment = base_seg_curve[points_per_base_seg*(seg_idx):points_per_base_seg*(seg_idx+1), :]
-        np.savetxt('slice_ER_4043/curve_sliced/slice0_'+str(seg_idx)+'.csv',segment,delimiter=',')
+    # for seg_idx in range(num_pre_seg):
+    #     segment = base_seg_curve[points_per_base_seg*(seg_idx):points_per_base_seg*(seg_idx+1), :]
+    #     np.savetxt('slice_ER_4043/curve_sliced/slice0_'+str(seg_idx)+'.csv',segment,delimiter=',')
 
 
     ############# first layer ##################
@@ -228,10 +228,10 @@ def main():
     ax.set_aspect('equal')
     plt.show()
 
-    for layer in range(num_layers):
-         for seg in range(num_matrix_seg+num_filler_seg):
-	         np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_'+str(seg)+'.csv',
-                     curve_curved[layer*points_per_layer+seg*points_per_segment:layer*points_per_layer+(1+seg)*points_per_segment],delimiter=',')
+    # for layer in range(num_layers):
+    #      for seg in range(num_matrix_seg+num_filler_seg):
+	#          np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_'+str(seg)+'.csv',
+    #                  curve_curved[layer*points_per_layer+seg*points_per_segment:layer*points_per_layer+(1+seg)*points_per_segment],delimiter=',')
         
 
 

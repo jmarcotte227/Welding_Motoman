@@ -147,8 +147,8 @@ for angle in rot_angles:
 
 
 #visualize_pcd([scanned_points,x_axis_mesh,bbox_mesh])
-# bboxes.append(scanned_points)
-# visualize_pcd(bboxes)
+bboxes.append(scanned_points)
+visualize_pcd(bboxes)
 
 ##################### get welding pieces end ########################
 
