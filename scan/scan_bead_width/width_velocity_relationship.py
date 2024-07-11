@@ -182,7 +182,7 @@ fig_ver, ax_ver = plt.subplots(1,1)
 ax_ver.scatter(velocity,widths)
 vel_ver = np.linspace(5, 15)
 
-w_ver = weld_w2v.v2w_loglog(vel_ver)
+w_ver = weld_w2v.v2w_loglog(vel_ver, 200)
 ax_ver.plot(vel_ver, w_ver, 'r')
 ax_ver.set_xlabel('Torch Speed (mm/s)')
 ax_ver.set_ylabel('Part Width (mm)')

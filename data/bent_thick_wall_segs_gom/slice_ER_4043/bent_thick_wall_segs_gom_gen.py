@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib import cm
 import sys
 import pickle
@@ -104,10 +105,10 @@ def main():
     #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     ax.set_aspect('equal')
     plt.show()
-    #save as individual segments
-    for seg_idx in range(num_pre_seg):
-        segment = base_seg_curve[points_per_base_seg*(seg_idx):points_per_base_seg*(seg_idx+1), :]
-        np.savetxt('slice_ER_4043/curve_sliced/slice0_'+str(seg_idx)+'.csv',segment,delimiter=',')
+    # #save as individual segments
+    # for seg_idx in range(num_pre_seg):
+    #     segment = base_seg_curve[points_per_base_seg*(seg_idx):points_per_base_seg*(seg_idx+1), :]
+    #     np.savetxt('slice_ER_4043/curve_sliced/slice0_'+str(seg_idx)+'.csv',segment,delimiter=',')
 
 
     ############# first layer ##################
@@ -165,18 +166,39 @@ def main():
     curve_curved=np.zeros((num_layers*points_per_layer,6))
 
     ######## Create the first layer ###############
-
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+    fig,ax = plt.subplots(1,1)
+    
     # matrix beads
 
     for seg_idx in range(num_matrix_seg):
         curve_curved[seg_idx*points_per_segment:(seg_idx+1)*points_per_segment, 0] = distances[seg_idx]
         curve_curved[seg_idx*points_per_segment:(seg_idx+1)*points_per_segment, 1] = np.linspace(work_offset, work_offset+wall_width, points_per_segment)
         curve_curved[seg_idx*points_per_segment:(seg_idx+1)*points_per_segment, -1] = -1
+        
+
+        ax.plot([distances[seg_idx]]*points_per_segment, np.linspace(work_offset, work_offset+wall_width, points_per_segment), 'r.-', label='Matrix Beads')
     # filler beads
     for seg_idx in range(num_filler_seg):
         curve_curved[(num_matrix_seg+seg_idx)*points_per_segment:(num_matrix_seg+seg_idx+1)*points_per_segment, 0] = distances[seg_idx]+(distances[seg_idx+1]-distances[seg_idx])/2
         curve_curved[(num_matrix_seg+seg_idx)*points_per_segment:(num_matrix_seg+seg_idx+1)*points_per_segment, 1] = np.linspace( work_offset+wall_width, work_offset, points_per_segment)
         curve_curved[(num_matrix_seg+seg_idx)*points_per_segment:(num_matrix_seg+seg_idx+1)*points_per_segment, -1] = -1
+
+        ax.plot([distances[seg_idx]+(distances[seg_idx+1]-distances[seg_idx])/2]*points_per_segment, np.linspace( work_offset+wall_width, work_offset, points_per_segment), 'b.-', label='Filler Beads')
+    ax.set_aspect('equal')
+    ax.set_xlabel('X Coordinate (mm)')
+    ax.set_ylabel('Y Coordinate (mm)')
+    handles, labels = ax.get_legend_handles_labels()
+    newLabels, newHandles = [], []
+    for handle, label in zip(handles, labels):
+      if label not in newLabels:
+        newLabels.append(label)
+        newHandles.append(handle)
+    ax.legend(newHandles, newLabels)
+    fig.dpi=500
+    plt.savefig('gom_path_plot.png',dpi=500)
+    plt.show()
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     ax.plot3D(base_seg_curve[::vis_step,0],base_seg_curve[::vis_step,1],base_seg_curve[::vis_step,2],'b.-')
     ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
@@ -227,10 +249,10 @@ def main():
     ax.set_aspect('equal')
     plt.show()
 
-    for layer in range(num_layers):
-         for seg in range(num_matrix_seg+num_filler_seg):
-	         np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_'+str(seg)+'.csv',
-                     curve_curved[layer*points_per_layer+seg*points_per_segment:layer*points_per_layer+(1+seg)*points_per_segment],delimiter=',')
+    # for layer in range(num_layers):
+    #      for seg in range(num_matrix_seg+num_filler_seg):
+	#          np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_'+str(seg)+'.csv',
+    #                  curve_curved[layer*points_per_layer+seg*points_per_segment:layer*points_per_layer+(1+seg)*points_per_segment],delimiter=',')
         
 
 

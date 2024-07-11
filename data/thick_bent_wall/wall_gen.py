@@ -40,7 +40,7 @@ def main():
     #wall characteristics
     wall_length = 100
     points_distance=0.5
-    num_layers = 31
+    num_layers = 5
     points_per_layer=int(wall_length/points_distance)
     vertical_shift = 3 #mm
 

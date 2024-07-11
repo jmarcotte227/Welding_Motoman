@@ -25,7 +25,7 @@ def rotate(origin, point, angle):
 def main():
     min_speed = 5
     max_speed = 15
-    feed_speed = 200
+    feed_speed = 160
 
     material = 'ER_4043'
 
@@ -41,7 +41,7 @@ def main():
     #wall characteristics
     wall_length = 100
     points_distance=1.5
-    num_layers = 31
+    num_layers = 30
     points_per_layer=int(wall_length/points_distance)
     vertical_shift = 3 #mm
     print(points_per_layer)
@@ -106,6 +106,10 @@ def main():
     ax.set_ylabel('z (mm)')
     plt.show()
     print(curve_curved.size)
+
+    print(curve_curved[29*points_per_layer:(29+1)*points_per_layer:vis_step,0])
+    print(curve_curved[29*points_per_layer:(29+1)*points_per_layer:vis_step,2])
+
 
 
     # for layer in range(num_layers):
