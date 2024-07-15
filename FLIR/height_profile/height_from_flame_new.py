@@ -18,14 +18,17 @@ positioner=positioner_obj('D500B',def_path=config_dir+'D500B_robot_default_confi
 flir_intrinsic=yaml.load(open(config_dir+'FLIR_A320.yaml'), Loader=yaml.FullLoader)
 
 # Load the IR recording data from the pickle file
-data_dir='../../../recorded_data/ER4043/wallbf_100ipm_v10_80ipm_v8/'
+data_dir='../../../recorded_data/wallbf_100ipm_v10_100ipm_v10/'
 with open(data_dir+'/ir_recording.pickle', 'rb') as file:
     ir_recording = pickle.load(file)
 ir_ts=np.loadtxt(data_dir+'/ir_stamps.csv', delimiter=',')
 joint_angle=np.loadtxt(data_dir+'/weld_js_exe.csv', delimiter=',')
 
-timeslot=[124.7,135.1,145.6,156.0,166.5,176.9,187.8,198.3,208.9,219.2,229.8,240.3,250.8,261.2,271.8,282.2,292.7,303.2,313.7,324.2,334.7,345.3,355.8,366.3]
+timeslot=[ir_ts[0]-ir_ts[0], ir_ts[-1]-ir_ts[0]]#[124.7,135.1,145.6,156.0,166.5,176.9,187.8,198.3,208.9,219.2,229.8,240.3,250.8,261.2,271.8,282.2,292.7,303.2,313.7,324.2,334.7,345.3,355.8,366.3]
 duration=np.mean(np.diff(timeslot))
+
+print("Number of frames:", ir_recording.shape)
+print("Number of timestesps: ", ir_ts.shape)
 
 
 
