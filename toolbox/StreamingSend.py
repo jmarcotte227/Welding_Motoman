@@ -37,7 +37,7 @@ class StreamingSend(object):
 	def robot_state_cb(self, sub, value, ts):
 		self.q_cur=value.joint_position
 		if self.joint_logging_flag:
-			self.joint_recording.append(np.hstack(([time.time()],value.joint_position)))
+			self.joint_recording.append(np.hstack(([time.time(),float(value.ts['microseconds'])/1e6],value.joint_position)))
 
 	# def get_breakpoints(self,lam,vd):
 	# 	###get breakpoints indices with dense lam and vd
@@ -84,7 +84,9 @@ class StreamingSend(object):
 
 		if start_time:
 			while time.time()-start_time<1/self.streaming_rate-0.0007:
+				time.sleep(0)	#sleep 0 for bg thread to run
 				continue
+			
 		
 		return 
 
