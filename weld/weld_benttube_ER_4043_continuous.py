@@ -200,6 +200,7 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		lam2=calc_lam_js(positioner_js,positioner)
 		lam_relative=calc_lam_cs(curve_sliced_relative)
 		num_points_layer=max(2,int(lam_relative[-1]/waypoint_distance))
+		
 		#breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
 
 		###alternate the start point on different ends

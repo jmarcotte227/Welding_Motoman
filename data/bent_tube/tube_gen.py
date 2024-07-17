@@ -45,7 +45,7 @@ def main():
     num_layers = 80
     points_per_layer=50
     point_distance = np.pi*tube_diameter/points_per_layer
-    vertical_shift = 3 #mm  ### Is this causing issues with offset height?
+    vertical_shift = 4 #mm  ### Is this causing issues with offset height?
 
     slices_per_layer = 10
 

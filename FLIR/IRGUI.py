@@ -16,11 +16,7 @@ counts_all_frames = []
 temp_all_frames = []
 all_frames = []
 data_mode = 0
-<<<<<<< HEAD
 main_folder_path = '../../recorded_data/weld_scan_job205_v102023_07_27_12_16_49'
-=======
-main_folder_path = '../FLIR/recorded_data/DAPRA/'
->>>>>>> upstream/main
 for folder_name in os.listdir(main_folder_path):
     if folder_name.startswith('layer_'):
         folder_path = os.path.join(main_folder_path, folder_name)

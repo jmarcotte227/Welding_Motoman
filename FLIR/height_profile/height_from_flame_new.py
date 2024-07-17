@@ -32,6 +32,13 @@ def flame_detection_aluminum(raw_img,threshold=1.0e4,area_threshold=4,percentage
 
 config_dir='../../config/'
 
+dataset='bent_tube/'
+sliced_alg='slice_ER_4043_dense/'
+path_dir='../../data/'+dataset+sliced_alg
+
+# Load Anticipated path
+curve_sliced_relative=np.loadtxt(path_dir+'curve_sliced_relative/slice1_0.csv',delimiter=',')
+
 robot=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'torch.csv',\
 	pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',d=15)
 robot2=robot_obj('MA1440_A0',def_path=config_dir+'MA1440_A0_robot_default_config.yml',tool_file_path=config_dir+'flir.csv',\
@@ -61,7 +68,7 @@ print("duration: ", duration)
 
 
 flame_3d=[]
-for start_time in timeslot[:4]:
+for start_time in timeslot[:-1]:
     
     start_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time))
     end_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time-duration))
@@ -112,12 +119,48 @@ for start_time in timeslot[:4]:
             # ax.set_zlabel('Z')
             # plt.show()
 
+# print("Flame Processed | Plotting Now")
+# flame_3d=np.array(flame_3d)
+# #plot the flame 3d
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
+# ax.scatter(flame_3d[:,0],flame_3d[:,1],flame_3d[:,2], c='r')
+# ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='b')
+# #set equal aspect ratio
+# ax.set_box_aspect([np.ptp(flame_3d[:,0]),np.ptp(flame_3d[:,1]),np.ptp(flame_3d[:,2])])
+# ax.set_aspect('equal')
+# plt.show()
+
 print("Flame Processed | Plotting Now")
+
 flame_3d=np.array(flame_3d)
+print(flame_3d.shape)
 #plot the flame 3d
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(flame_3d[:,0],flame_3d[:,1],flame_3d[:,2])
+ax.scatter(flame_3d[:700,0],flame_3d[:700,1],flame_3d[:700,2], 'b')
+# plot slice and successive slices
+layer = 10
+x=0
+curve_sliced_relative=np.loadtxt(path_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='g')
+try:
+    for plot_layer in range(layer+2, layer+20, 2):
+        curve_sliced_relative=np.loadtxt(path_dir+'curve_sliced_relative/slice'+str(plot_layer)+'_'+str(x)+'.csv',delimiter=',')
+        ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='r') 
+        print("Layer above: ", plot_layer) 
+except FileNotFoundError:
+    print("Layers outside of sliced layers")
+try:    
+    for plot_layer in range(layer-2, layer-20, -2):
+        if plot_layer <=0: raise FileNotFoundError
+        curve_sliced_relative=np.loadtxt(path_dir+'curve_sliced_relative/slice'+str(plot_layer)+'_'+str(x)+'.csv',delimiter=',')
+        ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='b')
+        print("Layer below: ", plot_layer)
+except FileNotFoundError: 
+    print("No layers prior")    
+
 #set equal aspect ratio
 ax.set_box_aspect([np.ptp(flame_3d[:,0]),np.ptp(flame_3d[:,1]),np.ptp(flame_3d[:,2])])
+#ax.set_aspect('equal')
 plt.show()

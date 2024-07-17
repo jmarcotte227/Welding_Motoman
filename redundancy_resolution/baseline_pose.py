@@ -3,12 +3,12 @@ import sys, traceback, time, copy, glob
 from general_robotics_toolbox import *
 from redundancy_resolution import *
 sys.path.append('../toolbox')
-from robot_def import *
+from motoman_def import *
 
 
 def main():
-	dataset='bent_tube_continuous/'
-	sliced_alg='slice_ER_4043/'
+	dataset='bent_tube/'
+	sliced_alg='slice_ER_4043_dense/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
