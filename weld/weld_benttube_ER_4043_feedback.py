@@ -62,6 +62,8 @@ layer_width_num=int(3/slicing_meta['line_resolution'])
 
 robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/torch.csv',\
 	pulse2deg_file_path='../config/MA2010_A0_pulse2deg_real.csv',d=15)
+robot2=robot_obj('MA1440_A0',def_path='../config/MA1440_A0_robot_default_config.yml',tool_file_path='../config/flir.csv',\
+	pulse2deg_file_path='../config/MA1440_A0_pulse2deg_real.csv',base_transformation_file='../config/MA1440_pose.csv')
 positioner=positioner_obj('D500B',def_path='../config/D500B_robot_extended_config.yml',tool_file_path='../config/positioner_tcp.csv',\
 	pulse2deg_file_path='../config/D500B_pulse2deg_real.csv',base_transformation_file='../config/D500B_pose.csv')
 
@@ -174,7 +176,7 @@ vd_relative_adjustment=0
 # 			primitives.append('movel')
 
 # 		q_prev=positioner_js[breakpoints[-1]]
-# 		timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=True)
+# 		global_ts, timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=True)
 # 		q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 # 		ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 # 		input("-------Base Layer Finished-------")
@@ -186,7 +188,7 @@ vd_relative_adjustment=0
 
 ###########################################layer welding############################################
 print('----------Normal Layers-----------')
-num_layer_start=int(1*nominal_slice_increment)	###modify layer num here
+num_layer_start=int(790*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(80*nominal_slice_increment,slicing_meta['num_layers'])
 
 #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -202,10 +204,10 @@ print("start layer: ", num_layer_start)
 print("end layer: ", num_layer_end)
 print("nominal_slice_increment", nominal_slice_increment)
 
-start_dir = True # Alternate direction that the layer starts from
+start_dir = False # Alternate direction that the layer starts from
 layer = num_layer_start
 # for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
-while layer <= slicing_meta['num_layers']:
+while layer <= int(slicing_meta['num_layers']):
 	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
 
 	num_sections_prev=num_sections
@@ -273,26 +275,31 @@ while layer <= slicing_meta['num_layers']:
 		rr_sensors.start_all_sensors()
 		global_ts, robot_ts,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True, blocking=True)
 		rr_sensors.stop_all_sensors()
+		global_ts = np.reshape(global_ts, (-1,1))
+		job_line = np.reshape(job_line, (-1,1))
 
+		print(global_ts.shape)
+		print(job_line.shape)
+		print(joint_recording.shape)
 		# save data
 		save_path = recorded_dir+'layer_'+str(layer)+'/'
 		try:
 			os.makedirs(save_path)
 		except Exception as e:
 			print(e)
-		np.savetxt(save_path+'weld_js_exe.csv', np.array([global_ts, job_line, joint_recording]), delimeter=',')
+		np.savetxt(save_path+'weld_js_exe.csv', np.hstack((global_ts, job_line, joint_recording)), delimiter=',')
 		rr_sensors.save_all_sensors(save_path)
 
 		q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 		ws.jog_single(robot,[q_0,0,0,0,0,0],4)
-		input("-------Layer Finished-------")
+		# input("-------Layer Finished-------")
 
 		################# PROCESS IR DATA #############################
 
-		with open(save_path+'/ir_recording.pickle', 'rb') as file:
+		with open(save_path+'ir_recording.pickle', 'rb') as file:
 			ir_recording = pickle.load(file)
-		ir_ts=np.loadtxt(data_dir+'/ir_stamps.csv', delimiter=',')
-		joint_angle=np.loadtxt(data_dir+'/weld_js_exe.csv', delimiter=',')
+		ir_ts=np.loadtxt(save_path+'ir_stamps.csv', delimiter=',')
+		joint_angle=np.loadtxt(save_path+'weld_js_exe.csv', delimiter=',')
 
 		timeslot=[ir_ts[0]-ir_ts[0], ir_ts[-1]-ir_ts[0]]
 		duration=np.mean(np.diff(timeslot))
@@ -329,7 +336,7 @@ while layer <= slicing_meta['num_layers']:
 
 				#find intersection point
 				intersection=line_intersect(p1,v1,p2,v2)
-				intersection = positioner_pose.R@(intersection-positioner_pose.p)
+				intersection = positioner_pose.R@(intersection-(positioner_pose.p+np.array([0,0,10])))
 
 				flame_3d.append(intersection)
 
@@ -338,25 +345,41 @@ while layer <= slicing_meta['num_layers']:
 	print("Flame Processed | Plotting Now")
 
 	flame_3d=np.array(flame_3d)
+	print(flame_3d.shape)
 	#plot the flame 3d
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
-	ax.scatter(flame_3d[:,0],flame_3d[:,1],flame_3d[:,2], 'b')
-	# plot slice and successive slices
+	try:
+		ax.scatter(flame_3d[:,0],flame_3d[:,1],flame_3d[:,2], 'b')
+	except IndexError:
+		print("No Flame Detected")
+	
 	curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-	ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='g')
-	for plot_layer in range(layer+2, layer+20, 2):
-		curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(plot_layer)+'_'+str(x)+'.csv',delimiter=',')
-		ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='r')
-	for plot_layer in range(layer-9, layer-1, 2):
-		curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(plot_layer)+'_'+str(x)+'.csv',delimiter=',')
-		ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='b')
-    
+	ax.plot3D(-curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='g')
+	try:
+		for plot_layer in range(layer+2, layer+21, 2):
+			curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(plot_layer)+'_'+str(x)+'.csv',delimiter=',')
+			ax.plot3D(-curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='r') 
+			print("Layer above: ", plot_layer) 
+	except FileNotFoundError:
+		print("Layers outside of sliced layers")
+	try:    
+		for plot_layer in range(layer-2, layer-21, -2):
+			if plot_layer <=0: raise FileNotFoundError
+			curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(plot_layer)+'_'+str(x)+'.csv',delimiter=',')
+			ax.plot3D(-curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='b')
+			print("Layer below: ", plot_layer)
+	except FileNotFoundError: 
+		print("No layers prior")    
 
 	#set equal aspect ratio
-	ax.set_box_aspect([np.ptp(flame_3d[:,0]),np.ptp(flame_3d[:,1]),np.ptp(flame_3d[:,2])])
-	# ax.set_aspect('equal')
-	layer = input(f"Current Layer: {layer} \nEnter Desired Layer Number: ")
+	try:
+		ax.set_box_aspect([np.ptp(flame_3d[:,0]),np.ptp(flame_3d[:,1]),np.ptp(flame_3d[:,2])])
+	except IndexError:
+		print("No Flame Detected")
+		ax.set_aspect('equal')
+	ax.set_aspect('equal')
 	plt.show()
+	layer = int(input(f"Current Layer: {layer} \nEnter Desired Layer Number: "))
 
 	
