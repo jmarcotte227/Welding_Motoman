@@ -51,7 +51,7 @@ yolo_model = YOLO(os.path.dirname(inspect.getfile(torch_tracking))+"/torch.pt")
 
 # Load the IR recording data from the pickle file
 # data_dir='../../../recorded_data/wallbf_100ipm_v10_100ipm_v10/'
-data_dir='../../../recorded_data/ER4043_bent_tube/'
+data_dir='../../../recorded_data/ER4043_bent_tube_2024_07_18_13_37_40/layer_20'
 with open(data_dir+'/ir_recording.pickle', 'rb') as file:
     ir_recording = pickle.load(file)
 ir_ts=np.loadtxt(data_dir+'/ir_stamps.csv', delimiter=',')
@@ -140,7 +140,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter(flame_3d[:700,0],flame_3d[:700,1],flame_3d[:700,2], 'b')
 # plot slice and successive slices
-layer = 10
+layer = 20
 x=0
 curve_sliced_relative=np.loadtxt(path_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
 ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='g')
