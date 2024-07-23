@@ -12,41 +12,35 @@ import weld_dh2v
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-def flame_detection_aluminum(raw_img,threshold=1.0e4,area_threshold=4,percentage_threshold=0.8):
-    ###flame detection by raw counts thresholding and connected components labeling
-    #centroids: x,y
-    #bbox: x,y,w,h
-    ###adaptively increase the threshold to 60% of the maximum pixel value
-    threshold=max(threshold,percentage_threshold*np.max(raw_img))
-    thresholded_img=(raw_img>threshold).astype(np.uint8)
-
-    nb_components, labels, stats, centroids = cv2.connectedComponentsWithStats(thresholded_img, connectivity=4)
-    
-    valid_indices=np.where(stats[:, cv2.CC_STAT_AREA] > area_threshold)[0][1:]  ###threshold connected area
-    if len(valid_indices)==0:
-        return None, None, None, None
-    
-    average_pixel_values = [np.mean(raw_img[labels == label]) for label in valid_indices]   ###sorting
-    valid_index=valid_indices[np.argmax(average_pixel_values)]      ###get the area with largest average brightness value
-
-    # Extract the centroid and bounding box of the largest component
-    centroid = centroids[valid_index]
-    bbox = stats[valid_index, :-1]
-
-    return centroid, bbox
-
 ##############################################################SENSORS####################################################################
 # weld state logging
-# weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
-cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
+weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
+# cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
 # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
+rr_sensors = WeldRRSensor(weld_service=weld_ser)
+# scanner init
 mti_client = RRN.ConnectService("rr+tcp://192.168.55.10:60830/?service=MTI2D")
 mti_client.setExposureTime("25")
+
+# Set up scanner Parameters
+scan_speed = 5 # scanning speed (mm/sec)
+scan_stand_off_d = 95 # mm
+Rz_angle = np.radians(0) # point direction with respect to weld)
+Ry_angle = np.radians(0)
+bounds_theta = np.radians(1)
+all_scan_angle = np.radians([0])
+q_init_table = np.radians([-15, 200])
+
+mti_Rpath = np.array([[ -1.,0.,0.],   
+                        [ 0.,1.,0.],
+                        [0.,0.,-1.]])
+
+
+
 ## RR sensor objects
 rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
 
 config_dir='../config/'
-flir_intrinsic=yaml.load(open(config_dir+'FLIR_A320.yaml'), Loader=yaml.FullLoader)
 
 ################################ Data Directories ###########################
 now = datetime.now()
@@ -71,6 +65,7 @@ positioner=positioner_obj('D500B',def_path='../config/D500B_robot_extended_confi
 
 client=MotionProgramExecClient()
 ws=WeldSend(client)
+scan_process = ScanProcess(robot2, positioner)
 
 ###set up control parameters
 job_offset=200 		###200 for Aluminum ER4043, 300 for Steel Alloy ER70S-6, 400 for Stainless Steel ER316L
@@ -131,11 +126,11 @@ vd_relative_adjustment=0
 # vd_relative_adjustment=0
 
 
+
+
 # ###########################################BASE layer welding############################################
 # num_layer_start=int(0*nominal_slice_increment)	###modify layer num here
 # num_layer_end=int(1*nominal_slice_increment)
-# #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
-# q_prev=np.array([9.53E-02,-2.71E+00])	###for motosim tests only
 
 # for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 # 	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
@@ -157,10 +152,9 @@ vd_relative_adjustment=0
 # 		num_points_layer=max(2,int(lam_relative[-1]/waypoint_distance))
 
 # 		###find which end to start depending on how close to joint limit
-# 		if positioner.upper_limit[1]-q_prev[1]>q_prev[1]-positioner.lower_limit[1]:
-# 			breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
-# 		else:
-# 			breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
+# 		if start_dir: breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
+#		else:
+#			breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
 
 # 		#s1_all,s2_all=calc_individual_speed(base_vd,lam1,lam2,lam_relative,breakpoints)
 
@@ -177,7 +171,6 @@ vd_relative_adjustment=0
 # 			v2_all.append(min(100,100*positioner_w/positioner.joint_vel_limit[1]))
 # 			primitives.append('movel')
 
-# 		q_prev=positioner_js[breakpoints[-1]]
 # 		global_ts, timestamp_robot,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(base_feedrate_cmd/10)+job_offset],arc=True)
 # 		q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
 # 		ws.jog_single(robot,[q_0,0,0,0,0,0],4)
@@ -193,8 +186,6 @@ print('----------Normal Layers-----------')
 num_layer_start=int(790*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(80*nominal_slice_increment,slicing_meta['num_layers'])
 
-#q_prev=client.getJointAnglesDB(positioner.pulse2deg)
-q_prev=np.array([9.53E-02,-2.71E+00])	###for motosim tests only
 num_sections_prev=5
 if num_layer_start<=1*nominal_slice_increment:
 	num_sections=len(glob.glob(data_dir+'curve_sliced_relative/slice0_*.csv'))
@@ -271,7 +262,6 @@ while layer <= int(slicing_meta['num_layers']):
 			positioner_w=vd_relative/np.linalg.norm(curve_sliced_relative[breakpoints[j]][:2])
 			v2_all.append(min(100,100*positioner_w/positioner.joint_vel_limit[1]))
 			primitives.append('movel')
-		q_prev=positioner_js[breakpoints[-1]]
 
 		################ Weld with sensors #############################
 		rr_sensors.start_all_sensors()
@@ -280,9 +270,6 @@ while layer <= int(slicing_meta['num_layers']):
 		global_ts = np.reshape(global_ts, (-1,1))
 		job_line = np.reshape(job_line, (-1,1))
 
-		print(global_ts.shape)
-		print(job_line.shape)
-		print(joint_recording.shape)
 		# save data
 		save_path = recorded_dir+'layer_'+str(layer)+'/'
 		try:
