@@ -11,6 +11,8 @@ from flir_toolbox import *
 import weld_dh2v
 import matplotlib.pyplot as plt
 from datetime import datetime
+import open3d as o3d
+
 
 ##############################################################SENSORS####################################################################
 # weld state logging
@@ -283,54 +285,25 @@ while layer <= int(slicing_meta['num_layers']):
 		ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 		# input("-------Layer Finished-------")
 
-		################# PROCESS IR DATA #############################
+	# send R1_home
+	R1_home = np.radians([-60,0,0,0,0,0])
+	ws.jog_single(robot, R1_home, v=4)
 
-		with open(save_path+'ir_recording.pickle', 'rb') as file:
-			ir_recording = pickle.load(file)
-		ir_ts=np.loadtxt(save_path+'ir_stamps.csv', delimiter=',')
-		joint_angle=np.loadtxt(save_path+'weld_js_exe.csv', delimiter=',')
+	################### scan Part ################################
+	scan_st = time.time()
 
-		timeslot=[ir_ts[0]-ir_ts[0], ir_ts[-1]-ir_ts[0]]
-		duration=np.mean(np.diff(timeslot))
+	pcd_layer = o3d.geometry.PointCloud()
+	layer_curve_relative = []
+	layer_curve_dh = []
+	for x in range(0, num_sections):
+		spg = ScanPathGen(robot2, positioner, scan_stand_off_d, Rz_angle, Ry_angle, bounds_theta)
 
-		flame_3d=[]
-	for start_time in timeslot[:-1]:
-		
-		start_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time))
-		end_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time-duration))
-		print(start_idx)
-		print(end_idx)
-	
-		#find all pixel regions to record from flame detection
-		for i in range(start_idx,end_idx):
-			
-			ir_image = ir_recording[i]
-			try:
-				centroid, bbox=flame_detection_aluminum(ir_image, percentage_threshold=0.8)
-			except ValueError:
-				centroid = None
-			if centroid is not None:
-				#find spatial vector ray from camera sensor
-				vector=np.array([(centroid[0]-flir_intrinsic['c0'])/flir_intrinsic['fsx'],(centroid[1]-flir_intrinsic['r0'])/flir_intrinsic['fsy'],1])
-				vector=vector/np.linalg.norm(vector)
-				#find index closest in time of joint_angle
-				joint_idx=np.argmin(np.abs(ir_ts[i]-joint_angle[:,0]))
-				robot2_pose_world=robot2.fwd(joint_angle[joint_idx][8:-2],world=True)
-				p2=robot2_pose_world.p
-				v2=robot2_pose_world.R@vector
-				robot1_pose=robot.fwd(joint_angle[joint_idx][2:8])
-				p1=robot1_pose.p
-				v1=robot1_pose.R[:,2]
-				positioner_pose=positioner.fwd(joint_angle[joint_idx][-2:], world=True)
+		curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+		curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
+		positioner_js=np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
 
-				#find intersection point
-				intersection=line_intersect(p1,v1,p2,v2)
-				intersection = positioner_pose.R@(intersection-(positioner_pose.p+np.array([0,0,10])))
-
-				flame_3d.append(intersection)
-
-
-	###################### Plot Flame vs Anticipated Layers ############################
+		rob_js_plan = np.hstack((curve_sliced_js, positioner_js))
+	###################### Plot height vs Anticipated Layers ############################
 	print("Flame Processed | Plotting Now")
 
 	flame_3d=np.array(flame_3d)
@@ -343,7 +316,7 @@ while layer <= int(slicing_meta['num_layers']):
 	except IndexError:
 		print("No Flame Detected")
 	
-	curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+	
 	ax.plot3D(-curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='g')
 	try:
 		for plot_layer in range(layer+2, layer+21, 2):
