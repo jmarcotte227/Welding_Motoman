@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from qpsolvers import solve_qp
 
 sys.path.append('../toolbox')
-from robot_def import *
+from motoman_def import *
 from lambda_calc import *
 # from utils import *
 from math import floor
