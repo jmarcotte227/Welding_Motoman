@@ -51,7 +51,7 @@ yolo_model = YOLO(os.path.dirname(inspect.getfile(torch_tracking))+"/torch.pt")
 
 # Load the IR recording data from the pickle file
 # data_dir='../../../recorded_data/wallbf_100ipm_v10_100ipm_v10/'
-data_dir='../../../recorded_data/ER4043_bent_tube/'
+data_dir='../../../recorded_data/ER4043_bent_tube_2024_07_18_13_37_40/layer_128'
 with open(data_dir+'/ir_recording.pickle', 'rb') as file:
     ir_recording = pickle.load(file)
 ir_ts=np.loadtxt(data_dir+'/ir_stamps.csv', delimiter=',')
@@ -99,7 +99,7 @@ for start_time in timeslot[:-1]:
 
             #find intersection point
             intersection=line_intersect(p1,v1,p2,v2)
-            intersection = positioner_pose.R@(intersection-positioner_pose.p)
+            intersection = positioner_pose.R@(intersection-(positioner_pose.p+np.array([0,0,10])))
 
             flame_3d.append(intersection)
 
@@ -140,14 +140,14 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter(flame_3d[:700,0],flame_3d[:700,1],flame_3d[:700,2], 'b')
 # plot slice and successive slices
-layer = 10
+layer = 128
 x=0
 curve_sliced_relative=np.loadtxt(path_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='g')
+ax.plot3D(-curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='g')
 try:
     for plot_layer in range(layer+2, layer+20, 2):
         curve_sliced_relative=np.loadtxt(path_dir+'curve_sliced_relative/slice'+str(plot_layer)+'_'+str(x)+'.csv',delimiter=',')
-        ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='r') 
+        ax.plot3D(-curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='r') 
         print("Layer above: ", plot_layer) 
 except FileNotFoundError:
     print("Layers outside of sliced layers")
@@ -155,7 +155,7 @@ try:
     for plot_layer in range(layer-2, layer-20, -2):
         if plot_layer <=0: raise FileNotFoundError
         curve_sliced_relative=np.loadtxt(path_dir+'curve_sliced_relative/slice'+str(plot_layer)+'_'+str(x)+'.csv',delimiter=',')
-        ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='b')
+        ax.plot3D(-curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='b')
         print("Layer below: ", plot_layer)
 except FileNotFoundError: 
     print("No layers prior")    
