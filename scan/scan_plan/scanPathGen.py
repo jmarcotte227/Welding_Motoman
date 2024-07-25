@@ -5,7 +5,7 @@ sys.path.append('../../toolbox/')
 sys.path.append('../../redundancy_resolution/')
 sys.path.append('../redundancy_resolution/')
 sys.path.append('../scan_tools/')
-from robot_def import *
+from motoman_def import *
 from multi_robot import *
 from scan_utils import *
 from scan_continuous import *

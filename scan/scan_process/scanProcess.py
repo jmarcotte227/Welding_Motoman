@@ -2,7 +2,7 @@ import sys
 import matplotlib
 sys.path.append('../../toolbox/')
 sys.path.append('../scan_tools/')
-from robot_def import *
+from motoman_def import *
 from scan_utils import *
 from utils import *
 from lambda_calc import *
@@ -227,11 +227,7 @@ class ScanProcess():
         
         return pcd_combined
 
-<<<<<<< HEAD
-    def pcd2dh_compare(self,scanned_points,last_scanned_points,curve_relative,robot_weld=None,q_weld=None,ph_param=None,drawing=False):
-=======
     def pcd2dh_old(self,scanned_points,last_scanned_points,curve_relative,robot_weld=None,q_weld=None,ph_param=None,drawing=False):
->>>>>>> upstream/main
 
         ##### cross section parameters
         # resolution_z=0.1
@@ -312,10 +308,6 @@ class ScanProcess():
         curve_i=0
         total_curve_i = len(curve_relative)
         dh=[]
-<<<<<<< HEAD
-        z_height=[]
-=======
->>>>>>> upstream/main
         for curve_wp in curve_relative:
             if np.all(curve_wp==curve_relative[-1]):
                 wp_R = direction2R(-1*curve_wp[3:],curve_wp[:3]-curve_relative[curve_i-1][:3])
@@ -360,13 +352,8 @@ class ScanProcess():
                 this_points_z=np.nan
                 last_points_z=np.nan
             
-<<<<<<< HEAD
-            this_dh = np.mean(this_points_z)-np.mean(last_points_z)
-            this_zheight = np.mean(this_points_z)
-=======
             
             this_dh = np.mean(this_points_z)-np.mean(last_points_z)
->>>>>>> upstream/main
 
             dh_max=7
             dh_min=-2
@@ -375,10 +362,6 @@ class ScanProcess():
             #     this_dh=np.nan
 
             dh.append(this_dh)
-<<<<<<< HEAD
-            z_height.append(this_zheight)
-=======
->>>>>>> upstream/main
 
             if drawing:
                 ## paint pcd for visualization
@@ -403,26 +386,11 @@ class ScanProcess():
                     dh[curve_i]=np.nanmean(dh[-2*window_nan:])
                 else:
                     dh[curve_i]=np.nanmean(dh[curve_i-window_nan:curve_i+window_nan])
-<<<<<<< HEAD
-            if np.isnan(z_height[curve_i]):
-                if curve_i<window_nan:
-                    z_height[curve_i]=np.nanmean(z_height[0:2*window_nan])
-                elif curve_i>len(z_height)-window_nan:
-                    z_height[curve_i]=np.nanmean(z_height[-2*window_nan:])
-                else:
-                    z_height[curve_i]=np.nanmean(z_height[curve_i-window_nan:curve_i+window_nan])
-=======
->>>>>>> upstream/main
         # input(dh)
 
         curve_relative=np.array(curve_relative)
         lam = calc_lam_cs(curve_relative[:,:3])
-<<<<<<< HEAD
-        profile_dh = np.array([lam,dh]).T 
-        profile_height = np.array([lam,z_height]).T   
-=======
         profile_height = np.array([lam,dh]).T   
->>>>>>> upstream/main
 
         if drawing:
             path_points.transform(H_from_RT(np.eye(3),[0,0,0.0001]))
@@ -431,15 +399,9 @@ class ScanProcess():
             draw_obj = []
             draw_obj.extend(path_viz_frames)
             draw_obj.extend([scanned_points_draw,path_points,last_scanned_points_draw,last_path_points])
-<<<<<<< HEAD
-            visualize_pcd(draw_obj)
-        
-        return profile_dh,profile_height
-=======
             # visualize_pcd(draw_obj)
         
         return profile_height
->>>>>>> upstream/main
     
     def pcd2dh(self,scanned_points,curve_relative,robot_weld=None,q_weld=None,ph_param=None,drawing=False):
 
@@ -482,11 +444,7 @@ class ScanProcess():
 
         # create the cropping polygon
         bounding_polygon=[]
-<<<<<<< HEAD
-        radius_scale=0.8
-=======
         radius_scale=0.55
->>>>>>> upstream/main
         # radius_scale=0.2
         radius=np.mean(np.linalg.norm(np.diff(curve_relative[:,:3],axis=0),axis=1))*radius_scale
         print("height neighbor radius:",radius)
@@ -552,13 +510,8 @@ class ScanProcess():
             
             this_dh = np.nanmean(this_points_z)
 
-<<<<<<< HEAD
-            dh_max=10
-            dh_min=-10
-=======
             dh_max=7
             dh_min=-2
->>>>>>> upstream/main
             this_dh = max(min(this_dh,dh_max),dh_min)
             # if this_dh>dh_max:
             #     this_dh=np.nan
