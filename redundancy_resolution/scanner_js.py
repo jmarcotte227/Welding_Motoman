@@ -13,6 +13,7 @@ from scan_utils import *
 from scan_continuous import *
 from scanPathGen import *
 from scanProcess import *
+from utils import *
 
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
@@ -88,14 +89,14 @@ with open(curve_data_dir+'slicing.yml', 'r') as file:
 line_resolution = slicing_meta['line_resolution']
 
 #### scanning parameters
-scan_speed=10 # scanning speed (mm/sec)
+scan_speed=5 # scanning speed (mm/sec)
 scan_stand_off_d = 95 ## mm
 Rz_angle = np.radians(0) # point direction w.r.t welds
 Ry_angle = np.radians(0) # rotate in y a bit
 bounds_theta = np.radians(1) ## circular motion at start and end
 extension = 10 ## extension before and after (mm)
 all_scan_angle = np.radians([0]) ## scan angle
-q_init_table=np.radians([-15,200]) ## init table
+q_init_table=np.radians([-15,0]) ## init table
 R1_w=0.01 ## regularization weight for two robots (R1)
 R2_w=0.01 ## regularization weight for two robots (R2)
 mti_Rpath = np.array([[ -1.,0.,0.],   
@@ -162,7 +163,7 @@ for i in range(0,slicing_meta['num_layers']):
         # generate scan path
         print("q init table:",np.degrees(positioner_weld_js[0]))
         scan_p,scan_R,q_out1,q_out2=spg.gen_scan_path([curve_sliced_relative],[0],all_scan_angle,\
-                            solve_js_method=0,q_init_table=positioner_weld_js[0],R_path=mti_Rpath,R1_w=R1_w,R2_w=R2_w,scan_path_dir=None)
+                            solve_js_method=1,q_init_table=positioner_weld_js[0],R_path=mti_Rpath,R1_w=R1_w,R2_w=R2_w,scan_path_dir=None)
         
         curve_scan_relative=[]
         for path_i in range(len(scan_p)):

@@ -6,7 +6,7 @@ sys.path.append('../../redundancy_resolution/')
 sys.path.append('../redundancy_resolution/')
 sys.path.append('../scan_tools/')
 from motoman_def import *
-from multi_robot import *
+import dual_robot as dr
 from scan_utils import *
 from scan_continuous import *
 from redundancy_resolution_scanner import *
@@ -428,7 +428,7 @@ class ScanPathGen():
         vd_relative=scan_speed
         
         if lam2[-1]!=0:
-            s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative,breakpoints)
+            s1_all,s2_all=dr.calc_individual_speed(vd_relative,lam1,lam2,lam_relative,breakpoints)
         else:
             s1_all=deepcopy(speed_bp)
             s2_all=np.zeros(len(s1_all))

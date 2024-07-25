@@ -7,7 +7,7 @@ from qpsolvers import solve_qp
 sys.path.append('../toolbox')
 from motoman_def import *
 from lambda_calc import *
-# from utils import *
+from utils import *
 from math import floor
 
 class redundancy_resolution_scanner(object):

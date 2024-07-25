@@ -22,6 +22,7 @@ sys.path.append('../scan/scan_process/')
 sys.path.append('../mocap/')
 
 from scanPathGen import *
+from scanProcess import *
 
 def connect_failed(s, client_id, url, err):
     global mti_sub, mti_client
@@ -41,16 +42,16 @@ def generate_mti_rr():
 
 ##############################################################SENSORS####################################################################
 # weld state logging
-weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
+# weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
 # cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
 # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
-rr_sensors = WeldRRSensor(weld_service=weld_ser)
+# rr_sensors = WeldRRSensor(weld_service=weld_ser)
 # scanner init
-mti_client = RRN.ConnectService("rr+tcp://192.168.55.10:60830/?service=MTI2D")
-mti_client.setExposureTime("25")
+# mti_client = RRN.ConnectService("rr+tcp://192.168.55.10:60830/?service=MTI2D")
+# mti_client.setExposureTime("25")
 
 # Set up scanner Parameters
-scan_speed = 5 # scanning speed (mm/sec)
+scan_speed = 2 # scanning speed (mm/sec)
 scan_stand_off_d = 95 # mm
 Rz_angle = np.radians(0) # point direction with respect to weld)
 Ry_angle = np.radians(0)
@@ -109,7 +110,8 @@ robot2=robot_obj('MA1440_A0',def_path=config_dir+'MA1440_A0_robot_default_config
 	base_marker_config_file=R2_marker_dir+'MA1440_'+R2_ph_dataset_date+'_marker_config.yaml',\
 	tool_marker_config_file=mti_marker_dir+'mti_'+R2_ph_dataset_date+'_marker_config.yaml')
 positioner=positioner_obj('D500B',def_path=config_dir+'D500B_robot_extended_config.yml',tool_file_path=config_dir+'positioner_tcp.csv',\
-	pulse2deg_file_path=config_dir+'D500B_pulse2deg_real.csv',base_transformation_file=config_dir+'D500B_pose.csv')
+	pulse2deg_file_path=config_dir+'D500B_pulse2deg_real.csv',base_transformation_file=config_dir+'D500B_pose.csv',\
+	base_marker_config_file=S1_marker_dir+'D500B_'+S1_ph_dataset_date+'_marker_config.yaml', tool_marker_config_file=S1_tcp_marker_dir+'positioner_tcp_marker_config.yaml')
 
 #### change base H to calibrated ones ####
 robot_scan_base = robot.T_base_basemarker.inv()*robot2.T_base_basemarker
@@ -255,8 +257,8 @@ vd_relative_adjustment=0
 
 ###########################################layer welding############################################
 print('----------Normal Layers-----------')
-num_layer_start=int(790*nominal_slice_increment)	###modify layer num here
-num_layer_end=min(80*nominal_slice_increment,slicing_meta['num_layers'])
+num_layer_start=int(301*nominal_slice_increment)	###modify layer num here
+num_layer_end=min(799*nominal_slice_increment,slicing_meta['num_layers'])
 
 num_sections_prev=5
 if num_layer_start<=1*nominal_slice_increment:
@@ -273,90 +275,90 @@ start_dir = False # Alternate direction that the layer starts from
 layer = num_layer_start
 # for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 while layer <= int(slicing_meta['num_layers']):
-	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
+	# mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
 
-	num_sections_prev=num_sections
-	num_sections=len(glob.glob(data_dir+'curve_sliced_relative/slice'+str(layer)+'_*.csv'))
+	# num_sections_prev=num_sections
+	# num_sections=len(glob.glob(data_dir+'curve_sliced_relative/slice'+str(layer)+'_*.csv'))
 
-	####################DETERMINE CURVE ORDER##############################################
+	# ####################DETERMINE CURVE ORDER##############################################
 	
 
-	for x in range(0,num_sections,layer_width_num):
-		curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
-		if len(curve_sliced_js)<2:
-			continue
-		positioner_js=np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-		curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-		curve_sliced = np.loadtxt(data_dir+'curve_sliced/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+	# for x in range(0,num_sections,layer_width_num):
+	# 	curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
+	# 	if len(curve_sliced_js)<2:
+	# 		continue
+	# 	positioner_js=np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+	# 	curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+	# 	curve_sliced = np.loadtxt(data_dir+'curve_sliced/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
 
-		###alternate the start point on different ends
-		num_points_layer = len(curve_sliced_js)
-		print(num_points_layer)
-		if start_dir: breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
-		else:
-			breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
-		start_dir = not start_dir
-		###########################################velocity profile#########################################
-		dh_max = slicing_meta['dh_max']
-		dh_min = slicing_meta['dh_min']
-		point_of_rotation = np.array((slicing_meta['point_of_rotation'],slicing_meta['baselayer_thickness']))
-		layer_angle = np.array((slicing_meta['layer_angle']))
-		##calculate distance to point of rotation
-		dist_to_por = []
-		for i in range(len(curve_sliced)):
-			point = np.array((curve_sliced[i,0],curve_sliced[i,2]))
-			dist = np.linalg.norm(point-point_of_rotation)
-			dist_to_por.append(dist)
+	# 	###alternate the start point on different ends
+	# 	num_points_layer = len(curve_sliced_js)
+	# 	print(num_points_layer)
+	# 	if start_dir: breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
+	# 	else:
+	# 		breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
+	# 	start_dir = not start_dir
+	# 	###########################################velocity profile#########################################
+	# 	dh_max = slicing_meta['dh_max']
+	# 	dh_min = slicing_meta['dh_min']
+	# 	point_of_rotation = np.array((slicing_meta['point_of_rotation'],slicing_meta['baselayer_thickness']))
+	# 	layer_angle = np.array((slicing_meta['layer_angle']))
+	# 	##calculate distance to point of rotation
+	# 	dist_to_por = []
+	# 	for i in range(len(curve_sliced)):
+	# 		point = np.array((curve_sliced[i,0],curve_sliced[i,2]))
+	# 		dist = np.linalg.norm(point-point_of_rotation)
+	# 		dist_to_por.append(dist)
 		
 		
 		
-		height_profile = [] 
-		for distance in dist_to_por:height_profile.append(distance*np.sin(layer_angle*np.pi/180))
-		velocity_profile = weld_dh2v.dh2v_loglog(height_profile, feedrate_cmd, 'ER_4043')
-		print(velocity_profile)
-		###move to intermidieate waypoint for collision avoidance if multiple section
-		if num_sections!=num_sections_prev:
-			waypoint_pose=robot.fwd(curve_sliced_js[breakpoints[0]])
-			waypoint_pose.p[-1]+=50
-			q1=robot.inv(waypoint_pose.p,waypoint_pose.R,curve_sliced_js[breakpoints[0]])[0]
-			q2=positioner_js[breakpoints[0]]
-			ws.jog_dual(robot,positioner,q1,q2,v=100)
-		q1_all=[curve_sliced_js[breakpoints[0]]]
-		q2_all=[positioner_js[breakpoints[0]]]
-		v1_all=[4]
-		v2_all=[10]
-		primitives=['movej']
-		for j in range(0,len(breakpoints)):
-			q1_all.append(curve_sliced_js[breakpoints[j]])
-			q2_all.append(positioner_js[breakpoints[j]])
-			v1_all.append(max(velocity_profile[breakpoints[j]],0.1))
+	# 	height_profile = [] 
+	# 	for distance in dist_to_por:height_profile.append(distance*np.sin(layer_angle*np.pi/180))
+	# 	velocity_profile = weld_dh2v.dh2v_loglog(height_profile, feedrate_cmd, 'ER_4043')
+	# 	print(velocity_profile)
+	# 	###move to intermidieate waypoint for collision avoidance if multiple section
+	# 	if num_sections!=num_sections_prev:
+	# 		waypoint_pose=robot.fwd(curve_sliced_js[breakpoints[0]])
+	# 		waypoint_pose.p[-1]+=50
+	# 		q1=robot.inv(waypoint_pose.p,waypoint_pose.R,curve_sliced_js[breakpoints[0]])[0]
+	# 		q2=positioner_js[breakpoints[0]]
+	# 		ws.jog_dual(robot,positioner,q1,q2,v=100)
+	# 	q1_all=[curve_sliced_js[breakpoints[0]]]
+	# 	q2_all=[positioner_js[breakpoints[0]]]
+	# 	v1_all=[4]
+	# 	v2_all=[10]
+	# 	primitives=['movej']
+	# 	for j in range(0,len(breakpoints)):
+	# 		q1_all.append(curve_sliced_js[breakpoints[j]])
+	# 		q2_all.append(positioner_js[breakpoints[j]])
+	# 		v1_all.append(max(velocity_profile[breakpoints[j]],0.1))
 			
-			positioner_w=vd_relative/np.linalg.norm(curve_sliced_relative[breakpoints[j]][:2])
-			v2_all.append(min(100,100*positioner_w/positioner.joint_vel_limit[1]))
-			primitives.append('movel')
+	# 		positioner_w=vd_relative/np.linalg.norm(curve_sliced_relative[breakpoints[j]][:2])
+	# 		v2_all.append(min(100,100*positioner_w/positioner.joint_vel_limit[1]))
+	# 		primitives.append('movel')
 
-		################ Weld with sensors #############################
-		rr_sensors.start_all_sensors()
-		global_ts, robot_ts,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True, blocking=True)
-		rr_sensors.stop_all_sensors()
-		global_ts = np.reshape(global_ts, (-1,1))
-		job_line = np.reshape(job_line, (-1,1))
+	# 	################ Weld with sensors #############################
+	# 	rr_sensors.start_all_sensors()
+	# 	global_ts, robot_ts,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=False, blocking=True)
+	# 	rr_sensors.stop_all_sensors()
+	# 	global_ts = np.reshape(global_ts, (-1,1))
+	# 	job_line = np.reshape(job_line, (-1,1))
 
-		# save data
-		save_path = recorded_dir+'layer_'+str(layer)+'/'
-		try:
-			os.makedirs(save_path)
-		except Exception as e:
-			print(e)
-		np.savetxt(save_path+'weld_js_exe.csv', np.hstack((global_ts, job_line, joint_recording)), delimiter=',')
-		rr_sensors.save_all_sensors(save_path)
+	# 	# save data
+	# 	save_path = recorded_dir+'layer_'+str(layer)+'/'
+	# 	try:
+	# 		os.makedirs(save_path)
+	# 	except Exception as e:
+	# 		print(e)
+	# 	np.savetxt(save_path+'weld_js_exe.csv', np.hstack((global_ts, job_line, joint_recording)), delimiter=',')
+	# 	rr_sensors.save_all_sensors(save_path)
 
-		# q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
-		# ws.jog_single(robot,[q_0,0,0,0,0,0],4)
+	# 	# q_0 = client.getJointAnglesMH(robot.pulse2deg)[0]
+	# 	# ws.jog_single(robot,[q_0,0,0,0,0,0],4)
 		
-	input("-------Layer Finished-------")
-	# send R1_home
-	ws.jog_single(robot, R1_home, v=4)
+	# input("-------Layer Finished-------")
+	# # send R1_home
+	# ws.jog_single(robot, R1_home, v=4)
 
 
 
@@ -372,10 +374,10 @@ while layer <= int(slicing_meta['num_layers']):
 		spg = ScanPathGen(robot2, positioner, scan_stand_off_d, Rz_angle, Ry_angle, bounds_theta)
 
 		# This might not be necessary, need to check
-		# curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-		# curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
-		# positioner_js=np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-		# rob_js_plan = np.hstack((curve_sliced_js, positioner_js))
+		curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+		curve_sliced_js=np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
+		positioner_js=np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+		rob_js_plan = np.hstack((curve_sliced_js, positioner_js))
 
 		q_out1=np.loadtxt(data_dir+'curve_scan_js/MA1440_js'+str(read_layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,6))
 		q_out2=np.loadtxt(data_dir+'curve_scan_js/D500B_js'+str(read_layer)+'_'+str(x)+'.csv',delimiter=',').reshape((-1,2))
@@ -418,7 +420,10 @@ while layer <= int(slicing_meta['num_layers']):
 		
 		q2=q_bp2[0][0]
 
-		ws.jog_dual(robot2,positioner,[R2_mid,q1],q2,v=to_start_speed)
+		print("R2_mid: ", R2_mid)
+		print("q1: ", q1)
+		print("q2: ", q2)	
+		ws.jog_dual(robot2,positioner,R2_mid,q2,v=to_start_speed)
 
 		input("Start Scan")
 		scan_scan_st=time.time()
@@ -511,8 +516,10 @@ while layer <= int(slicing_meta['num_layers']):
 	pcd=pcd_new
 
 	# calibrate H
-	pcd,Transz0_H = scan_process.pcd_calib_z(pcd,Transz0_H=Transz0_H)
-
+	try:
+		pcd,Transz0_H = scan_process.pcd_calib_z(pcd,Transz0_H=Transz0_H)
+	except NameError:
+		pcd,Transz0_H = scan_process.pcd_calib_z(pcd)
 	###################### Record dh and curve relative #################################
 	profile_dh = scan_process.pcd2dh(pcd,curve_sliced_relative, drawing=False)
 	if len(layer_curve_dh)!=0:
@@ -555,7 +562,8 @@ while layer <= int(slicing_meta['num_layers']):
 	# plt.show(block=False)
 
 	input("Moving Scan Robot to Home")
-	ws.jog_dual(robot2,positioner,[R2_mid,R2_home],[0,q_prev[1]],v=to_home_speed)
+	ws.jog_dual(robot2,positioner,R2_mid,[0, q_prev[1]],v=to_home_speed)
+	ws.jog_dual(robot2,positioner,R2_home,[0, q_prev[1]], v=to_home_speed)
 	###################### Plot height vs Anticipated Layers ############################
 	print("Flame Processed | Plotting Now")
 
