@@ -16,11 +16,11 @@ counts_all_frames = []
 temp_all_frames = []
 all_frames = []
 data_mode = 0
-main_folder_path = '../../recorded_data/ER4043_bent_tube/'
+main_folder_path = '../../recorded_data/ER4043_bent_tube_2024_07_18_13_37_40/layer_1/'
 for folder_name in os.listdir(main_folder_path):
     if folder_name.startswith('layer_'):
         folder_path = os.path.join(main_folder_path, folder_name)
-        file_path = os.path.join(folder_path, 'ir_recording_raw.pickle')
+        file_path = os.path.join(folder_path, 'ir_recording.pickle')
         
         file_size_kb = os.path.getsize(file_path) / 1024
         if file_size_kb > 1000:

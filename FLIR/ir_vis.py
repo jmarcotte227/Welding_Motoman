@@ -4,7 +4,7 @@ import pickle, sys
 sys.path.append('../toolbox/')
 from flir_toolbox import *
 
-with open('../../recorded_data/weld_scan_job205_v152023_07_27_13_23_06/layer_150/ir_recording.pickle', 'rb') as file:
+with open('../../recorded_data/ER4043_bent_tube_2024_07_18_13_37_40/layer_1/ir_recording.pickle', 'rb') as file:
     ir_recording = pickle.load(file)
 freq=30
 
