@@ -64,7 +64,7 @@ filenames = os.listdir('../../recorded_data/ER4043_bent_tube_2024_07_18_13_37_40
 for filename in filenames:
     layers.append(get_trailing_number(filename))
 print(layers)
-for layer in layers:
+for layer in [layers[0]]:
     if layer <=700:
         save_path = f'../../recorded_data/ER4043_bent_tube_2024_07_18_13_37_40/layer_{layer}/'
         with open(save_path+'ir_recording.pickle', 'rb') as file:
@@ -126,12 +126,11 @@ try:
 except IndexError:
     print("No Flame Detected")
 
-# PLATE OFFSET #
-plate_offset = 12.44 #mm
-for layer in layers:
+for layer in [layers[0]]:
+    print("Layer: ", layer)
     if layer <=700:
         curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-        ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2]+plate_offset, c='g')   
+        ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2], c='g')   
 
 #set equal aspect ratio
 try:
@@ -139,7 +138,4 @@ try:
 except IndexError:
     print("No Flame Detected")
 ax.set_aspect('equal')
-ax.set_ylim(-100, 200)
-ax.set_xlim(-50, 50)
-ax.set_zlim(0, 100)
 plt.show()

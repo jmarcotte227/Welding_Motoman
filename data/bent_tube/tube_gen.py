@@ -128,8 +128,8 @@ def main():
 
     plt.show()
 
-    for layer in range(num_layers*slices_per_layer):
-	    np.savetxt('slice_ER_4043_dense/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
+    # for layer in range(num_layers*slices_per_layer):
+	#     np.savetxt('slice_ER_4043_dense/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
 
 
 

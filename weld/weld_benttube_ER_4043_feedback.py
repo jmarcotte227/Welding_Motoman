@@ -38,13 +38,13 @@ def flame_detection_aluminum(raw_img,threshold=1.0e4,area_threshold=4,percentage
 ##############################################################SENSORS####################################################################
 # weld state logging
 # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
-cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
-# mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
-## RR sensor objects
-rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
+# cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
+# # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
+# ## RR sensor objects
+# rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
 
-config_dir='../config/'
-flir_intrinsic=yaml.load(open(config_dir+'FLIR_A320.yaml'), Loader=yaml.FullLoader)
+# config_dir='../config/'
+# flir_intrinsic=yaml.load(open(config_dir+'FLIR_A320.yaml'), Loader=yaml.FullLoader)
 
 ################################ Data Directories ###########################
 now = datetime.now()
@@ -249,6 +249,7 @@ while layer <= int(slicing_meta['num_layers']):
 		for distance in dist_to_por:height_profile.append(distance*np.sin(layer_angle*np.pi/180))
 		velocity_profile = weld_dh2v.dh2v_loglog(height_profile, feedrate_cmd, 'ER_4043')
 		print(velocity_profile)
+		print("Breakpoints Length: ", len(breakpoints))
 		###move to intermidieate waypoint for collision avoidance if multiple section
 		if num_sections!=num_sections_prev:
 			waypoint_pose=robot.fwd(curve_sliced_js[breakpoints[0]])
@@ -272,9 +273,9 @@ while layer <= int(slicing_meta['num_layers']):
 		q_prev=positioner_js[breakpoints[-1]]
 
 		################ Weld with sensors #############################
-		rr_sensors.start_all_sensors()
+		# rr_sensors.start_all_sensors()
 		global_ts, robot_ts,joint_recording,job_line,_=ws.weld_segment_dual(primitives,robot,positioner,q1_all,q2_all,v1_all,v2_all,cond_all=[int(feedrate_cmd/10)+job_offset],arc=True, blocking=True)
-		rr_sensors.stop_all_sensors()
+		# rr_sensors.stop_all_sensors()
 		global_ts = np.reshape(global_ts, (-1,1))
 		job_line = np.reshape(job_line, (-1,1))
 
