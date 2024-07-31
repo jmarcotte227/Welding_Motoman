@@ -64,7 +64,7 @@ filenames = os.listdir('../../recorded_data/ER4043_bent_tube_2024_07_18_13_37_40
 for filename in filenames:
     layers.append(get_trailing_number(filename))
 print(layers)
-for layer in [layers[0]]:
+for layer in layers:
     if layer <=700:
         save_path = f'../../recorded_data/ER4043_bent_tube_2024_07_18_13_37_40/layer_{layer}/'
         with open(save_path+'ir_recording.pickle', 'rb') as file:
@@ -108,7 +108,7 @@ for layer in [layers[0]]:
 
                         #find intersection point
                         intersection=line_intersect(p1,v1,p2,v2)
-                        intersection = positioner_pose.R@(intersection-(positioner_pose.p))# +np.array([0,0,10])))
+                        intersection = positioner_pose.R.T@(intersection-(positioner_pose.p))# +np.array([0,0,10])))
 
                         flame_3d.append(intersection)
 
@@ -126,7 +126,7 @@ try:
 except IndexError:
     print("No Flame Detected")
 
-for layer in [layers[0]]:
+for layer in layers:
     print("Layer: ", layer)
     if layer <=700:
         curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')

@@ -80,7 +80,7 @@ def main():
         base_layer[i,0]=circle_points[i][0]
         base_layer[i,1]=circle_points[i][1]
         base_layer[i,-1]=-1
-    #np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    
 
     #first layer
     for i in range(len(circle_points)-1):
@@ -128,9 +128,10 @@ def main():
 
     plt.show()
 
-    # for layer in range(num_layers*slices_per_layer):
-	#     np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
-
+    for layer in range(num_layers*slices_per_layer):
+        np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+    
+    np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':
