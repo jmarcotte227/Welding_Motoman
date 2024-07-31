@@ -47,7 +47,7 @@ def main():
     point_distance = np.pi*tube_diameter/points_per_layer
     vertical_shift = 4 #mm  ### Is this causing issues with offset height?
 
-    slices_per_layer = 10
+    slices_per_layer = 1
 
     print('Point distance: ', point_distance)
     print('------------------------')
@@ -129,7 +129,7 @@ def main():
     plt.show()
 
     # for layer in range(num_layers*slices_per_layer):
-	#     np.savetxt('slice_ER_4043_dense/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
+	#     np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')  
 
 
 
