@@ -18,6 +18,8 @@ from numpy.linalg import norm
 def v_opt(v_next, h_err, h_targ, lam=None):
     return norm(h_targ+h_err-weld_dh2v.v2dh_loglog(v_next), 2)**2
 
+bounds = Bounds(3, 17)
+
 def rotate(origin, point, angle):
     """
     Rotate a point counterclockwise by a given angle around a given origin.
@@ -69,18 +71,25 @@ def avg_by_line(job_line, flame_pos, num_segs):
     return output
 
 def interpolate_heights(sparse_height):
-     for i, height in enumerate(sparse_height):
-        if np.isnan(height):
-             prev_height = sparse_height[i-1]
-             #search for next nan number
-             for j, height_check in enumerate(sparse_height[i:]):
-                  if not np.isnan(height_check):
-                       idx_dif = j+1
-                       height_dif = (prev_height-height_check)
-                       for k in range(idx_dif):
-                            sparse_height[i+k] = prev_height - height_dif*(k+1)/idx_dif
-                       break
-     return sparse_height
+	# for i, height in enumerate(sparse_height):
+	# 	if np.greater(height, 200).any(): sparse_height[i,:] = [None, None, None]
+	for i, height in enumerate(sparse_height):
+		if np.isnan(height):
+			prev_height = sparse_height[i-1]
+			#search for next nan number
+			for j, height_check in enumerate(sparse_height[i:]):
+				if not np.isnan(height_check):
+					idx_dif = j+1
+					height_dif = (prev_height-height_check)
+					for k in range(idx_dif):
+						sparse_height[i+k] = prev_height - height_dif*(k+1)/idx_dif
+					break
+				elif i+j == len(sparse_height)-1:
+					idx_dif = j+1
+					height_dif = (prev_height-0)
+					for k in range(idx_dif):
+						sparse_height[i+k] = prev_height - height_dif*(k+1)/idx_dif
+	return sparse_height
 
 def flame_detection_aluminum(raw_img,threshold=1.0e4,area_threshold=4,percentage_threshold=0.8):
     ###flame detection by raw counts thresholding and connected components labeling
@@ -108,10 +117,10 @@ def flame_detection_aluminum(raw_img,threshold=1.0e4,area_threshold=4,percentage
 ##############################################################SENSORS####################################################################
 # weld state logging
 # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
-# cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
+cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
 # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
 ## RR sensor objects
-# rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
+rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
 
 config_dir='../config/'
 flir_intrinsic=yaml.load(open(config_dir+'FLIR_A320.yaml'), Loader=yaml.FullLoader)
@@ -126,7 +135,7 @@ rec_folder = input("Enter folder of desired test directory (leave blank for new)
 if rec_folder == '':
 	recorded_dir=now.strftime('../../recorded_data/ER4043_bent_tube_%Y_%m_%d_%H_%M_%S/')
 else:
-	recorded_dir='../../recorded_data/'+rec_folder
+	recorded_dir='../../recorded_data/'+rec_folder+'/'
 with open(data_dir+'slicing.yml', 'r') as file:
 	slicing_meta = yaml.safe_load(file)
 # recorded_dir='recorded_data/cup_ER316L/'
@@ -210,7 +219,7 @@ measure_distance = 500
 # vd_relative_adjustment=0
 
 
-# ###########################################BASE layer welding############################################
+###########################################BASE layer welding############################################
 # num_layer_start=int(0*nominal_slice_increment)	###modify layer num here
 # num_layer_end=int(1*nominal_slice_increment)
 # #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -269,7 +278,7 @@ measure_distance = 500
 
 ###########################################layer welding############################################
 print('----------Normal Layers-----------')
-num_layer_start=int(1*nominal_slice_increment)	###modify layer num here
+num_layer_start=int(77*nominal_slice_increment)	###modify layer num here
 num_layer_end=min(80*nominal_slice_increment,slicing_meta['num_layers'])
 
 #q_prev=client.getJointAnglesDB(positioner.pulse2deg)
@@ -287,10 +296,14 @@ print("nominal_slice_increment", nominal_slice_increment)
 layer_angle = np.array((slicing_meta['layer_angle']))
 base_thickness = slicing_meta['baselayer_thickness']
 
-start_dir = False # Alternate direction that the layer starts from
+start_dir = True # Alternate direction that the layer starts from
 
 # for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
+	if layer != 1:
+		save_path = recorded_dir+'layer_'+str(layer-1)+'/'
+		start_dir_prev = np.loadtxt(save_path+'start_dir.csv', delimiter=',')
+		start_dir = not start_dir_prev
 	mp=MotionProgram(ROBOT_CHOICE='RB1',ROBOT_CHOICE2='ST1',pulse2deg=robot.pulse2deg,pulse2deg_2=positioner.pulse2deg, tool_num = 12)
 
 	num_sections_prev=num_sections
@@ -311,7 +324,6 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 	if start_dir: breakpoints=np.linspace(0,len(curve_sliced_js)-1,num=num_points_layer).astype(int)
 	else:
 		breakpoints=np.linspace(len(curve_sliced_js)-1,0,num=num_points_layer).astype(int)
-	start_dir = not start_dir
 
 	# jog to start and position camera
 	p_positioner_home=np.mean([robot.fwd(curve_sliced_js[0]).p,robot.fwd(curve_sliced_js[-1]).p],axis=0)
@@ -350,103 +362,129 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 		velocity_profile = vel_nom
 	else: 
 		save_path = recorded_dir+'layer_'+str(layer-1)+'/'
+		
 		# Process IR data
 		with open(save_path+'ir_recording.pickle', 'rb') as file:
 			ir_recording = pickle.load(file)
 		ir_ts=np.loadtxt(save_path+'ir_stamps.csv', delimiter=',')
 		joint_angle=np.loadtxt(save_path+'weld_js_exe.csv', delimiter=',')
+		if len(ir_ts) == 0:
+			print("No Flame Detected, nominal velocity")
+			velocity_profile = vel_nom
+		else:
+			timeslot=[ir_ts[0]-ir_ts[0], ir_ts[-1]-ir_ts[0]]
+			duration=np.mean(np.diff(timeslot))
 
-		timeslot=[ir_ts[0]-ir_ts[0], ir_ts[-1]-ir_ts[0]]
-		duration=np.mean(np.diff(timeslot))
-
-		flame_3d=[]
-		job_no = []
-		torch_path = []
-		for start_time in timeslot[:-1]:
-			
-			start_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time))
-			end_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time-duration))
-		
-			#find all pixel regions to record from flame detection
-			for i in range(start_idx,end_idx):
+			flame_3d=[]
+			job_no = []
+			torch_path = []
+			for start_time in timeslot[:-1]:
 				
-				ir_image = ir_recording[i]
-				try:
-					centroid, bbox=flame_detection_aluminum(ir_image, percentage_threshold=0.8)
-				except ValueError:
-					centroid = None
-				if centroid is not None:
-					#find spatial vector ray from camera sensor
-					vector=np.array([(centroid[0]-flir_intrinsic['c0'])/flir_intrinsic['fsx'],(centroid[1]-flir_intrinsic['r0'])/flir_intrinsic['fsy'],1])
-					vector=vector/np.linalg.norm(vector)
-					#find index closest in time of joint_angle
-					joint_idx=np.argmin(np.abs(ir_ts[i]-joint_angle[:,0]))
-					robot2_pose_world=robot2.fwd(joint_angle[joint_idx][8:-2],world=True)
-					p2=robot2_pose_world.p
-					v2=robot2_pose_world.R@vector
-					robot1_pose=robot.fwd(joint_angle[joint_idx][2:8])
-					p1=robot1_pose.p
-					v1=robot1_pose.R[:,2]
-					positioner_pose=positioner.fwd(joint_angle[joint_idx][-2:], world=True)
+				start_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time))
+				end_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time-duration))
+			
+				#find all pixel regions to record from flame detection
+				for i in range(start_idx,end_idx):
+					
+					ir_image = ir_recording[i]
+					try:
+						centroid, bbox=flame_detection_aluminum(ir_image, percentage_threshold=0.8)
+					except ValueError:
+						centroid = None
+					if centroid is not None:
+						#find spatial vector ray from camera sensor
+						vector=np.array([(centroid[0]-flir_intrinsic['c0'])/flir_intrinsic['fsx'],(centroid[1]-flir_intrinsic['r0'])/flir_intrinsic['fsy'],1])
+						vector=vector/np.linalg.norm(vector)
+						#find index closest in time of joint_angle
+						joint_idx=np.argmin(np.abs(ir_ts[i]-joint_angle[:,0]))
+						robot2_pose_world=robot2.fwd(joint_angle[joint_idx][8:-2],world=True)
+						p2=robot2_pose_world.p
+						v2=robot2_pose_world.R@vector
+						robot1_pose=robot.fwd(joint_angle[joint_idx][2:8])
+						p1=robot1_pose.p
+						v1=robot1_pose.R[:,2]
+						positioner_pose=positioner.fwd(joint_angle[joint_idx][-2:], world=True)
 
-					#find intersection point
-					intersection=line_intersect(p1,v1,p2,v2)
-					intersection = positioner_pose.R.T@(intersection-positioner_pose.p)
-					torch = positioner_pose.R.T@(robot1_pose.p-positioner_pose.p)
+						#find intersection point
+						intersection=line_intersect(p1,v1,p2,v2)
+						intersection = positioner_pose.R.T@(intersection-positioner_pose.p)
+						torch = positioner_pose.R.T@(robot1_pose.p-positioner_pose.p)
 
-					flame_3d.append(intersection)
-					torch_path.append(intersection)
-					job_no.append(int(joint_angle[joint_idx][1]))
+						flame_3d.append(intersection)
+						torch_path.append(intersection)
+						job_no.append(int(joint_angle[joint_idx][1]))
 
 
-		###################### Plot Flame vs Anticipated Layers ############################
-		print("Flame Processed | Plotting Now")
+			###################### Plot Flame vs Anticipated Layers ############################
+			print("Flame Processed | Plotting Now")
 
-		flame_3d=np.array(flame_3d)
-		torch_path = np.array(torch_path)
-		print(flame_3d.shape)
-		#plot the flame 3d
-		fig = plt.figure()
-		ax = fig.add_subplot(111, projection='3d')
-		try:
-			ax.scatter(flame_3d[:,0],flame_3d[:,1],flame_3d[:,2], 'b')
-			ax.plot3D(torch_path[:,0], torch_path[:,1], torch_path[:,2])
-		except IndexError:
-			print("No Flame Detected")
-		
-		curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
-		ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2])
-		ax.set_aspect('equal')
-		plt.show()
+			flame_3d=np.array(flame_3d)
+			torch_path = np.array(torch_path)
+			print(flame_3d.shape)
+			
+			#plot the flame 3d
+			fig = plt.figure()
+			ax = fig.add_subplot(111, projection='3d')
+			try:
+				ax.scatter(flame_3d[:,0],flame_3d[:,1],flame_3d[:,2], 'b')
+				ax.plot3D(torch_path[:,0], torch_path[:,1], torch_path[:,2])
+			except IndexError:
+				print("No Flame Detected")
+			
+			curve_sliced_relative=np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(layer)+'_'+str(x)+'.csv',delimiter=',')
+			ax.plot3D(curve_sliced_relative[:,0], curve_sliced_relative[:,1], curve_sliced_relative[:,2])
+			ax.set_aspect('equal')
+			plt.show()
 
-		#################### Get Height Profile ######################
-		for i in range(flame_3d.shape[0]):
-			flame_3d[i] = R.T@flame_3d[i]
+			#################### Get Height Profile ######################
+			for i in range(flame_3d.shape[0]):
+				flame_3d[i] = R.T@flame_3d[i]
+			print(flame_3d[:,2])
+			print(np.any(flame_3d[:,2]).any()>400)
+			if (np.greater(flame_3d, 400).any()):
+				print("Flame out of bounds Error")
+				velocity_profile = vel_nom
+			else:
+				to_flat_angle = np.deg2rad(layer_angle*(layer-1))
+				new_x, new_z = rotate(point_of_rotation, (flame_3d[:,0], flame_3d[:,2]), to_flat_angle)
+				flame_3d[:,0] = new_x
+				flame_3d[:,2] = new_z-base_thickness
 
-		to_flat_angle = np.deg2rad(layer_angle*(layer-1))
-		new_x, new_z = rotate(point_of_rotation, (flame_3d[:,0], flame_3d[:,2]), to_flat_angle)
-		flame_3d[:,0] = new_x
-		flame_3d[:,2] = new_z-base_thickness
+				job_no_offset = 4 # get rid of first non-instructive job lines in AAA file
+				job_no = [i-4 for i in job_no]
+				averages = avg_by_line(job_no, flame_3d, len(breakpoints))
+				scan_height = interpolate_heights(averages[:,-1]) # checks for empty height quantities and fills them in
 
-		job_no_offset = 4 # get rid of first non-instructive job lines in AAA file
-		job_no = [i-4 for i in job_no]
-		averages = avg_by_line(job_no, flame_3d, len(breakpoints))
-		scan_height = interpolate_heights(averages[:,-1]) # checks for empty height quantities and fills them in
-
-		height_err = 0-scan_height
-		opt_result=minimize(v_opt, vel_nom, (height_err, height_profile), bounds=bounds,
-                    options = {'maxfun':100000})
-		if not opt_result.success: 
-			print(opt_result)
-			raise ValueError(opt_result.message)
-		
-		velocity_profile = opt_result.x
-		###########################################################################
-
+				height_err = 0-scan_height
+				opt_result=minimize(v_opt, vel_nom, (height_err, height_profile), bounds=bounds,
+							options = {'maxfun':100000})
+				if not opt_result.success: 
+					print(opt_result)
+					raise ValueError(opt_result.message)
+				
+				velocity_profile = opt_result.x
+				if start_dir_prev == False:
+					velocity_profile = np.flip(velocity_profile)
+			###########################################################################
 	
 	
-	print(velocity_profile)
+	
+	
+	
+	print(velocity_profile[breakpoints])
+	print("Start dir: ", start_dir)
+	if layer != 1: print("Prev start dir: ", start_dir_prev)
+	input("Check Vel Profile, enter to continue")
 	print("Breakpoints Length: ", len(breakpoints))
+
+	save_path = recorded_dir+'layer_'+str(layer)+'/'
+	try:
+		os.makedirs(save_path)
+	except Exception as e:
+		print(e)
+	# velocity_profile = np.flip(velocity_profile)
+	np.savetxt(save_path + 'velocity_profile.csv', velocity_profile[breakpoints], delimiter=',')
+	np.savetxt(save_path + 'start_dir.csv', [start_dir], delimiter=',')
 	###move to intermidieate waypoint for collision avoidance if multiple section
 	if num_sections!=num_sections_prev:
 		waypoint_pose=robot.fwd(curve_sliced_js[breakpoints[0]])
@@ -480,11 +518,6 @@ for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
 	print(job_line.shape)
 	print(joint_recording.shape)
 	# save data
-	save_path = recorded_dir+'layer_'+str(layer)+'/'
-	try:
-		os.makedirs(save_path)
-	except Exception as e:
-		print(e)
 	np.savetxt(save_path+'weld_js_exe.csv', np.hstack((global_ts, job_line, joint_recording)), delimiter=',')
 	rr_sensors.save_all_sensors(save_path)
 
