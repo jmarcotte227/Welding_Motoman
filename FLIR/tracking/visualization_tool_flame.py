@@ -11,7 +11,9 @@ from ultralytics import YOLO
 # data_dir='../../../recorded_data/ER316L/streaming/cylinderspiral_T19000/'
 # data_dir='../../../recorded_data/ER4043/wallbf_100ipm_v10_100ipm_v10/'
 # data_dir='../../../recorded_data/wall_weld_test/4043_150ipm_2024_06_18_11_16_32/layer_4/'
-data_dir='../../../recorded_data/ER4043_bent_tube/'
+# data_dir='../../../recorded_data/ER4043_bent_tube/'
+data_dir = f'../../../recorded_data/ER4043_bent_tube_2024_08_01_11_47_23/layer_30/'
+
 
 yolo_model = YOLO(os.path.dirname(inspect.getfile(torch_tracking))+"/torch.pt")
 
@@ -21,7 +23,7 @@ with open(data_dir+'/ir_recording.pickle', 'rb') as file:
 ir_ts=np.loadtxt(data_dir+'/ir_stamps.csv', delimiter=',')
 
 #load template
-template = cv2.imread('torch_template_ER316L.png',0)
+# template = cv2.imread('torch_template_ER316L.png',0)
 
 # Create a window to display the images
 cv2.namedWindow("IR Recording", cv2.WINDOW_NORMAL)
@@ -46,6 +48,9 @@ def update_frame(val):
     if centroid is not None:
         cv2.rectangle(ir_bgr, (bbox[0],bbox[1]), (bbox[0]+bbox[2],bbox[1]+bbox[3]), (0,255,0), thickness=1)
         cv2.rectangle(ir_bgr, (torch_bbox[0],torch_bbox[1]), (torch_bbox[0]+torch_bbox[2],torch_bbox[1]+torch_bbox[3]), (0,255,0), thickness=1)
+        ir_bgr[int(centroid[1]),int(centroid[0])] = [0,0,255]
+        ir_bgr[int(torch_centroid[1]), int(torch_centroid[0])] = [0,0,255]
+
 
     # Display the IR image
     cv2.imshow("IR Recording", ir_bgr)
