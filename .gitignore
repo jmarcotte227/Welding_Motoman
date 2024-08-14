@@ -397,3 +397,7 @@ scan/report_scans/bent_wall_scan_trimmed.stl
 =======
 *.cache
 >>>>>>> upstream/main
+scan/saved_pointclouds.zip
+scan/saved_pointclouds/curve_slice_coords.csv
+scan/saved_pointclouds/ER4043_automated_tube_trimmed.stl
+scan/saved_pointclouds/flame_3d.csv

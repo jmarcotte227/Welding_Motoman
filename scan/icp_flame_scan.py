@@ -28,7 +28,6 @@ def visualize_pcd(show_pcd_list,point_show_normal=False):
     
 data_dir='../data/bent_tube/slice_ER_4043/'
 scanned_dir='../../recorded_data/ER4043_bent_tube_2024_08_01_11_47_23/'
-save_dir = 'saved_pointclouds/'
 ######## read the scanned stl
 # target_mesh = o3d.io.read_triangle_mesh(data_dir+'surface.stl')
 scanned_mesh = o3d.io.read_triangle_mesh(scanned_dir+'ER4043_automated_tube_trimmed.stl')
@@ -38,11 +37,15 @@ scanned_mesh.compute_vertex_normals()
 ######## Get Points from all curve_sliced_relative
 target_coords = []
 for i in range(1,80):
-    points = np.loadtxt(data_dir+'curve_sliced_relative/slice'+str(i)+'_0.csv',delimiter=',')
+    with open(scanned_dir+f'layer_{str(i)}/flame_3d_{str(i)}_0.pkl', 'rb') as file:
+        points = pickle.load(file)
     for row in points:
-        target_coords.append(row[:3])
+        if np.any(row>150):
+            pass
+        else:
+            target_coords.append(row)
 target_coords = np.array(target_coords)
-np.savetxt(save_dir+'curve_slice_coords.csv', target_coords, delimiter=',')
+
     
 ## inch to mm
 # target_mesh.scale(25.4, center=(0, 0, 0))
@@ -58,19 +61,11 @@ target_points.points = o3d.utility.Vector3dVector(target_coords)
 target_points = target_points.paint_uniform_color([0, 0.8, 0.0])
 scanned_points = scanned_points.paint_uniform_color([0.8, 0, 0.0])
 scanned_points_original=copy.deepcopy(scanned_points)
-total_transformation = np.array([[ 6.71184034e-01, -7.17519464e-01,  1.86219793e-01,  7.86854660e+01],
-                                 [ 7.40874617e-01,  6.57712433e-01, -1.36085110e-01, -1.15101035e+01],
-                                 [-2.48353577e-02,  2.29303671e-01,  9.73038042e-01, -2.47471096e+01],
-                                 [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
-angle = 0.7854
-total_transformation = total_transformation@np.array([[np.cos(angle), -np.sin(angle), 0, 100],
-                                                      [np.sin(angle), np.cos(angle), 0, 75],
-                                                      [0, 0, 1, 0],
-                                                      [0, 0, 0, 1]])
+total_transformation = np.eye(4)
 
 ## global tranformation
-# R_guess,p_guess=global_alignment(scanned_points.points,target_points.points)
-# total_transformation = H_from_RT(R_guess,p_guess)
+R_guess,p_guess=global_alignment(scanned_points.points,target_points.points)
+total_transformation = H_from_RT(R_guess,p_guess)
 scanned_points=scanned_points.transform(total_transformation)
 
 
