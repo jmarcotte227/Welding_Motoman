@@ -12,7 +12,7 @@ from flir_toolbox import *
 import weld_dh2v
 import matplotlib.pyplot as plt
 from datetime import datetime
-from scipy.optimize import Bounds, minimize
+from scipy.optimize import Bounds 
 from numpy.linalg import norm
 
 def v_opt(v_next, h_err, h_targ, lam=None):

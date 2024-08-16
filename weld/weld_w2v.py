@@ -1,9 +1,12 @@
+"""Module containing the data for the width model for WAAM"""
+
 import numpy as np
 
 material_param = {}
 material_param['ER_4043'] = {
     #ER 4043
-    "160ipm": [-0.55863074,  3.01451518], #update with better estimate once found error: -0.009853848161215595
+    #update with better estimate once found error: -0.009853848161215595
+    "160ipm": [-0.55863074,  3.01451518], 
     "200ipm": [-0.33208935,  2.72353279]
 }
 

@@ -26,3 +26,8 @@ convergent_manufacturing_utils = { git = "https://github.com/hehonglu123/converg
 dual_robot = { git = "https://github.com/hehonglu123/dual_robot.git"}
 lambda_calc = { git = "https://github.com/hehonglu123/lambda_calc"}
 robotics_utils = { git = "https://github.com/hehonglu123/robotics_utils.git"}
+
+[tool.pyright]
+executionEnvironments = [
+  {root = "src"}
+]
