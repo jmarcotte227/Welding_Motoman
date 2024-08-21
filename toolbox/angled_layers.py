@@ -5,6 +5,7 @@ using non-uniform height profiles.
 
 import numpy as np
 import cv2
+import pickle
 
 
 def rotate(origin, point, angle):
@@ -138,3 +139,61 @@ def flame_detection_aluminum(
     bbox = stats[valid_index, :-1]
 
     return centroid, bbox
+
+
+def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic):
+    with open(save_path + "ir_recording.pickle", "rb") as file:
+        ir_recording = pickle.load(file)
+    ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
+    joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
+    timeslot = [ir_ts[0] - ir_ts[0], ir_ts[-1] - ir_ts[0]]
+    duration = np.mean(np.diff(timeslot))
+
+    flame_3d = []
+    job_no = []
+    torch_path = []
+    for start_time in timeslot[:-1]:
+        start_idx = np.argmin(np.abs(ir_ts - ir_ts[0] - start_time))
+        end_idx = np.argmin(np.abs(ir_ts - ir_ts[0] - start_time - duration))
+
+    # find all pixel regions to record from flame detection
+    for i in range(start_idx, end_idx):
+
+        ir_image = ir_recording[i]
+        try:
+            centroid, _ = flame_detection_aluminum(ir_image, percentage_threshold=0.8)
+        except ValueError:
+            centroid = None
+
+        if centroid is not None:
+            # find spatial vector ray from camera sensor
+            vector = np.array(
+                [
+                    (centroid[0] - flir_intrinsic["c0"]) / flir_intrinsic["fsx"],
+                    (centroid[1] - flir_intrinsic["r0"]) / flir_intrinsic["fsy"],
+                    1,
+                ]
+            )
+            vector = vector / np.linalg.norm(vector)
+            # find index closest in time of joint_angle
+            joint_idx = np.argmin(np.abs(ir_ts[i] - joint_angle[:, 0]))
+            robot2_pose_world = robot2.fwd(joint_angle[joint_idx][8:-2], world=True)
+            p2 = robot2_pose_world.p
+            v2 = robot2_pose_world.R @ vector
+            robot1_pose = robot.fwd(joint_angle[joint_idx][2:8])
+            p1 = robot1_pose.p
+            v1 = robot1_pose.R[:, 2]
+            positioner_pose = positioner.fwd(joint_angle[joint_idx][-2:], world=True)
+
+            # find intersection point
+            intersection = line_intersect(p1, v1, p2, v2)
+            intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
+            torch = positioner_pose.R.T @ (robot1_pose.p - positioner_pose.p)
+
+            flame_3d.append(intersection)
+            torch_path.append(intersection)
+            job_no.append(int(joint_angle[joint_idx][1]))
+    flame_3d = np.array(flame_3d)
+    torch_path = np.array(torch_path)
+    job_no = np.array(job_no)
+    return flame_3d, torch_path, job_no

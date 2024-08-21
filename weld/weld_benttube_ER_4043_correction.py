@@ -164,129 +164,79 @@ for layer in range(num_layer_start, num_layer_end):
         v2_all.append(pos_vel)
         primitives.append("movel")
 
-        q_prev = positioner_js[breakpoints[-1]]
-        rr_sensors.start_all_sensors()
-        global_ts, timestamp_robot, joint_recording, job_line, _ = ws.weld_segment_dual(
-            primitives,
-            robot,
-            positioner,
-            q1_all,
-            q2_all,
-            v1_all,
-            v2_all,
-            cond_all=[int(base_feedrate_cmd / 10) + job_offset],
-            arc=True,
-        )
-        rr_sensors.stop_all_sensors()
-        global_ts = np.reshape(global_ts, (-1, 1))
-        job_line = np.reshape(job_line, (-1, 1))
+    q_prev = positioner_js[breakpoints[-1]]
+    rr_sensors.start_all_sensors()
+    global_ts, timestamp_robot, joint_recording, job_line, _ = ws.weld_segment_dual(
+        primitives,
+        robot,
+        positioner,
+        q1_all,
+        q2_all,
+        v1_all,
+        v2_all,
+        cond_all=[int(base_feedrate_cmd / 10) + job_offset],
+        arc=True,
+    )
+    rr_sensors.stop_all_sensors()
+    global_ts = np.reshape(global_ts, (-1, 1))
+    job_line = np.reshape(job_line, (-1, 1))
 
-        # Reposition arm out of the way
-        q_0 = client.getJointAnglesMH(robot.pulse2deg)
-        q_0[1] = q_0[1] - np.pi / 8
-        ws.jog_single(robot, q_0, 4)
+    # Reposition arm out of the way
+    q_0 = client.getJointAnglesMH(robot.pulse2deg)
+    q_0[1] = q_0[1] - np.pi / 8
+    ws.jog_single(robot, q_0, 4)
 
-        # save data
-        save_path = recorded_dir + f"layer_{layer}/"
-        try:
-            os.makedirs(save_path)
-        except Exception as e:
-            print(e)
-        np.savetxt(
-            save_path + "weld_js_exe.csv",
-            np.hstack((global_ts, job_line, joint_recording)),
-            delimiter=",",
-        )
-        rr_sensors.save_all_sensors(save_path)
-        input("-------Base Layer Finished-------")
+    # save data
+    save_path = recorded_dir + f"layer_{layer}/"
+    try:
+        os.makedirs(save_path)
+    except Exception as e:
+        print(e)
+    np.savetxt(
+        save_path + "weld_js_exe.csv",
+        np.hstack((global_ts, job_line, joint_recording)),
+        delimiter=",",
+    )
+    rr_sensors.save_all_sensors(save_path)
+    input("-------Base Layer Finished-------")
 
-# ## Interpret base layer IR data to get h offset
-# with open(save_path+'ir_recording.pickle', 'rb') as file:
-#   ir_recording = pickle.load(file)
-# ir_ts=np.loadtxt(save_path+'ir_stamps.csv', delimiter=',')
-# joint_angle=np.loadtxt(save_path+'weld_js_exe.csv', delimiter=',')
-# timeslot=[ir_ts[0]-ir_ts[0], ir_ts[-1]-ir_ts[0]]
-# duration=np.mean(np.diff(timeslot))
+    ## Interpret base layer IR data to get h offset
+    flame_3d, torch_path, job_no = flame_tracking(save_path, robot, robot2, positioner,flir_intrinsic) 
+    
+    base_thickness = float(input("Enter base thickness: "))
+    for i in range(flame_3d.shape[0]):
+      flame_3d[i] = R.T@flame_3d[i]
+    if flame_3d.shape[0] == 0:
+      height_offset = 6 # this is arbitrary
+    else:
+      avg_base_height = np.mean(flame_3d[:,2])
+      height_offset = base_thickness - avg_base_height
 
-# flame_3d=[]
-# job_no = []
-# torch_path = []
-# for start_time in timeslot[:-1]:
+try:
+  print("Height Offset:", height_offset)
+except:
+  height_offset = float(input("Enter height offset: "))
 
-#   start_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time))
-#   end_idx=np.argmin(np.abs(ir_ts-ir_ts[0]-start_time-duration))
 
-#   #find all pixel regions to record from flame detection
-#   for i in range(start_idx,end_idx):
 
-#       ir_image = ir_recording[i]
-#       try:
-#           centroid, bbox=flame_detection_aluminum(ir_image, percentage_threshold=0.8)
-#       except ValueError:
-#           centroid = None
-#       if centroid is not None:
-#           #find spatial vector ray from camera sensor
-#           vector=np.array([(centroid[0]-flir_intrinsic['c0'])/flir_intrinsic['fsx'],(centroid[1]-flir_intrinsic['r0'])/flir_intrinsic['fsy'],1])
-#           vector=vector/np.linalg.norm(vector)
-#           #find index closest in time of joint_angle
-#           joint_idx=np.argmin(np.abs(ir_ts[i]-joint_angle[:,0]))
-#           robot2_pose_world=robot2.fwd(joint_angle[joint_idx][8:-2],world=True)
-#           p2=robot2_pose_world.p
-#           v2=robot2_pose_world.R@vector
-#           robot1_pose=robot.fwd(joint_angle[joint_idx][2:8])
-#           p1=robot1_pose.p
-#           v1=robot1_pose.R[:,2]
-#           positioner_pose=positioner.fwd(joint_angle[joint_idx][-2:], world=True)
 
-#           #find intersection point
-#           intersection=line_intersect(p1,v1,p2,v2)
-#           intersection = positioner_pose.R.T@(intersection-positioner_pose.p)
-#           torch = positioner_pose.R.T@(robot1_pose.p-positioner_pose.p)
-
-#           flame_3d.append(intersection)
-#           torch_path.append(intersection)
-#           job_no.append(int(joint_angle[joint_idx][1]))
-# flame_3d = np.array(flame_3d)
-# torch_path = np.array(torch_path)
-# base_thickness = float(input("Enter base thickness: "))
-# for i in range(flame_3d.shape[0]):
-#   flame_3d[i] = R.T@flame_3d[i]
-# if flame_3d.shape[0] == 0:
-#   height_offset = 6 # this is arbitrary
-# else:
-#   avg_base_height = np.mean(flame_3d[:,2])
-#   height_offset = base_thickness - avg_base_height
-
-# try:
-#   print("Height Offset:", height_offset)
-# except:
-#   height_offset = float(input("Enter height offset: "))
-height_offset = -5.77
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
-num_layer_start = int(20 * nominal_slice_increment)  ###modify layer num here
-num_layer_end = min(80 * nominal_slice_increment, slicing_meta["num_layers"])
+num_layer_start = 1  ###modify layer num here
+num_layer_end = 80
 
-# q_prev=client.getJointAnglesDB(positioner.pulse2deg)
-q_prev = np.array([9.53e-02, -2.71e00])  ###for motosim tests only
-num_sections_prev = 5
-if num_layer_start <= 1 * nominal_slice_increment:
-    num_sections = len(glob.glob(data_dir + "curve_sliced_relative/slice0_*.csv"))
-else:
-    num_sections = 1
-
+q_prev=client.getJointAnglesDB(positioner.pulse2deg)
+# q_prev = np.array([9.53e-02, -2.71e00])  ###for motosim tests only
 
 base_thickness = slicing_meta["baselayer_thickness"]
 print("start layer: ", num_layer_start)
 print("end layer: ", num_layer_end)
-print("nominal_slice_increment", nominal_slice_increment)
 layer_angle = np.array((slicing_meta["layer_angle"]))
-
 
 start_dir = True  # Alternate direction that the layer starts from
 
 # for layer in range(num_layer_start,num_layer_end,nominal_slice_increment):
-for layer in range(num_layer_start, num_layer_end, nominal_slice_increment):
+for layer in range(num_layer_start, num_layer_end):
     if layer != 1:
         save_path = recorded_dir + "layer_" + str(layer - 1) + "/"
         start_dir_prev = np.loadtxt(save_path + "start_dir.csv", delimiter=",")
@@ -298,36 +248,23 @@ for layer in range(num_layer_start, num_layer_end, nominal_slice_increment):
         pulse2deg_2=positioner.pulse2deg,
         tool_num=12,
     )
-
-    num_sections_prev = num_sections
-    num_sections = len(
-        glob.glob(data_dir + "curve_sliced_relative/slice" + str(layer) + "_*.csv")
-    )
-
-    ####################DETERMINE CURVE ORDER##############################################
-    x = 0
+    
     curve_sliced_js = np.loadtxt(
-        data_dir + "curve_sliced_js/MA2010_js" + str(layer) + "_" + str(x) + ".csv",
-        delimiter=",",
+        data_dir + f"curve_sliced_js/MA2010_js{layer}_0.csv", delimiter=","
     ).reshape((-1, 6))
-    if len(curve_sliced_js) < 2:
-        continue
+
     positioner_js = np.loadtxt(
-        data_dir + "curve_sliced_js/D500B_js" + str(layer) + "_" + str(x) + ".csv",
-        delimiter=",",
+        data_dir + f"curve_sliced_js/D500B_js{layer}_0.csv", delimiter=","
     )
     curve_sliced_relative = np.loadtxt(
-        data_dir + "curve_sliced_relative/slice" + str(layer) + "_" + str(x) + ".csv",
-        delimiter=",",
+        data_dir + f"curve_sliced_relative/slice{layer}_0.csv", delimiter=","
     )
     curve_sliced = np.loadtxt(
-        data_dir + "curve_sliced/slice" + str(layer) + "_" + str(x) + ".csv",
-        delimiter=",",
+        data_dir + f"curve_sliced/slice{layer}_0.csv", delimiter=","
     )
 
     ###alternate the start point on different ends
     num_points_layer = len(curve_sliced_js)
-    print(num_points_layer)
     if start_dir:
         breakpoints = np.linspace(
             0, len(curve_sliced_js) - 1, num=num_points_layer
