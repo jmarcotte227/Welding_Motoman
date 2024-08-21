@@ -69,8 +69,10 @@ class SpeedHeightModel:
         return v
 
     def model_update_rls(self, vels, dhs):
-        """updates the model coefficients using the recursive least-squares algorithm"""
-        # Algorithm from https://osquant.com/papers/recursive-least-squares-linear-regression/
+        """updates the model coefficients using the recursive 
+        least-squares algorithm"""
+        # Algorithm from 
+        # https://osquant.com/papers/recursive-least-squares-linear-regression/
         for idx, vel in enumerate(vels):
             x = np.array([[np.log(np.array(vel))], [1]])
             y = np.log(dhs[idx])
