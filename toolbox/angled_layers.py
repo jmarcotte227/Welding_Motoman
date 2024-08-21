@@ -20,47 +20,21 @@ def rotate(origin, point, angle):
     return qx, qy
 
 
-def avg_by_line(job_line, data_array, num_segs):
+def avg_by_line(labels, data_array, bins):
     """
-    Averages the data in the variable "data" into the number of segments
-    in "num_segs" according to the values in "job_line"
+    Averages the data in the variable "data" into the bins in "bins"
+    according to the values in "job_line"
     """
-    ref_idx = job_line[0]
-    job_line_unique = [ref_idx]
-    idx = 0
-    num_points = 0
-    average_pos = []
-    total = np.zeros(data_array.shape[1])
-    while True:
-        while job_line[idx] == ref_idx:
-            total = total + data_array[idx, :]
-            num_points += 1
-            idx += 1
-            if idx >= len(job_line):
-                break
+    data_dim = data_array.shape[1]
 
-        average_pos.append(total / num_points)
-        total = np.zeros(data_array.shape[1])
-        try:
-            ref_idx = job_line[idx]
-            job_line_unique.append(ref_idx)
-        except:
-            break
-        num_points = 0
-    average_pos = np.array(average_pos)
-    output = np.empty((num_segs, 3))
-
-    # for i, line_no in enumerate(job_line_unique):
-    #     output[line_no,1:] = average_pos[i,:]
-    #     output[line_no,0] = line_no
-    for i in range(num_segs):
-        if i in job_line_unique:
-            idx = job_line_unique.index(i)
-            output[i, :] = average_pos[idx, :]
+    output = np.zeros((bins.shape[0], data_dim))
+    for idx,_bin in enumerate(bins):
+        avg_idxs = np.where(labels==_bin)[0]
+        if avg_idxs.shape[0] == 0:
+            output[idx,:] = [None]*data_dim
         else:
-            output[i, :] = [None, None, None]
-    # handle missing height data
-
+            total = np.sum(data_array[avg_idxs,:], axis=0)
+            output[idx,:] = total/avg_idxs.shape[0]
     return output
 
 
@@ -72,7 +46,7 @@ class SpeedHeightModel:
 
     def __init__(self, lam=0.05, beta=1, a=-0.4619, b=1.647):
         # Beta == 1 for non-exponentail updates
-        self.coeff_mat = np.array([a,b])
+        self.coeff_mat = np.array([a, b])
         self.nom_a = a
         self.nom_b = b
         self.lam = lam
@@ -80,23 +54,22 @@ class SpeedHeightModel:
         self.beta = beta
 
     def v2dh(self, v):
-        ''' outputs the height for a velocity or array of velocities'''
+        """outputs the height for a velocity or array of velocities"""
         logdh = self.coeff_mat[0] * np.log(v) + self.coeff_mat[1]
 
         dh = np.exp(logdh)
         return dh
 
     def dh2v(self, dh):
-        ''' outputs the velocity for a height or set of heights '''
+        """outputs the velocity for a height or set of heights"""
         logdh = np.log(dh)
         logv = (logdh - self.coeff_mat[1]) / self.coeff_mat[0]
 
         v = np.exp(logv)
         return v
 
-
     def model_update_rls(self, vels, dhs):
-        ''' updates the model coefficients using the recursive least-squares algorithm '''
+        """updates the model coefficients using the recursive least-squares algorithm"""
         # Algorithm from https://osquant.com/papers/recursive-least-squares-linear-regression/
         for idx, vel in enumerate(vels):
             x = np.array([[np.log(np.array(vel))], [1]])
