@@ -3,9 +3,11 @@ Contains the relevant python functions and objects for welding parts
 using non-uniform height profiles.
 """
 
+import pickle
 import numpy as np
 import cv2
-import pickle
+from flir_toolbox import line_intersect
+
 
 
 def rotate(origin, point, angle):
@@ -36,8 +38,11 @@ def avg_by_line(labels, data_array, bins):
     Averages the data in the variable "data" into the bins in "bins"
     according to the values in "job_line"
     """
-    data_dim = data_array.shape[1]
-
+    try:
+        data_dim = data_array.shape[1]
+    except IndexError:
+        data_array = np.reshape(data_array, (-1,1))
+        data_dim = data_array.shape[1]
     output = np.zeros((bins.shape[0], data_dim))
     for idx, _bin in enumerate(bins):
         avg_idxs = np.where(labels == _bin)[0]
@@ -84,6 +89,7 @@ class SpeedHeightModel:
         least-squares algorithm"""
         # Algorithm from
         # https://osquant.com/papers/recursive-least-squares-linear-regression/
+        vels = np.reshape(vels,-1)
         for idx, vel in enumerate(vels):
             x = np.array([[np.log(np.array(vel))], [1]])
             y = np.log(dhs[idx])
@@ -125,7 +131,7 @@ def flame_detection_aluminum(
         1:
     ]  ###threshold connected area
     if len(valid_indices) == 0:
-        return None, None, None, None
+        return None, None
 
     average_pixel_values = [
         np.mean(raw_img[labels == label]) for label in valid_indices
@@ -141,10 +147,12 @@ def flame_detection_aluminum(
     return centroid, bbox
 
 
-def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic):
+def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_offset=0):
     with open(save_path + "ir_recording.pickle", "rb") as file:
         ir_recording = pickle.load(file)
     ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
+    if ir_ts.shape[0] == 0:
+        raise ValueError("No flame detected")
     joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
     timeslot = [ir_ts[0] - ir_ts[0], ir_ts[-1] - ir_ts[0]]
     duration = np.mean(np.diff(timeslot))
@@ -187,13 +195,48 @@ def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic):
 
             # find intersection point
             intersection = line_intersect(p1, v1, p2, v2)
+            # offset by height_offset
+            intersection[2] = intersection[2]+height_offset
             intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
             torch = positioner_pose.R.T @ (robot1_pose.p - positioner_pose.p)
 
             flame_3d.append(intersection)
-            torch_path.append(intersection)
+            torch_path.append(torch)
             job_no.append(int(joint_angle[joint_idx][1]))
     flame_3d = np.array(flame_3d)
     torch_path = np.array(torch_path)
     job_no = np.array(job_no)
     return flame_3d, torch_path, job_no
+
+
+def calc_velocity(save_path, robot):
+    joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
+
+    joint_angles_prev = joint_angle[0, :]
+    joint_angles_layer = joint_angle[1:, :]
+    pose_prev = robot.fwd(joint_angles_prev[2:8]).p
+    time_prev = joint_angles_prev[0]
+
+    time_series_layer = []
+    job_nos_layer = []
+    calc_vel_layer = []
+    for i in range(joint_angles_layer.shape[0]):
+        # calculate instantatneous velocity
+        robot1_pose = robot.fwd(joint_angles_layer[i, 2:8])
+        cart_dif = robot1_pose.p - pose_prev
+        time_stamp = joint_angles_layer[i][0]
+        time_dif = time_stamp - time_prev
+        time_prev = time_stamp
+        cart_vel = cart_dif / time_dif
+        time_prev = time_stamp
+        pose_prev = robot1_pose.p
+        lin_vel = np.sqrt(
+            cart_vel[0] ** 2 + cart_vel[1] ** 2 + cart_vel[2] ** 2
+        )
+        calc_vel_layer.append(lin_vel)
+        job_nos_layer.append(joint_angles_layer[i][1])
+        time_series_layer.append(time_stamp)
+    calc_vel_layer = np.array(calc_vel_layer)
+    job_nos_layer = np.array(job_nos_layer)
+    time_series_layer = np.array(time_series_layer)
+    return calc_vel_layer, job_nos_layer, time_series_layer
