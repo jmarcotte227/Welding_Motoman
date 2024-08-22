@@ -36,7 +36,7 @@ bounds = Bounds(3, 17)
 #####################SENSORS############################################
 # weld state logging
 # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
-cam_ser = None #RRN.ConnectService("rr+tcp://localhost:60827/?service=camera")
+cam_ser = RRN.ConnectService("rr+tcp://localhost:60827/?service=camera")
 # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
 ## RR sensor objects
 rr_sensors = WeldRRSensor(
@@ -52,7 +52,7 @@ now = datetime.now()
 dataset = "bent_tube/"
 sliced_alg = "slice_ER_4043/"
 data_dir = "../data/" + dataset + sliced_alg
-rec_folder = "test_dir" # input("Enter folder of desired test directory (leave blank for new): ")
+rec_folder = 'ER4043_bent_tube_2024_08_22_11_12_27' #input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
         "../../recorded_data/ER4043_bent_tube_%Y_%m_%d_%H_%M_%S/"
@@ -177,6 +177,7 @@ job_no_offset = 3
 #         v2_all,
 #         cond_all=[int(base_feedrate_cmd / 10) + job_offset],
 #         arc=True,
+#         blocking=True,
 #     )
 #     rr_sensors.stop_all_sensors()
 #     global_ts = np.reshape(global_ts, (-1, 1))
@@ -186,6 +187,8 @@ job_no_offset = 3
 #     q_0 = client.getJointAnglesMH(robot.pulse2deg)
 #     q_0[1] = q_0[1] - np.pi / 8
 #     ws.jog_single(robot, q_0, 4)
+
+#     model = SpeedHeightModel()
 
 #     # save data
 #     save_path = recorded_dir + f"layer_{layer}/"
@@ -198,6 +201,8 @@ job_no_offset = 3
 #         np.hstack((global_ts, job_line, joint_recording)),
 #         delimiter=",",
 #     )
+#     np.savetxt(save_path + "/coeff_mat.csv", model.coeff_mat, delimiter=",")
+#     np.savetxt(save_path + "/model_p.csv", model.p, delimiter=",")
 #     rr_sensors.save_all_sensors(save_path)
 #     input("-------Base Layer Finished-------")
 
@@ -209,26 +214,27 @@ job_no_offset = 3
 #     base_thickness = float(input("Enter base thickness: "))
 #     for i in range(flame_3d.shape[0]):
 #         flame_3d[i] = R.T @ flame_3d[i]
-#     if flame_3d.shape[0] == 0:
-#         height_offset = 6  # this is arbitrary
-#     else:
-#         avg_base_height = np.mean(flame_3d[:, 2])
-#         height_offset = base_thickness - avg_base_height
+#     # if flame_3d.shape[0] == 0:
+#     #     height_offset = 6  # this is arbitrary
+#     # else:
+#     avg_base_height = np.mean(flame_3d[:, 2])
+#     height_offset = base_thickness - avg_base_height
 
 try:
+    print("Average Base Height:", avg_base_height)
     print("Height Offset:", height_offset)
 except:
-    height_offset = 5 #float(input("Enter height offset: "))
+    height_offset = -4.51 #float(input("Enter height offset: "))
 
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
-num_layer_start = 59  ###modify layer num here
-num_layer_end = 80
+num_layer_start = 65  ###modify layer num here
+num_layer_end = 81
 point_of_rotation = np.array(
         (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"])
     )
-# q_prev = client.getJointAnglesDB(positioner.pulse2deg)
-q_prev = np.array([9.53e-02, -2.71e00])  ###for motosim tests only
+q_prev = client.getJointAnglesDB(positioner.pulse2deg)
+# q_prev = np.array([9.53e-02, -2.71e00])  ###for motosim tests only
 
 base_thickness = slicing_meta["baselayer_thickness"]
 print("start layer: ", num_layer_start)
@@ -284,6 +290,8 @@ for layer in range(num_layer_start, num_layer_end):
         ### Process IR data prev 
         try:
             flame_3d_prev, _, job_no_prev = flame_tracking(f"{recorded_dir}layer_{layer-1}/", robot, robot2, positioner, flir_intrinsic, height_offset)
+            if flame_3d_prev.shape[0] == 0:
+                raise ValueError("No flame detected")
         except ValueError as e:
             print(e)
             flame_3d_prev = None
@@ -302,21 +310,23 @@ for layer in range(num_layer_start, num_layer_end):
             job_no_prev = [i - job_no_offset for i in job_no_prev]
             averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(curve_sliced_js)-1,len(curve_sliced_js)))
             heights_prev = averages_prev[:,2]
-            if not start_dir: heights_prev = np.flip(heights_prev)
+            if start_dir: heights_prev = np.flip(heights_prev)
             # Find Valid datapoints for height correction
             prev_idx = np.argwhere(np.invert(np.isnan(heights_prev)))
 
             ### Process IR data 2 prev
             try:
                 flame_3d_prev_2, _, job_no_prev_2 = flame_tracking(f"{recorded_dir}layer_{layer-2}/", robot, robot2, positioner, flir_intrinsic, height_offset)
+                print(flame_3d_prev_2.shape)
             except ValueError as e:
                 print(e)
                 ir_error_flag = True
             else:
+                print(ir_error_flag)
                 # rotate to flat
                 for i in range(flame_3d_prev_2.shape[0]):
                     flame_3d_prev_2[i] = R.T @ flame_3d_prev_2[i] 
-
+                
                 new_x, new_z = rotate(
                     point_of_rotation, (flame_3d_prev_2[:, 0], flame_3d_prev_2[:, 2]), to_flat_angle
                 )
@@ -327,7 +337,7 @@ for layer in range(num_layer_start, num_layer_end):
                 averages_prev_2 = avg_by_line(job_no_prev_2, flame_3d_prev_2, np.linspace(0,len(curve_sliced_js)-1,len(curve_sliced_js)))
                
                 heights_prev_2 = averages_prev_2[:,2]
-                if start_dir: heights_prev_2 = np.flip(heights_prev_2)
+                if not start_dir: heights_prev_2 = np.flip(heights_prev_2)
                 # Find Valid datapoints for height correction
                 prev_idx_2 = np.argwhere(np.invert(np.isnan(heights_prev_2)))
 
@@ -342,10 +352,17 @@ for layer in range(num_layer_start, num_layer_end):
                 dh = heights_prev[valid_idx]-heights_prev_2[valid_idx]
                 print(dh)
                 # update model coefficients
+                print("Update, vel_avg: ", vel_avg[valid_idx])
+                print("Update, dh: ", dh)
                 model.model_update_rls(vel_avg[valid_idx], dh)
                 vel_nom = model.dh2v(height_profile)
                 print(vel_nom)
-
+                if np.any(np.isnan(vel_nom)):
+                    print("bum model")
+                    model_coeff = np.loadtxt(f"{recorded_dir}layer_{layer-2}/coeff_mat.csv", delimiter=",")
+                    model_p = np.loadtxt(f"{recorded_dir}layer_{layer-2}/model_p.csv", delimiter=",")
+                    model = SpeedHeightModel(a = model_coeff[0], b = model_coeff[1], p = model_p)
+                    vel_nom = model.dh2v(height_profile)
             heights_prev = interpolate_heights(height_profile, heights_prev)
             height_err = 0-heights_prev
             # correct direction if start dir is in the opposite direction
@@ -354,10 +371,12 @@ for layer in range(num_layer_start, num_layer_end):
             # plt.plot(heights_prev)
             # plt.plot(heights_prev_2)
             # plt.show()
+            # plt.close()
             # ax = plt.figure().add_subplot(projection='3d')
             # ax.plot3D(flame_3d_prev[:,0], flame_3d_prev[:,1], flame_3d_prev[:,2])
             # ax.plot3D(flame_3d_prev_2[:,0], flame_3d_prev_2[:,1], flame_3d_prev_2[:,2])
             # plt.show()
+            # plt.close()
 
             nan_vel_idx = np.argwhere(np.isnan(vel_avg))
             vel_avg[nan_vel_idx] = vel_nom[nan_vel_idx]
@@ -368,13 +387,16 @@ for layer in range(num_layer_start, num_layer_end):
                 bounds=bounds,
                 options={"maxfun": 100000},
             )
+            try:
+                if not opt_result.success:
+                    print(opt_result)
+                    raise ValueError(opt_result.message)
 
-            if not opt_result.success:
-                print(opt_result)
-                raise ValueError(opt_result.message)
+                velocity_profile = opt_result.x
 
-            velocity_profile = opt_result.x
-
+            except ValueError as e:
+                
+                velocity_profile = vel_nom
     if start_dir:
         breakpoints = np.linspace(
             0, len(curve_sliced_js) - 1, num=len(curve_sliced_js)
@@ -400,14 +422,15 @@ for layer in range(num_layer_start, num_layer_end):
     p2_in_base_frame = p2_in_base_frame - measure_distance * v_z
     R2 = np.vstack((v_x, v_y, v_z)).T
     q2 = robot2.inv(p2_in_base_frame, R2, last_joints=np.zeros(6))[0]
-    # q_prev = client.getJointAnglesDB(positioner.pulse2deg)
+    q_prev = client.getJointAnglesDB(positioner.pulse2deg)
     num2p = np.round((q_prev - positioner_js[0]) / (2 * np.pi))
     positioner_js += num2p * 2 * np.pi
-    # ws.jog_dual(robot2, positioner, q2, positioner_js[0], v=1)
+    ws.jog_dual(robot2, positioner, q2, positioner_js[0], v=1)
 
-
+    print("Start_dir: ", start_dir)
+    print("Prev velocities: ", vel_avg)
     print("Velocities: ",velocity_profile[breakpoints])
-    # input("Check Vel Profile, enter to continue")
+    input("Check Vel Profile, enter to continue")
     save_path = recorded_dir + "layer_" + str(layer) + "/"
     try:
         os.makedirs(save_path)
@@ -434,35 +457,35 @@ for layer in range(num_layer_start, num_layer_end):
         primitives.append("movel")
     q_prev = positioner_js[breakpoints[-1]]
     ################ Weld with sensors #############################
-    # rr_sensors.start_all_sensors()
-    # global_ts, robot_ts, joint_recording, job_line, _ = ws.weld_segment_dual(
-    #     primitives,
-    #     robot,
-    #     positioner,
-    #     q1_all,
-    #     q2_all,
-    #     v1_all,
-    #     v2_all,
-    #     cond_all=[int(feedrate_cmd / 10) + job_offset],
-    #     arc=True,
-    #     blocking=True,
-    # )
-    # rr_sensors.stop_all_sensors()
-    # global_ts = np.reshape(global_ts, (-1, 1))
-    # job_line = np.reshape(job_line, (-1, 1))
+    rr_sensors.start_all_sensors()
+    global_ts, robot_ts, joint_recording, job_line, _ = ws.weld_segment_dual(
+        primitives,
+        robot,
+        positioner,
+        q1_all,
+        q2_all,
+        v1_all,
+        v2_all,
+        cond_all=[int(feedrate_cmd / 10) + job_offset],
+        arc=True,
+        blocking=True,
+    )
+    rr_sensors.stop_all_sensors()
+    global_ts = np.reshape(global_ts, (-1, 1))
+    job_line = np.reshape(job_line, (-1, 1))
 
-    # # save data
-    # np.savetxt(
-    #     save_path + "weld_js_exe.csv",
-    #     np.hstack((global_ts, job_line, joint_recording)),
-    #     delimiter=",",
-    # )
-    # rr_sensors.save_all_sensors(save_path)
+    # save data
+    np.savetxt(
+        save_path + "weld_js_exe.csv",
+        np.hstack((global_ts, job_line, joint_recording)),
+        delimiter=",",
+    )
+    rr_sensors.save_all_sensors(save_path)
 
-    # q_0 = client.getJointAnglesMH(robot.pulse2deg)
-    # q_0[1] = q_0[1] - np.pi / 8
-    # print(q_0)
-    # ws.jog_single(robot, q_0, 4)
-    # input("-------Layer Finished-------")
+    q_0 = client.getJointAnglesMH(robot.pulse2deg)
+    q_0[1] = q_0[1] - np.pi / 8
+    print(q_0)
+    ws.jog_single(robot, q_0, 4)
+    input(f"-------Layer {layer} Finished-------")
 
 

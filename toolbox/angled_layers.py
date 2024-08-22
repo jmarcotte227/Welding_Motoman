@@ -6,7 +6,7 @@ using non-uniform height profiles.
 import pickle
 import numpy as np
 import cv2
-from flir_toolbox import line_intersect
+from flir_toolbox import *
 
 
 
