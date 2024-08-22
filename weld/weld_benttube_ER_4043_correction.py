@@ -222,7 +222,7 @@ except:
 
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
-num_layer_start = 43  ###modify layer num here
+num_layer_start = 59  ###modify layer num here
 num_layer_end = 80
 point_of_rotation = np.array(
         (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"])
@@ -270,11 +270,13 @@ for layer in range(num_layer_start, num_layer_end):
         start_dir=True
         model = SpeedHeightModel()
         vel_nom = model.dh2v(height_profile)
+        velocity_profile = vel_nom
     else: 
         start_dir = not np.loadtxt(f"{recorded_dir}layer_{layer-1}/start_dir.csv", delimiter=",")
         # Initialize model with previous layer's coefficients
         model_coeff = np.loadtxt(f"{recorded_dir}layer_{layer-1}/coeff_mat.csv", delimiter=",")
-        model = SpeedHeightModel(a = model_coeff[0], b = model_coeff[1])
+        model_p = np.loadtxt(f"{recorded_dir}layer_{layer-1}/model_p.csv", delimiter=",")
+        model = SpeedHeightModel(a = model_coeff[0], b = model_coeff[1], p = model_p)
         vel_nom = model.dh2v(height_profile) #updated later down if model updates
 
         
@@ -338,23 +340,24 @@ for layer in range(num_layer_start, num_layer_end):
                 
                 valid_idx = np.intersect1d(np.intersect1d(prev_idx, prev_idx_2), vel_valid_idx)
                 dh = heights_prev[valid_idx]-heights_prev_2[valid_idx]
-
+                print(dh)
                 # update model coefficients
                 model.model_update_rls(vel_avg[valid_idx], dh)
                 vel_nom = model.dh2v(height_profile)
+                print(vel_nom)
 
             heights_prev = interpolate_heights(height_profile, heights_prev)
             height_err = 0-heights_prev
             # correct direction if start dir is in the opposite direction
             if not start_dir:
                 vel_avg = np.flip(vel_avg)
-            plt.plot(heights_prev)
-            plt.plot(heights_prev_2)
-            plt.show()
-            ax = plt.figure().add_subplot(projection='3d')
-            ax.plot3D(flame_3d_prev[:,0], flame_3d_prev[:,1], flame_3d_prev[:,2])
-            ax.plot3D(flame_3d_prev_2[:,0], flame_3d_prev_2[:,1], flame_3d_prev_2[:,2])
-            plt.show()
+            # plt.plot(heights_prev)
+            # plt.plot(heights_prev_2)
+            # plt.show()
+            # ax = plt.figure().add_subplot(projection='3d')
+            # ax.plot3D(flame_3d_prev[:,0], flame_3d_prev[:,1], flame_3d_prev[:,2])
+            # ax.plot3D(flame_3d_prev_2[:,0], flame_3d_prev_2[:,1], flame_3d_prev_2[:,2])
+            # plt.show()
 
             nan_vel_idx = np.argwhere(np.isnan(vel_avg))
             vel_avg[nan_vel_idx] = vel_nom[nan_vel_idx]
@@ -412,6 +415,7 @@ for layer in range(num_layer_start, num_layer_end):
         print(e)
 
     np.savetxt(save_path + "/coeff_mat.csv", model.coeff_mat, delimiter=",")
+    np.savetxt(save_path + "/model_p.csv", model.p, delimiter=",")
     np.savetxt(
         save_path + "velocity_profile.csv", velocity_profile[breakpoints], delimiter=","
     )

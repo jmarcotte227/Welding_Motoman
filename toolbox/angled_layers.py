@@ -60,13 +60,15 @@ class SpeedHeightModel:
     ln(h) = a ln(v) + b
     """
 
-    def __init__(self, lam=0.05, beta=1, a=-0.4619, b=1.647):
+    def __init__(self, lam=0.05, beta=1, a=-0.4619, b=1.647, p = None):
         # Beta == 1 for non-exponentail updates
         self.coeff_mat = np.array([a, b])
         self.nom_a = a
         self.nom_b = b
         self.lam = lam
-        self.p = np.diag(np.ones(self.coeff_mat.shape[0]) * self.lam)
+        if p is None:
+            self.p = np.diag(np.ones(self.coeff_mat.shape[0]) * self.lam)
+        else: self.p = p
         self.beta = beta
 
     def v2dh(self, v):
