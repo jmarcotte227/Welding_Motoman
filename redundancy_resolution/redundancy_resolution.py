@@ -236,7 +236,7 @@ class redundancy_resolution(object):
 				
 				positioner_js_ith_layer_xth_section=self.positioner.find_curve_js(-curve_sliced_relative[i][x][:,3:],q_prev)
 
-				q_prev=positioner_js_ith_layer_xth_section[-1]
+				q_prev=q_seed # positioner_js_ith_layer_xth_section[-1]
 				###filter noise
 				if smooth_filter:
 					positioner_js_ith_layer_xth_section[:,0]=moving_average(positioner_js_ith_layer_xth_section[:,0],padding=True)

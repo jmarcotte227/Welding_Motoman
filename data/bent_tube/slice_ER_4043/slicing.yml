@@ -10,8 +10,8 @@ layer_angle: 1.1257976619508032
 tube_diameter: 50
 smooth_filter: False
 q_positioner_seed: 
-  - 1.57
-  - 1.57
+  - -0.261799387799149
+  - 4.833336940642538160
 
 
 

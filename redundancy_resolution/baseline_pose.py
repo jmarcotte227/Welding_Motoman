@@ -37,7 +37,7 @@ def main():
 	q_seed=np.radians([-35.4291,56.6333,40.5194,4.5177,-52.2505,-11.6546])
 
 	rr=redundancy_resolution(robot,positioner,curve_sliced)
-	H=rr.baseline_pose(vec=np.array([1,0]))
+	H=rr.baseline_pose(vec=np.array([0,1]))
 
 
 	# try:
@@ -92,10 +92,10 @@ def main():
 	
 			#np.savetxt(data_dir+'curve_sliced_relative/baselayer'+str(i)+'_'+str(x)+'.csv',curve_sliced_relative_base[i][x],delimiter=',')
 
-
+	set_axes_equal(ax)
 	plt.title(dataset[:-1]+' first '+str(slicing_meta['num_layers'])+' slices')
 	ax.set_aspect('equal')
-	# plt.show()
+	plt.show()
 
 
 

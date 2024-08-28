@@ -9,8 +9,8 @@ def main():
 	dataset='bent_tube/'
 	sliced_alg='slice_ER_4043/'
 	data_dir='../data/'+dataset+sliced_alg
-	num_layers=757
-	num_baselayers=2
+	num_layers=81
+	num_baselayers=0
 	curve_sliced_js=[]
 	positioner_js=[]
 	for i in range(num_layers):
@@ -29,7 +29,7 @@ def main():
 
 	plt.plot(positioner_js,label=('q1','q2'))
 	plt.legend()
-	plt.title('bent wall first '+str(num_layers)+' slices')
+	plt.title(' '+str(num_layers)+' slices')
 	plt.show()
 
 
