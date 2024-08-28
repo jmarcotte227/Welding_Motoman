@@ -92,7 +92,7 @@ def main():
 	
 			#np.savetxt(data_dir+'curve_sliced_relative/baselayer'+str(i)+'_'+str(x)+'.csv',curve_sliced_relative_base[i][x],delimiter=',')
 
-	set_axes_equal(ax)
+
 	plt.title(dataset[:-1]+' first '+str(slicing_meta['num_layers'])+' slices')
 	ax.set_aspect('equal')
 	plt.show()
