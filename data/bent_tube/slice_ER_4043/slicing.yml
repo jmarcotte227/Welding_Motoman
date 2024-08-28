@@ -1,7 +1,7 @@
-num_layers: 80
+num_layers: 81
 num_baselayers: 0
 line_resolution: 0.1
-baselayer_thickness: 3
+baselayer_thickness: 4
 point_distance: 3.141592653589793
 dh_max: 2.468475190539253
 dh_min: 1.4860946104132609
@@ -10,8 +10,8 @@ layer_angle: 1.1257976619508032
 tube_diameter: 50
 smooth_filter: False
 q_positioner_seed: 
-  - -2.0
-  - 1.820263258290424790
+  - 1.57
+  - 1.57
 
 
 
