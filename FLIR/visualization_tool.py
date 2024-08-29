@@ -9,7 +9,7 @@ from flir_toolbox import *
 # data_dir='../../recorded_data/ER316L/trianglebf_100ipm_v10_100ipm_v10/'
 # data_dir='../../recorded_data/trianglebf_100ipm_v10_100ipm_v10/'
 # data_dir='../../recorded_data/wall_weld_test/5356_150ipm_2024_06_17_14_36_16/layer_2'
-data_dir='../../recorded_data/ER4043_bent_tube'
+data_dir='../../recorded_data/ER4043_bent_tube_2024_08_22_11_12_27/layer_75'
 with open(data_dir+'/ir_recording.pickle', 'rb') as file:
     ir_recording = pickle.load(file)
 ir_ts=np.loadtxt(data_dir+'/ir_stamps.csv', delimiter=',')
