@@ -37,7 +37,7 @@ def main():
 	q_seed=np.radians([-35.4291,56.6333,40.5194,4.5177,-52.2505,-11.6546])
 
 	rr=redundancy_resolution(robot,positioner,curve_sliced)
-	H=rr.baseline_pose(vec=np.array([-1,0]))
+	H=rr.baseline_pose(vec=np.array([0,1]))
 
 
 	# try:
