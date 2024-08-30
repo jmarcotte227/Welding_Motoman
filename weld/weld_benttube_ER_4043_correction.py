@@ -36,7 +36,7 @@ bounds = Bounds(3, 17)
 #####################SENSORS############################################
 # weld state logging
 # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
-cam_ser = RRN.ConnectService("rr+tcp://localhost:60827/?service=camera")
+cam_ser = None # RRN.ConnectService("rr+tcp://localhost:60827/?service=camera")
 # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
 ## RR sensor objects
 rr_sensors = WeldRRSensor(
@@ -52,7 +52,7 @@ now = datetime.now()
 dataset = "bent_tube/"
 sliced_alg = "slice_ER_4043/"
 data_dir = "../data/" + dataset + sliced_alg
-rec_folder = 'ER4043_bent_tube_2024_08_22_11_12_27' #input("Enter folder of desired test directory (leave blank for new): ")
+rec_folder = 'ER4043_bent_tube_2024_08_28_12_24_30' #input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
         "../../recorded_data/ER4043_bent_tube_%Y_%m_%d_%H_%M_%S/"
@@ -104,10 +104,10 @@ jog_vd = 4.0
 job_no_offset = 3
 
 ####################BASE layer welding################################
-# num_layer_start = int(0)
-# num_layer_end = int(1)
+num_layer_start = int(0)
+num_layer_end = int(1)
 
-# for layer in range(num_layer_start, num_layer_end):
+for layer in range(num_layer_start, num_layer_end):
 #     mp = MotionProgram(
 #         ROBOT_CHOICE="RB1",
 #         ROBOT_CHOICE2="ST1",
@@ -191,7 +191,7 @@ job_no_offset = 3
 #     model = SpeedHeightModel()
 
 #     # save data
-#     save_path = recorded_dir + f"layer_{layer}/"
+    save_path = recorded_dir + f"layer_{layer}/"
 #     try:
 #         os.makedirs(save_path)
 #     except Exception as e:
@@ -207,18 +207,18 @@ job_no_offset = 3
 #     input("-------Base Layer Finished-------")
 
 #     ## Interpret base layer IR data to get h offset
-#     flame_3d, torch_path, job_no = flame_tracking(
-#         save_path, robot, robot2, positioner, flir_intrinsic
-#     )
+    flame_3d, torch_path, job_no = flame_tracking(
+        save_path, robot, robot2, positioner, flir_intrinsic
+    )
 
-#     base_thickness = float(input("Enter base thickness: "))
-#     for i in range(flame_3d.shape[0]):
-#         flame_3d[i] = R.T @ flame_3d[i]
-#     # if flame_3d.shape[0] == 0:
-#     #     height_offset = 6  # this is arbitrary
-#     # else:
-#     avg_base_height = np.mean(flame_3d[:, 2])
-#     height_offset = base_thickness - avg_base_height
+    base_thickness = float(input("Enter base thickness: "))
+    for i in range(flame_3d.shape[0]):
+        flame_3d[i] = R.T @ flame_3d[i]
+    # if flame_3d.shape[0] == 0:
+    #     height_offset = 6  # this is arbitrary
+    # else:
+    avg_base_height = np.mean(flame_3d[:, 2])
+    height_offset = base_thickness - avg_base_height
 
 try:
     print("Average Base Height:", avg_base_height)
