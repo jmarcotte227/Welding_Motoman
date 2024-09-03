@@ -18,7 +18,7 @@ def rms_error(data):
     return np.sqrt(num/n)
 
 sys.path.append('../../toolbox')
-from angled_layers import *
+from angled_layers import rotate, flame_tracking
 
 
 recorded_dir = '../../../recorded_data/ER4043_bent_tube_2024_08_28_12_24_30/'
@@ -67,11 +67,12 @@ base_thickness = slicing_meta["baselayer_thickness"]
 layer_angle = np.array((slicing_meta["layer_angle"]))
 print(layer_angle)
 num_layer_start = 1
-num_layer_end = 80
+num_layer_end = 79
 heights = []
 flames = []
 rms_err = []
-for layer in range(num_layer_start, num_layer_end):
+for layer in range(num_layer_start, num_layer_end+1):
+    print(f"Starting layer {layer}", end='\r')
     ### Load Data
     curve_sliced_js = np.loadtxt(
         data_dir + f"curve_sliced_js/MA2010_js{layer}_0.csv", delimiter=","
@@ -104,6 +105,9 @@ for layer in range(num_layer_start, num_layer_end):
     except ValueError as e:
         print(e)
         flame_3d= None
+    except FileNotFoundError as e:
+        print(e)
+        flame_3d = None
     else:
     # rotate to flat
         for i in range(flame_3d.shape[0]):
@@ -114,10 +118,10 @@ for layer in range(num_layer_start, num_layer_end):
         )
         flame_3d[:, 0] = new_x
         flame_3d[:, 2] = new_z - base_thickness
-        flames.append(flame_3d)
 
         job_no= [i - job_no_offset for i in job_no]
         averages= avg_by_line(job_no, flame_3d, np.linspace(0,len(curve_sliced_js)-1,len(curve_sliced_js)))
+        flames.append(averages)
         heights.append(averages[:,2])
 
 fig = plt.figure()
@@ -126,7 +130,6 @@ for flame in flames:
     ax.scatter(flame[:,0], flame[:,1], flame[:,2])
 plt.show()
 for scan in heights:
-    print("scan: ", scan)
     rms_err.append(rms_error(scan))
 plt.plot(rms_err)
 plt.gca().set_xlabel("Layer Number")
