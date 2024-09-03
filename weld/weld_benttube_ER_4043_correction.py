@@ -1,6 +1,7 @@
 import sys
 import glob
 import yaml
+import numpy as np
 
 sys.path.append("../toolbox/")
 sys.path.append("")
@@ -22,7 +23,7 @@ from angled_layers import *
 
 
 # Setup Optimization Problem
-def v_opt(v_next, v_prev, h_err, h_targ, model, alpha=0.04, beta=0.11):
+def v_opt(v_next, v_prev, h_err, h_targ, model, beta=0.11):
     return (
         norm(h_targ + h_err - model.v2dh(v_next), 2) ** 2
         + alpha * norm(v_next - v_prev, 2) ** 2
@@ -36,7 +37,7 @@ bounds = Bounds(3, 17)
 #####################SENSORS############################################
 # weld state logging
 # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
-cam_ser = None # RRN.ConnectService("rr+tcp://localhost:60827/?service=camera")
+cam_ser = RRN.ConnectService("rr+tcp://localhost:60827/?service=camera")
 # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
 ## RR sensor objects
 rr_sensors = WeldRRSensor(
@@ -52,7 +53,7 @@ now = datetime.now()
 dataset = "bent_tube/"
 sliced_alg = "slice_ER_4043/"
 data_dir = "../data/" + dataset + sliced_alg
-rec_folder = 'ER4043_bent_tube_2024_08_28_12_24_30' #input("Enter folder of desired test directory (leave blank for new): ")
+rec_folder = input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
         "../../recorded_data/ER4043_bent_tube_%Y_%m_%d_%H_%M_%S/"
@@ -108,105 +109,105 @@ num_layer_start = int(0)
 num_layer_end = int(1)
 
 for layer in range(num_layer_start, num_layer_end):
-#     mp = MotionProgram(
-#         ROBOT_CHOICE="RB1",
-#         ROBOT_CHOICE2="ST1",
-#         pulse2deg=robot.pulse2deg,
-#         pulse2deg_2=positioner.pulse2deg,
-#         tool_num=12,
-#     )
-#     curve_sliced_js = np.loadtxt(
-#         data_dir + f"curve_sliced_js/MA2010_js{layer}_0.csv", delimiter=","
-#     ).reshape((-1, 6))
+    mp = MotionProgram(
+        ROBOT_CHOICE="RB1",
+        ROBOT_CHOICE2="ST1",
+        pulse2deg=robot.pulse2deg,
+        pulse2deg_2=positioner.pulse2deg,
+        tool_num=12,
+    )
+    curve_sliced_js = np.loadtxt(
+        data_dir + f"curve_sliced_js/MA2010_js{layer}_0.csv", delimiter=","
+    ).reshape((-1, 6))
 
-#     positioner_js = np.loadtxt(
-#         data_dir + f"curve_sliced_js/D500B_js{layer}_0.csv", delimiter=","
-#     )
-#     curve_sliced_relative = np.loadtxt(
-#         data_dir + f"curve_sliced_relative/slice{layer}_0.csv", delimiter=","
-#     )
+    positioner_js = np.loadtxt(
+        data_dir + f"curve_sliced_js/D500B_js{layer}_0.csv", delimiter=","
+    )
+    curve_sliced_relative = np.loadtxt(
+        data_dir + f"curve_sliced_relative/slice{layer}_0.csv", delimiter=","
+    )
 
-#     # Define breakpoints; redundant here
-#     num_points_layer = len(curve_sliced_js)
-#     breakpoints = np.linspace(0, len(curve_sliced_js) - 1, num=num_points_layer).astype(
-#         int
-#     )
+    # Define breakpoints; redundant here
+    num_points_layer = len(curve_sliced_js)
+    breakpoints = np.linspace(0, len(curve_sliced_js) - 1, num=num_points_layer).astype(
+        int
+    )
 
-#     #### jog to start and position camera
-#     p_positioner_home = np.mean(
-#         [robot.fwd(curve_sliced_js[0]).p, robot.fwd(curve_sliced_js[-1]).p], axis=0
-#     )
-#     p_robot2_proj = p_positioner_home + np.array([0, 0, 50])
-#     p2_in_base_frame = np.dot(H2010_1440[:3, :3], p_robot2_proj) + H2010_1440[:3, 3]
-#     # pointing toward positioner's X with 15deg tiltd angle looking down
-#     v_z = H2010_1440[:3, :3] @ np.array([0, -0.96592582628, -0.2588190451])
-#     # FLIR's Y pointing toward 1440's -X in 1440's base frame,
-#     # projected on v_z's plane
-#     v_y = VectorPlaneProjection(np.array([-1, 0, 0]), v_z)
-#     v_x = np.cross(v_y, v_z)
-#     # back project measure_distance-mm away from torch
-#     p2_in_base_frame = p2_in_base_frame - measure_distance * v_z
-#     R2 = np.vstack((v_x, v_y, v_z)).T
-#     q2 = robot2.inv(p2_in_base_frame, R2, last_joints=np.zeros(6))[0]
-#     q_prev = client.getJointAnglesDB(positioner.pulse2deg)
-#     num2p = np.round((q_prev - positioner_js[0]) / (2 * np.pi))
-#     positioner_js += num2p * 2 * np.pi
-#     ws.jog_dual(robot2, positioner, q2, positioner_js[0], v=1)
+    #### jog to start and position camera
+    p_positioner_home = np.mean(
+        [robot.fwd(curve_sliced_js[0]).p, robot.fwd(curve_sliced_js[-1]).p], axis=0
+    )
+    p_robot2_proj = p_positioner_home + np.array([0, 0, 50])
+    p2_in_base_frame = np.dot(H2010_1440[:3, :3], p_robot2_proj) + H2010_1440[:3, 3]
+    # pointing toward positioner's X with 15deg tiltd angle looking down
+    v_z = H2010_1440[:3, :3] @ np.array([0, -0.96592582628, -0.2588190451])
+    # FLIR's Y pointing toward 1440's -X in 1440's base frame,
+    # projected on v_z's plane
+    v_y = VectorPlaneProjection(np.array([-1, 0, 0]), v_z)
+    v_x = np.cross(v_y, v_z)
+    # back project measure_distance-mm away from torch
+    p2_in_base_frame = p2_in_base_frame - measure_distance * v_z
+    R2 = np.vstack((v_x, v_y, v_z)).T
+    q2 = robot2.inv(p2_in_base_frame, R2, last_joints=np.zeros(6))[0]
+    q_prev = client.getJointAnglesDB(positioner.pulse2deg)
+    num2p = np.round((q_prev - positioner_js[0]) / (2 * np.pi))
+    positioner_js += num2p * 2 * np.pi
+    ws.jog_dual(robot2, positioner, q2, positioner_js[0], v=1)
 
-#     q1_all = [curve_sliced_js[breakpoints[0]]]
-#     q2_all = [positioner_js[breakpoints[0]]]
-#     v1_all = [jog_vd]
-#     v2_all = [pos_vel]
-#     primitives = ["movej"]
-#     for j in range(1, len(breakpoints)):
-#         q1_all.append(curve_sliced_js[breakpoints[j]])
-#         q2_all.append(positioner_js[breakpoints[j]])
-#         v1_all.append(max(base_vd, 0.1))
-#         v2_all.append(pos_vel)
-#         primitives.append("movel")
+    q1_all = [curve_sliced_js[breakpoints[0]]]
+    q2_all = [positioner_js[breakpoints[0]]]
+    v1_all = [jog_vd]
+    v2_all = [pos_vel]
+    primitives = ["movej"]
+    for j in range(1, len(breakpoints)):
+        q1_all.append(curve_sliced_js[breakpoints[j]])
+        q2_all.append(positioner_js[breakpoints[j]])
+        v1_all.append(max(base_vd, 0.1))
+        v2_all.append(pos_vel)
+        primitives.append("movel")
 
-#     q_prev = positioner_js[breakpoints[-1]]
-#     rr_sensors.start_all_sensors()
-#     global_ts, timestamp_robot, joint_recording, job_line, _ = ws.weld_segment_dual(
-#         primitives,
-#         robot,
-#         positioner,
-#         q1_all,
-#         q2_all,
-#         v1_all,
-#         v2_all,
-#         cond_all=[int(base_feedrate_cmd / 10) + job_offset],
-#         arc=True,
-#         blocking=True,
-#     )
-#     rr_sensors.stop_all_sensors()
-#     global_ts = np.reshape(global_ts, (-1, 1))
-#     job_line = np.reshape(job_line, (-1, 1))
+    q_prev = positioner_js[breakpoints[-1]]
+    rr_sensors.start_all_sensors()
+    global_ts, timestamp_robot, joint_recording, job_line, _ = ws.weld_segment_dual(
+        primitives,
+        robot,
+        positioner,
+        q1_all,
+        q2_all,
+        v1_all,
+        v2_all,
+        cond_all=[int(base_feedrate_cmd / 10) + job_offset],
+        arc=True,
+        blocking=True,
+    )
+    rr_sensors.stop_all_sensors()
+    global_ts = np.reshape(global_ts, (-1, 1))
+    job_line = np.reshape(job_line, (-1, 1))
 
-#     # Reposition arm out of the way
-#     q_0 = client.getJointAnglesMH(robot.pulse2deg)
-#     q_0[1] = q_0[1] - np.pi / 8
-#     ws.jog_single(robot, q_0, 4)
+    # Reposition arm out of the way
+    q_0 = client.getJointAnglesMH(robot.pulse2deg)
+    q_0[1] = q_0[1] - np.pi / 8
+    ws.jog_single(robot, q_0, 4)
 
-#     model = SpeedHeightModel()
+    model = SpeedHeightModel()
 
-#     # save data
+    # save data
     save_path = recorded_dir + f"layer_{layer}/"
-#     try:
-#         os.makedirs(save_path)
-#     except Exception as e:
-#         print(e)
-#     np.savetxt(
-#         save_path + "weld_js_exe.csv",
-#         np.hstack((global_ts, job_line, joint_recording)),
-#         delimiter=",",
-#     )
-#     np.savetxt(save_path + "/coeff_mat.csv", model.coeff_mat, delimiter=",")
-#     np.savetxt(save_path + "/model_p.csv", model.p, delimiter=",")
-#     rr_sensors.save_all_sensors(save_path)
-#     input("-------Base Layer Finished-------")
+    try:
+        os.makedirs(save_path)
+    except Exception as e:
+        print(e)
+    np.savetxt(
+        save_path + "weld_js_exe.csv",
+        np.hstack((global_ts, job_line, joint_recording)),
+        delimiter=",",
+    )
+    np.savetxt(save_path + "/coeff_mat.csv", model.coeff_mat, delimiter=",")
+    np.savetxt(save_path + "/model_p.csv", model.p, delimiter=",")
+    rr_sensors.save_all_sensors(save_path)
+    input("-------Base Layer Finished-------")
 
-#     ## Interpret base layer IR data to get h offset
+    ## Interpret base layer IR data to get h offset
     flame_3d, torch_path, job_no = flame_tracking(
         save_path, robot, robot2, positioner, flir_intrinsic
     )
@@ -214,11 +215,11 @@ for layer in range(num_layer_start, num_layer_end):
     base_thickness = float(input("Enter base thickness: "))
     for i in range(flame_3d.shape[0]):
         flame_3d[i] = R.T @ flame_3d[i]
-    # if flame_3d.shape[0] == 0:
-    #     height_offset = 6  # this is arbitrary
-    # else:
-    avg_base_height = np.mean(flame_3d[:, 2])
-    height_offset = base_thickness - avg_base_height
+    if flame_3d.shape[0] == 0:
+        height_offset = 6  # this is arbitrary
+    else:
+        avg_base_height = np.mean(flame_3d[:, 2])
+        height_offset = base_thickness - avg_base_height
 
 try:
     print("Average Base Height:", avg_base_height)
@@ -228,7 +229,7 @@ except:
 
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
-num_layer_start = 65  ###modify layer num here
+num_layer_start = 1  ###modify layer num here
 num_layer_end = 81
 point_of_rotation = np.array(
         (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"])
@@ -316,7 +317,14 @@ for layer in range(num_layer_start, num_layer_end):
 
             ### Process IR data 2 prev
             try:
-                flame_3d_prev_2, _, job_no_prev_2 = flame_tracking(f"{recorded_dir}layer_{layer-2}/", robot, robot2, positioner, flir_intrinsic, height_offset)
+                flame_3d_prev_2, _, job_no_prev_2 = flame_tracking(
+                        f"{recorded_dir}layer_{layer-2}/",
+                        robot,
+                        robot2,
+                        positioner,
+                        flir_intrinsic,
+                        height_offset
+                )
                 print(flame_3d_prev_2.shape)
             except ValueError as e:
                 print(e)
@@ -328,7 +336,9 @@ for layer in range(num_layer_start, num_layer_end):
                     flame_3d_prev_2[i] = R.T @ flame_3d_prev_2[i] 
                 
                 new_x, new_z = rotate(
-                    point_of_rotation, (flame_3d_prev_2[:, 0], flame_3d_prev_2[:, 2]), to_flat_angle
+                    point_of_rotation, 
+                    (flame_3d_prev_2[:, 0], flame_3d_prev_2[:, 2]),
+                    to_flat_angle
                 )
                 flame_3d_prev_2[:, 0] = new_x
                 flame_3d_prev_2[:, 2] = new_z - base_thickness
@@ -346,6 +356,9 @@ for layer in range(num_layer_start, num_layer_end):
                 job_nos_vel = [i - job_no_offset for i in job_nos_vel]
                 vel_avg = avg_by_line(job_nos_vel, calc_vel, np.linspace(0,len(curve_sliced_js)-1, len(curve_sliced_js))).reshape(-1)
                 
+                # correct direction if start dir is in the opposite direction
+                if start_dir:
+                    vel_avg = np.flip(vel_avg)
                 vel_valid_idx = np.argwhere(np.invert(np.isnan(vel_avg)))
                 
                 valid_idx = np.intersect1d(np.intersect1d(prev_idx, prev_idx_2), vel_valid_idx)
@@ -365,9 +378,6 @@ for layer in range(num_layer_start, num_layer_end):
                     vel_nom = model.dh2v(height_profile)
             heights_prev = interpolate_heights(height_profile, heights_prev)
             height_err = 0-heights_prev
-            # correct direction if start dir is in the opposite direction
-            if not start_dir:
-                vel_avg = np.flip(vel_avg)
             # plt.plot(heights_prev)
             # plt.plot(heights_prev_2)
             # plt.show()
