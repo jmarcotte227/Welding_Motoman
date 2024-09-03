@@ -26,7 +26,6 @@ from angled_layers import *
 def v_opt(v_next, v_prev, h_err, h_targ, model, beta=0.11):
     return (
         norm(h_targ + h_err - model.v2dh(v_next), 2) ** 2
-        + alpha * norm(v_next - v_prev, 2) ** 2
         + beta * norm(delta_v(v_next), 2) ** 2
     )
 
@@ -53,7 +52,7 @@ now = datetime.now()
 dataset = "bent_tube/"
 sliced_alg = "slice_ER_4043/"
 data_dir = "../data/" + dataset + sliced_alg
-rec_folder = input("Enter folder of desired test directory (leave blank for new): ")
+rec_folder = 'ER4043_bent_tube_2024_09_03_13_26_16' #input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
         "../../recorded_data/ER4043_bent_tube_%Y_%m_%d_%H_%M_%S/"
@@ -109,102 +108,102 @@ num_layer_start = int(0)
 num_layer_end = int(1)
 
 for layer in range(num_layer_start, num_layer_end):
-    mp = MotionProgram(
-        ROBOT_CHOICE="RB1",
-        ROBOT_CHOICE2="ST1",
-        pulse2deg=robot.pulse2deg,
-        pulse2deg_2=positioner.pulse2deg,
-        tool_num=12,
-    )
-    curve_sliced_js = np.loadtxt(
-        data_dir + f"curve_sliced_js/MA2010_js{layer}_0.csv", delimiter=","
-    ).reshape((-1, 6))
+    # mp = MotionProgram(
+    #     ROBOT_CHOICE="RB1",
+    #     ROBOT_CHOICE2="ST1",
+    #     pulse2deg=robot.pulse2deg,
+    #     pulse2deg_2=positioner.pulse2deg,
+    #     tool_num=12,
+    # )
+    # curve_sliced_js = np.loadtxt(
+    #     data_dir + f"curve_sliced_js/MA2010_js{layer}_0.csv", delimiter=","
+    # ).reshape((-1, 6))
 
-    positioner_js = np.loadtxt(
-        data_dir + f"curve_sliced_js/D500B_js{layer}_0.csv", delimiter=","
-    )
-    curve_sliced_relative = np.loadtxt(
-        data_dir + f"curve_sliced_relative/slice{layer}_0.csv", delimiter=","
-    )
+    # positioner_js = np.loadtxt(
+    #     data_dir + f"curve_sliced_js/D500B_js{layer}_0.csv", delimiter=","
+    # )
+    # curve_sliced_relative = np.loadtxt(
+    #     data_dir + f"curve_sliced_relative/slice{layer}_0.csv", delimiter=","
+    # )
 
-    # Define breakpoints; redundant here
-    num_points_layer = len(curve_sliced_js)
-    breakpoints = np.linspace(0, len(curve_sliced_js) - 1, num=num_points_layer).astype(
-        int
-    )
+    # # Define breakpoints; redundant here
+    # num_points_layer = len(curve_sliced_js)
+    # breakpoints = np.linspace(0, len(curve_sliced_js) - 1, num=num_points_layer).astype(
+    #     int
+    # )
 
-    #### jog to start and position camera
-    p_positioner_home = np.mean(
-        [robot.fwd(curve_sliced_js[0]).p, robot.fwd(curve_sliced_js[-1]).p], axis=0
-    )
-    p_robot2_proj = p_positioner_home + np.array([0, 0, 50])
-    p2_in_base_frame = np.dot(H2010_1440[:3, :3], p_robot2_proj) + H2010_1440[:3, 3]
-    # pointing toward positioner's X with 15deg tiltd angle looking down
-    v_z = H2010_1440[:3, :3] @ np.array([0, -0.96592582628, -0.2588190451])
-    # FLIR's Y pointing toward 1440's -X in 1440's base frame,
-    # projected on v_z's plane
-    v_y = VectorPlaneProjection(np.array([-1, 0, 0]), v_z)
-    v_x = np.cross(v_y, v_z)
-    # back project measure_distance-mm away from torch
-    p2_in_base_frame = p2_in_base_frame - measure_distance * v_z
-    R2 = np.vstack((v_x, v_y, v_z)).T
-    q2 = robot2.inv(p2_in_base_frame, R2, last_joints=np.zeros(6))[0]
-    q_prev = client.getJointAnglesDB(positioner.pulse2deg)
-    num2p = np.round((q_prev - positioner_js[0]) / (2 * np.pi))
-    positioner_js += num2p * 2 * np.pi
-    ws.jog_dual(robot2, positioner, q2, positioner_js[0], v=1)
+    # #### jog to start and position camera
+    # p_positioner_home = np.mean(
+    #     [robot.fwd(curve_sliced_js[0]).p, robot.fwd(curve_sliced_js[-1]).p], axis=0
+    # )
+    # p_robot2_proj = p_positioner_home + np.array([0, 0, 50])
+    # p2_in_base_frame = np.dot(H2010_1440[:3, :3], p_robot2_proj) + H2010_1440[:3, 3]
+    # # pointing toward positioner's X with 15deg tiltd angle looking down
+    # v_z = H2010_1440[:3, :3] @ np.array([0, -0.96592582628, -0.2588190451])
+    # # FLIR's Y pointing toward 1440's -X in 1440's base frame,
+    # # projected on v_z's plane
+    # v_y = VectorPlaneProjection(np.array([-1, 0, 0]), v_z)
+    # v_x = np.cross(v_y, v_z)
+    # # back project measure_distance-mm away from torch
+    # p2_in_base_frame = p2_in_base_frame - measure_distance * v_z
+    # R2 = np.vstack((v_x, v_y, v_z)).T
+    # q2 = robot2.inv(p2_in_base_frame, R2, last_joints=np.zeros(6))[0]
+    # q_prev = client.getJointAnglesDB(positioner.pulse2deg)
+    # num2p = np.round((q_prev - positioner_js[0]) / (2 * np.pi))
+    # positioner_js += num2p * 2 * np.pi
+    # ws.jog_dual(robot2, positioner, q2, positioner_js[0], v=1)
 
-    q1_all = [curve_sliced_js[breakpoints[0]]]
-    q2_all = [positioner_js[breakpoints[0]]]
-    v1_all = [jog_vd]
-    v2_all = [pos_vel]
-    primitives = ["movej"]
-    for j in range(1, len(breakpoints)):
-        q1_all.append(curve_sliced_js[breakpoints[j]])
-        q2_all.append(positioner_js[breakpoints[j]])
-        v1_all.append(max(base_vd, 0.1))
-        v2_all.append(pos_vel)
-        primitives.append("movel")
+    # q1_all = [curve_sliced_js[breakpoints[0]]]
+    # q2_all = [positioner_js[breakpoints[0]]]
+    # v1_all = [jog_vd]
+    # v2_all = [pos_vel]
+    # primitives = ["movej"]
+    # for j in range(1, len(breakpoints)):
+    #     q1_all.append(curve_sliced_js[breakpoints[j]])
+    #     q2_all.append(positioner_js[breakpoints[j]])
+    #     v1_all.append(max(base_vd, 0.1))
+    #     v2_all.append(pos_vel)
+    #     primitives.append("movel")
 
-    q_prev = positioner_js[breakpoints[-1]]
-    rr_sensors.start_all_sensors()
-    global_ts, timestamp_robot, joint_recording, job_line, _ = ws.weld_segment_dual(
-        primitives,
-        robot,
-        positioner,
-        q1_all,
-        q2_all,
-        v1_all,
-        v2_all,
-        cond_all=[int(base_feedrate_cmd / 10) + job_offset],
-        arc=True,
-        blocking=True,
-    )
-    rr_sensors.stop_all_sensors()
-    global_ts = np.reshape(global_ts, (-1, 1))
-    job_line = np.reshape(job_line, (-1, 1))
+    # q_prev = positioner_js[breakpoints[-1]]
+    # rr_sensors.start_all_sensors()
+    # global_ts, timestamp_robot, joint_recording, job_line, _ = ws.weld_segment_dual(
+    #     primitives,
+    #     robot,
+    #     positioner,
+    #     q1_all,
+    #     q2_all,
+    #     v1_all,
+    #     v2_all,
+    #     cond_all=[int(base_feedrate_cmd / 10) + job_offset],
+    #     arc=True,
+    #     blocking=True,
+    # )
+    # rr_sensors.stop_all_sensors()
+    # global_ts = np.reshape(global_ts, (-1, 1))
+    # job_line = np.reshape(job_line, (-1, 1))
 
-    # Reposition arm out of the way
-    q_0 = client.getJointAnglesMH(robot.pulse2deg)
-    q_0[1] = q_0[1] - np.pi / 8
-    ws.jog_single(robot, q_0, 4)
+    # # Reposition arm out of the way
+    # q_0 = client.getJointAnglesMH(robot.pulse2deg)
+    # q_0[1] = q_0[1] - np.pi / 8
+    # ws.jog_single(robot, q_0, 4)
 
-    model = SpeedHeightModel()
+    # model = SpeedHeightModel()
 
-    # save data
+    # # save data
     save_path = recorded_dir + f"layer_{layer}/"
-    try:
-        os.makedirs(save_path)
-    except Exception as e:
-        print(e)
-    np.savetxt(
-        save_path + "weld_js_exe.csv",
-        np.hstack((global_ts, job_line, joint_recording)),
-        delimiter=",",
-    )
-    np.savetxt(save_path + "/coeff_mat.csv", model.coeff_mat, delimiter=",")
-    np.savetxt(save_path + "/model_p.csv", model.p, delimiter=",")
-    rr_sensors.save_all_sensors(save_path)
+    # try:
+    #     os.makedirs(save_path)
+    # except Exception as e:
+    #     print(e)
+    # np.savetxt(
+    #     save_path + "weld_js_exe.csv",
+    #     np.hstack((global_ts, job_line, joint_recording)),
+    #     delimiter=",",
+    # )
+    # np.savetxt(save_path + "/coeff_mat.csv", model.coeff_mat, delimiter=",")
+    # np.savetxt(save_path + "/model_p.csv", model.p, delimiter=",")
+    # rr_sensors.save_all_sensors(save_path)
     input("-------Base Layer Finished-------")
 
     ## Interpret base layer IR data to get h offset
@@ -225,7 +224,7 @@ try:
     print("Average Base Height:", avg_base_height)
     print("Height Offset:", height_offset)
 except:
-    height_offset = -4.51 #float(input("Enter height offset: "))
+    height_offset = -4.85 #float(input("Enter height offset: "))
 
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
@@ -438,8 +437,10 @@ for layer in range(num_layer_start, num_layer_end):
     ws.jog_dual(robot2, positioner, q2, positioner_js[0], v=1)
 
     print("Start_dir: ", start_dir)
-    print("Prev velocities: ", vel_avg)
-    print("Velocities: ",velocity_profile[breakpoints])
+    try: print("Prev velocities: ", vel_avg)
+    except: pass
+    print("Velocities: ",velocity_profile)
+    print("Sent Velocities: ", velocity_profile[breakpoints])
     input("Check Vel Profile, enter to continue")
     save_path = recorded_dir + "layer_" + str(layer) + "/"
     try:

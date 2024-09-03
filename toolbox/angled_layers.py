@@ -242,3 +242,18 @@ def calc_velocity(save_path, robot):
     job_nos_layer = np.array(job_nos_layer)
     time_series_layer = np.array(time_series_layer)
     return calc_vel_layer, job_nos_layer, time_series_layer
+
+def line_intersect(p1,v1,p2,v2):
+    #calculate the intersection of two lines, on line 1
+    #find the closest point on line1 to line2
+    w = p1 - p2
+    a = np.dot(v1, v1)
+    b = np.dot(v1, v2)
+    c = np.dot(v2, v2)
+    d = np.dot(v1, w)
+    e = np.dot(v2, w)
+
+    sc = (b*e - c*d) / (a*c - b*b)
+    closest_point = p1 + sc * v1
+
+    return closest_point
