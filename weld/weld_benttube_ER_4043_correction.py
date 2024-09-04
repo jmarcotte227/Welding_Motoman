@@ -52,7 +52,7 @@ now = datetime.now()
 dataset = "bent_tube/"
 sliced_alg = "slice_ER_4043/"
 data_dir = "../data/" + dataset + sliced_alg
-rec_folder = 'ER4043_bent_tube_2024_09_03_13_26_16' #input("Enter folder of desired test directory (leave blank for new): ")
+rec_folder = input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
         "../../recorded_data/ER4043_bent_tube_%Y_%m_%d_%H_%M_%S/"
