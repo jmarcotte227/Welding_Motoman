@@ -26,23 +26,26 @@ def PointsInCircum(r,n):
 # limits of welding bead height (based on min and Max estimate speed from Eric)
     # needs to be modified based on actual limits from Eric 
 def main():
-    min_speed = 5
-    max_speed = 15
+    min_speed = 7
+    max_speed = 13
     feed_speed = 160
     material = 'ER_4043'
+    div_factor = 1 # change the angle between the bounds without changing the por
 
-    max_dH = weld_dh2v.v2dh_loglog(min_speed,feed_speed,material)
-    min_dH = weld_dh2v.v2dh_loglog(max_speed,feed_speed,material)
+    max_dH = weld_dh2v.v2dh_loglog(min_speed,feed_speed,material)/div_factor
+    min_dH = weld_dh2v.v2dh_loglog(max_speed,feed_speed,material)/div_factor
     mean_dH = (max_dH+min_dH)/2
 
     print('Max dH: ', max_dH)
     print('Min dH: ', min_dH)
     print('Mean dH: ', mean_dH)
+    print('Min vel: ', weld_dh2v.dh2v_loglog(max_dH, feed_speed, material))
+    print('Max vel: ', weld_dh2v.dh2v_loglog(min_dH, feed_speed, material))
     print('------------------------')
 
     #tube characteristics
     tube_diameter = 50
-    num_layers = 80
+    num_layers = 150
     points_per_layer=50
     point_distance = np.pi*tube_diameter/points_per_layer
     vertical_shift = 4 #mm  ### Is this causing issues with offset height?
@@ -129,9 +132,9 @@ def main():
     plt.show()
 
     for layer in range(num_layers*slices_per_layer):
-        np.savetxt('slice_ER_4043/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+        np.savetxt('slice_ER_4043_small/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
     
-    np.savetxt('slice_ER_4043/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    np.savetxt('slice_ER_4043_small/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':
