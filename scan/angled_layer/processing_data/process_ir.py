@@ -114,8 +114,6 @@ for layer in range(num_layer_start, num_layer_end+1):
         print(e)
         flame_3d = None
     else:
-        for i in range(flame_3d.shape[0]):
-            flame_3d[i] = R.T @ flame_3d[i] 
         # ammend job numbers to front
         job_no = job_no.reshape((-1,1))
         output_array = np.hstack((job_no, flame_3d))

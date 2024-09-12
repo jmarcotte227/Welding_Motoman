@@ -70,7 +70,7 @@ flames_flat = []
 for layer, flame in enumerate(flames):
     to_flat_angle = np.deg2rad(layer_angle*(layer+1))
     for i in range(flame.shape[0]):
-        flame[i,1:] = R.T @ flame[i,1:] 
+        flame[i,1:] = R.T @ flame[i,1:]
 
     new_x, new_z = rotate(
         point_of_rotation, (flame[:, 1], flame[:, 3]), to_flat_angle
@@ -89,4 +89,16 @@ for layer in flames_flat:
     ax.scatter(layer[:,0],layer[:,1],layer[:,2])
 plt.show()
 
+fig, ax = plt.subplots(1,1)
+fig.set_size_inches(10,6)
+fig.set_dpi(200)
+rms_err = []
+for scan in height_err:
+    rms_err.append(rms_error(scan))
+ax.plot(np.linspace(1,len(height_err),len(height_err)),rms_err)
+ax.set_xlabel("Layer Number")
+ax.set_ylabel("RMSE (mm)")
+ax.legend(["Small Angle", "Height Correction"])
+ax.grid()
+plt.show()
         
