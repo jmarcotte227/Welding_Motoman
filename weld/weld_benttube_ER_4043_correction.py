@@ -30,17 +30,17 @@ def v_opt(v_next, v_prev, h_err, h_targ, model, beta=0.11):
     )
 
 
-bounds = Bounds(3, 17)
+bounds = Bounds(4, 17)
 
 
 #####################SENSORS############################################
 # weld state logging
 # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
 cam_ser = RRN.ConnectService("rr+tcp://localhost:60827/?service=camera")
-# mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
+mic_ser = RRN.ConnectService('rr+tcp://localhost:60828?service=microphone')
 ## RR sensor objects
 rr_sensors = WeldRRSensor(
-    weld_service=None, cam_service=cam_ser, microphone_service=None
+    weld_service=None, cam_service=cam_ser, microphone_service=mic_ser
 )
 
 config_dir = "../config/"
@@ -50,12 +50,12 @@ flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320.yaml"), Loader=yaml.Full
 now = datetime.now()
 
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043/"
+sliced_alg = "slice_ER_4043_small/"
 data_dir = "../data/" + dataset + sliced_alg
 rec_folder = input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
-        "../../recorded_data/ER4043_bent_tube_%Y_%m_%d_%H_%M_%S/"
+        "../../recorded_data/ER4043_bent_tube_small_%Y_%m_%d_%H_%M_%S/"
     )
 else:
     recorded_dir = "../../recorded_data/" + rec_folder + "/"
@@ -72,7 +72,7 @@ robot = robot_obj(
 robot2 = robot_obj(
     "MA1440_A0",
     def_path="../config/MA1440_A0_robot_default_config.yml",
-    tool_file_path="../config/flir.csv",
+    tool_file_path="../config/flir_imaging.csv",
     pulse2deg_file_path="../config/MA1440_A0_pulse2deg_real.csv",
     base_transformation_file="../config/MA1440_pose.csv",
 )
@@ -224,12 +224,12 @@ try:
     print("Average Base Height:", avg_base_height)
     print("Height Offset:", height_offset)
 except:
-    height_offset = -4.85 #float(input("Enter height offset: "))
+    height_offset = -5.32 #float(input("Enter height offset: "))
 
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
 num_layer_start = 1  ###modify layer num here
-num_layer_end = 81
+num_layer_end = 152
 point_of_rotation = np.array(
         (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"])
     )
@@ -497,6 +497,6 @@ for layer in range(num_layer_start, num_layer_end):
     q_0[1] = q_0[1] - np.pi / 8
     print(q_0)
     ws.jog_single(robot, q_0, 4)
-    input(f"-------Layer {layer} Finished-------")
+    print(f"-------Layer {layer} Finished-------")
 
 
