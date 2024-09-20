@@ -23,7 +23,7 @@ from angled_layers import rotate, flame_tracking, avg_by_line, calc_velocity, Sp
 config_dir = "../../../config/"
 flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043_small/"
+sliced_alg = "slice_ER_4043/"
 data_dir = "../../../data/" + dataset + sliced_alg
 
 with open(data_dir + "slicing.yml", "r") as file:
@@ -32,14 +32,14 @@ with open(data_dir + "slicing.yml", "r") as file:
 robot = robot_obj(
     "MA2010_A0",
     def_path=config_dir+"MA2010_A0_robot_default_config.yml",
-    tool_file_path=config_dir+"torch.csv",
+    tool_file_path=config_dir+"torch_no_fujimount.csv",
     pulse2deg_file_path=config_dir+"MA2010_A0_pulse2deg_real.csv",
     d=15,
 )
 robot2 = robot_obj(
     "MA1440_A0",
     def_path=config_dir+"MA1440_A0_robot_default_config.yml",
-    tool_file_path=config_dir+"flir_imaging.csv",
+    tool_file_path=config_dir+"flir.csv",
     pulse2deg_file_path=config_dir+"MA1440_A0_pulse2deg_real.csv",
     base_transformation_file=config_dir+"MA1440_pose.csv",
 )
@@ -56,8 +56,8 @@ H = np.loadtxt(data_dir + "curve_pose.csv", delimiter=",")
 p = H[:3, -1]
 R = H[:3, :3]
 
-height_offset = [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
-height_offset = [0,0,0]
+height_offset = -5.71#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
+# height_offset = [0,0,0]
 job_no_offset = 3
 point_of_rotation = np.array(
         (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"]))
@@ -73,9 +73,9 @@ flames = []
 heights = []
 
 
-record_folder = 'ER4043_bent_tube_small_2024_09_12_12_14_40'
+record_folder = 'ER4043_bent_tube_2024_09_04_12_23_40'
 recorded_dir = f'../../../../recorded_data/{record_folder}/'
-height_offset = -5.32
+height_offset = -5.71
 for layer in range(num_layer_start, num_layer_end+1):
     print(f"Starting layer {layer}", end='\r')
     ### Load Data
