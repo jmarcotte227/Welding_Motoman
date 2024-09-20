@@ -21,7 +21,7 @@ sys.path.append('../../../toolbox')
 from angled_layers import rotate, flame_tracking, avg_by_line, calc_velocity, SpeedHeightModel
 
 config_dir = "../../../config/"
-flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
+flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320_legacy.yaml"), Loader=yaml.FullLoader)
 dataset = "bent_tube/"
 sliced_alg = "slice_ER_4043/"
 data_dir = "../../../data/" + dataset + sliced_alg
@@ -56,7 +56,7 @@ H = np.loadtxt(data_dir + "curve_pose.csv", delimiter=",")
 p = H[:3, -1]
 R = H[:3, :3]
 
-height_offset = -5.71#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
+height_offset = -4.85#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
 # height_offset = [0,0,0]
 job_no_offset = 3
 point_of_rotation = np.array(
@@ -73,7 +73,7 @@ flames = []
 heights = []
 
 
-record_folder = 'ER4043_bent_tube_2024_09_04_12_23_40'
+record_folder = 'ER4043_bent_tube_2024_09_03_13_26_16'
 recorded_dir = f'../../../../recorded_data/{record_folder}/'
 height_offset = -5.71
 for layer in range(num_layer_start, num_layer_end+1):
