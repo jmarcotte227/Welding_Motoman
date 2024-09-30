@@ -8,7 +8,7 @@ from robotics_utils import H_inv
 sys.path.append('../../toolbox')
 from angled_layers import avg_by_line, rotate
 
-plt.rcParams['text.usetex'] = True
+# plt.rcParams['text.usetex'] = True
 
 def rms_error(data):
     data = np.array(data)
@@ -24,6 +24,7 @@ config_dir = "../../config/"
 dataset = "bent_tube/"
 sliced_alg = "slice_ER_4043/"
 data_dir = "../../data/" + dataset + sliced_alg
+
 # flame_set = 'processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl'
 flame_sets = [
     'processing_data/ER4043_bent_tube_2024_08_28_12_24_30_flame.pkl',
@@ -69,10 +70,11 @@ fig.set_size_inches(10,6)
 fig.set_dpi(200)
 plt_params = [
     'b--',
-    'r'
+    'r',
+    'orange'
 ]
 
-layer_start = 20
+layer_start = 71
 rms_errs = []
 
 for idx,flame_set in enumerate(flame_sets):
@@ -86,8 +88,20 @@ for idx,flame_set in enumerate(flame_sets):
             (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"]))
     base_thickness = slicing_meta["baselayer_thickness"]
     layer_angle = np.array((slicing_meta["layer_angle"]))
+
+    curve_sliced = np.loadtxt(data_dir+"curve_sliced/slice1_0.csv", delimiter=',')
+    dist_to_por = []
+    for i in range(len(curve_sliced)):
+        point = np.array((curve_sliced[i, 0], curve_sliced[i, 2]))
+        dist = np.linalg.norm(point - point_of_rotation)
+        dist_to_por.append(dist)
+
+    height_profile = []
+    for distance in dist_to_por:
+        height_profile.append(distance * np.sin(np.deg2rad(layer_angle)))
     height_err = []
     flames_flat = []
+    # for layer, flame in enumerate(flames):
     for layer, flame in enumerate(flames[layer_start:layer_start+1]):
         to_flat_angle = np.deg2rad(layer_angle*(layer+layer_start))
         for i in range(flame.shape[0]):
@@ -103,7 +117,11 @@ for idx,flame_set in enumerate(flame_sets):
         averages= avg_by_line(flame[:,0], flame[:,1:], np.linspace(0,49,50))
         height_err.append(averages[:,2])
         flames_flat.append(averages)
-        ax.plot(np.linspace(1,50,50),averages[:,2], plt_params[idx])
+        if idx == 1:
+            ax.plot(np.linspace(1,50,50),averages[:,2], plt_params[idx])
+        ax.plot(np.linspace(1,50,50),height_profile, plt_params[2])
+        # ax.plot(np.linspace(1,50,50),np.zeros(50), plt_params[2])
+
         
 
 
@@ -117,15 +135,18 @@ for idx,flame_set in enumerate(flame_sets):
     for scan in height_err:
         rms_err.append(rms_error(scan))
     rms_errs.append(rms_err)
+print("max openloop error: ", np.max(rms_errs[0]))
+print("max closed-loop error: ", np.max(rms_errs[1]))
 ax_2.plot(np.linspace(1,len(height_err),len(height_err)),rms_errs[0], plt_params[0])
 ax_2.plot(np.linspace(1,len(height_err),len(height_err)),rms_errs[1], plt_params[1])
 ax_2.set_xlabel("Layer Number")
 ax_2.set_ylabel("RMSE (mm)")
 ax_2.legend(["Open-Loop", "Closed-Loop"])
-ax.legend(["Open-Loop", "Closed-Loop"])
+ax.legend(["Closed-Loop", "Target"])
 ax.set_title(f"Height Profile Layer {layer_start+1}")
 ax_2.grid()
-fig_2.savefig('rms_plot.png')
+# fig_2.savefig('rms_plot.png')
 fig.savefig(f'height_profile_{layer_start+1}.png')
 plt.show()
-        
+
+

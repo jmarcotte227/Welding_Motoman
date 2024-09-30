@@ -10,9 +10,9 @@ from angled_layers import avg_by_line, rotate
 
 config_dir = "../../config/"
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043_small/"
+sliced_alg = "slice_ER_4043/"
 data_dir = "../../data/" + dataset + sliced_alg
-flame_set = 'processing_data/ER4043_bent_tube_small_2024_09_12_12_14_40_flame.pkl'
+flame_set = 'processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl'
 
 with open(data_dir + "slicing.yml", "r") as file:
     slicing_meta = yaml.safe_load(file)
@@ -97,11 +97,11 @@ for i in range(len(flames_prev)-1):
 
 fig = plt.figure()
 ax = plt.axes(projection = '3d')
-for i in range(1,2):
+for i in range(10,20):
     ax.scatter(flames_flat[i][:,0],flames_flat[i][:,1],flames_flat[i][:,2])
     ax.scatter(flames_prev[i][:,0],flames_prev[i][:,1],flames_prev[i][:,2])
 plt.show()
 
 fig, ax = plt.subplots(1,1)
-ax.plot(dhs[0])
+ax.plot(dhs[2])
 plt.show()
