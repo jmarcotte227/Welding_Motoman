@@ -8,7 +8,7 @@ from robotics_utils import H_inv
 sys.path.append('../../toolbox')
 from angled_layers import avg_by_line, rotate
 
-# plt.rcParams['text.usetex'] = True
+plt.rcParams['text.usetex'] = True
 
 def rms_error(data):
     data = np.array(data)
@@ -71,10 +71,10 @@ fig.set_dpi(200)
 plt_params = [
     'b--',
     'r',
-    'orange'
+    'g-.'
 ]
 
-layer_start = 71
+layer_start = 1
 rms_errs = []
 
 for idx,flame_set in enumerate(flame_sets):
@@ -102,7 +102,7 @@ for idx,flame_set in enumerate(flame_sets):
     height_err = []
     flames_flat = []
     # for layer, flame in enumerate(flames):
-    for layer, flame in enumerate(flames[layer_start:layer_start+1]):
+    for layer, flame in enumerate(flames):
         to_flat_angle = np.deg2rad(layer_angle*(layer+layer_start))
         for i in range(flame.shape[0]):
             flame[i,1:] = R.T @ flame[i,1:]
@@ -113,15 +113,16 @@ for idx,flame_set in enumerate(flame_sets):
         flame[:, 1] = new_x
         flame[:, 3] = new_z - base_thickness
 
+        print(flame[:,0])
         flame[:,0] = flame[:,0]-job_no_offset
         averages= avg_by_line(flame[:,0], flame[:,1:], np.linspace(0,49,50))
+        print(averages)
         height_err.append(averages[:,2])
         flames_flat.append(averages)
-        if idx == 1:
-            ax.plot(np.linspace(1,50,50),averages[:,2], plt_params[idx])
-        ax.plot(np.linspace(1,50,50),height_profile, plt_params[2])
-        # ax.plot(np.linspace(1,50,50),np.zeros(50), plt_params[2])
-
+        # if idx == 1:
+        #     ax.plot(np.linspace(1,50,50),averages[:,2], plt_params[idx])
+        ax.plot(np.linspace(1,50,50),averages[:,2], plt_params[idx])
+    
         
 
 
@@ -135,6 +136,9 @@ for idx,flame_set in enumerate(flame_sets):
     for scan in height_err:
         rms_err.append(rms_error(scan))
     rms_errs.append(rms_err)
+# ax.plot(np.linspace(1,50,50),height_profile, plt_params[2])
+# ax.plot(np.linspace(1,50,50),np.zeros(50), plt_params[2])
+print(len(height_err))
 print("max openloop error: ", np.max(rms_errs[0]))
 print("max closed-loop error: ", np.max(rms_errs[1]))
 ax_2.plot(np.linspace(1,len(height_err),len(height_err)),rms_errs[0], plt_params[0])
@@ -142,11 +146,18 @@ ax_2.plot(np.linspace(1,len(height_err),len(height_err)),rms_errs[1], plt_params
 ax_2.set_xlabel("Layer Number")
 ax_2.set_ylabel("RMSE (mm)")
 ax_2.legend(["Open-Loop", "Closed-Loop"])
-ax.legend(["Closed-Loop", "Target"])
+ax.legend(["$e_{16}$ Open-Loop", "$e_{16}$ Closed-Loop"])
+# ax.legend(["$h_{16}$ Open-Loop","$h_{16}$ Closed-Loop", "$\delta h_{d,16}$"])
+# ax.legend(["$h_{72}$ Closed-Loop", "$\delta h_{d,72}$"])
 ax.set_title(f"Height Profile Layer {layer_start+1}")
+ax.set_xlabel("Segment Index")
+ax.set_ylabel("Height (mm)")
+# ax.set_ylabel("Error (mm)")
+ax.set_ylim(-7,3)
+ax.grid()
 ax_2.grid()
-# fig_2.savefig('rms_plot.png')
-fig.savefig(f'height_profile_{layer_start+1}.png')
+fig_2.savefig('rms_plot.png')
+fig.savefig(f'error_profile_{layer_start+1}.png')
 plt.show()
 
 
