@@ -7,6 +7,7 @@ import pickle
 import numpy as np
 import cv2
 from flir_toolbox import *
+import matplotlib.pyplot as plt
 
 
 
@@ -209,6 +210,49 @@ def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_
     torch_path = np.array(torch_path)
     job_no = np.array(job_no)
     return flame_3d, torch_path, job_no
+
+
+def flame_temp(save_path):
+    with open(save_path + "ir_recording.pickle", "rb") as file:
+        ir_recording = pickle.load(file)
+    ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
+    if ir_ts.shape[0] == 0:
+        raise ValueError("No flame detected")
+    joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
+    timeslot = [ir_ts[0] - ir_ts[0], ir_ts[-1] - ir_ts[0]]
+    duration = np.mean(np.diff(timeslot))
+
+    job_no = []
+    avg_temp = []
+    max_temp = []
+    min_temp = []
+    for start_time in timeslot[:-1]:
+        start_idx = np.argmin(np.abs(ir_ts - ir_ts[0] - start_time))
+        end_idx = np.argmin(np.abs(ir_ts - ir_ts[0] - start_time - duration))
+
+    # find all pixel regions to record from flame detection
+    for i in range(start_idx, end_idx):
+
+        ir_image = ir_recording[i]
+        try:
+            centroid, bbox = flame_detection_aluminum(ir_image, percentage_threshold=0.8)
+        except ValueError:
+            centroid = None
+
+        if centroid is not None:
+            # crop to bbox image
+            ir_crop = ir_image[bbox[1]:bbox[1]+bbox[3],bbox[0]:bbox[0]+bbox[2]]
+            joint_idx = np.argmin(np.abs(ir_ts[i] - joint_angle[:, 0]))
+            job_no.append(int(joint_angle[joint_idx][1]))
+            max_temp.append(np.max(ir_crop))
+            min_temp.append(np.min(ir_image))
+            avg_temp.append(np.average(ir_crop))
+    max_temp = np.array(max_temp)
+    avg_temp = np.array(avg_temp)
+    min_temp = np.array(min_temp)
+
+    job_no = np.array(job_no)
+    return max_temp, avg_temp, min_temp, job_no
 
 
 def calc_velocity(save_path, robot):
