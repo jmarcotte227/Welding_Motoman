@@ -5,7 +5,9 @@ import sys
 from scipy.spatial.transform import Rotation as R
 
 sys.path.append('../../weld/')
-import weld_dh2v
+sys.path.append('../../toolbox/')
+import angled_layers as al
+
 
 def rotate(origin, point, angle):
     """
@@ -26,26 +28,31 @@ def PointsInCircum(r,n):
 # limits of welding bead height (based on min and Max estimate speed from Eric)
     # needs to be modified based on actual limits from Eric 
 def main():
-    min_speed = 7
-    max_speed = 13
+    min_speed = 5
+    max_speed = 15
     feed_speed = 160
     material = 'ER_4043'
     div_factor = 1 # change the angle between the bounds without changing the por
 
-    max_dH = weld_dh2v.v2dh_loglog(min_speed,feed_speed,material)/div_factor
-    min_dH = weld_dh2v.v2dh_loglog(max_speed,feed_speed,material)/div_factor
+    # Initialize height-speed model
+    model = al.SpeedHeightModel(a=-0.36997977, b=1.21532975)
+    # model = al.SpeedHeightModel()
+
+
+    max_dH = model.v2dh(min_speed)/div_factor
+    min_dH = model.v2dh(max_speed)/div_factor
     mean_dH = (max_dH+min_dH)/2
 
     print('Max dH: ', max_dH)
     print('Min dH: ', min_dH)
     print('Mean dH: ', mean_dH)
-    print('Min vel: ', weld_dh2v.dh2v_loglog(max_dH, feed_speed, material))
-    print('Max vel: ', weld_dh2v.dh2v_loglog(min_dH, feed_speed, material))
+    print('Min vel: ', model.dh2v(max_dH))
+    print('Max vel: ', model.dh2v(min_dH))
     print('------------------------')
 
     #tube characteristics
     tube_diameter = 50
-    num_layers = 150
+    num_layers = 80
     points_per_layer=50
     point_distance = np.pi*tube_diameter/points_per_layer
     vertical_shift = 4 #mm  ### Is this causing issues with offset height?
@@ -123,18 +130,22 @@ def main():
     #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     ax.quiver(X=rot_point,Y=-20,Z=0,U=0,V=1,W=0,length = 40,color='g')
 
-    ax.set_aspect('equal')
+    
     ax.set_xlabel('x (mm)')
     ax.set_ylabel('y (mm)')
     ax.set_zlabel('z (mm)')
+    # ax.set_xlim([-50, 250])
+    # ax.set_ylim([-25, 25])
+    # ax.set_zlim([0, 250])
+    ax.set_aspect('equal')
     plt.locator_params(axis='y', nbins=4)
 
     plt.show()
 
     for layer in range(num_layers*slices_per_layer):
-        np.savetxt('slice_ER_4043_small/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+        np.savetxt('slice_ER_4043_hot/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
     
-    np.savetxt('slice_ER_4043_small/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    np.savetxt('slice_ER_4043_hot/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':
