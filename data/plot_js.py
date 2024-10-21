@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 def main():
 	dataset='bent_tube/'
-	sliced_alg='slice_ER_4043_small/'
+	sliced_alg='slice_ER_4043_hot/'
 	data_dir='../data/'+dataset+sliced_alg
 	num_layers=151
 	num_baselayers=0

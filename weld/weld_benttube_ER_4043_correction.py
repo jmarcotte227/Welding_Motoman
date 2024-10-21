@@ -30,17 +30,17 @@ def v_opt(v_next, v_prev, h_err, h_targ, model, beta=0.11):
     )
 
 
-bounds = Bounds(4, 17)
+bounds = Bounds(3, 17)
 
 
 #####################SENSORS############################################
 # weld state logging
-# weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
+weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
 cam_ser = RRN.ConnectService("rr+tcp://localhost:60827/?service=camera")
-mic_ser = RRN.ConnectService('rr+tcp://localhost:60828?service=microphone')
+# mic_ser = RRN.ConnectService('rr+tcp://localhost:60828?service=microphone')
 ## RR sensor objects
 rr_sensors = WeldRRSensor(
-    weld_service=None, cam_service=cam_ser, microphone_service=mic_ser
+    weld_service=weld_ser, cam_service=cam_ser, microphone_service=None
 )
 
 config_dir = "../config/"
@@ -50,7 +50,7 @@ flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320.yaml"), Loader=yaml.Full
 now = datetime.now()
 
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043_small/"
+sliced_alg = "slice_ER_4043_hot/"
 data_dir = "../data/" + dataset + sliced_alg
 rec_folder = input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
@@ -188,7 +188,7 @@ for layer in range(num_layer_start, num_layer_end):
     q_0[1] = q_0[1] - np.pi / 8
     ws.jog_single(robot, q_0, 4)
 
-    model = SpeedHeightModel()
+    model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
 
     # # save data
     save_path = recorded_dir + f"layer_{layer}/"
@@ -274,7 +274,7 @@ for layer in range(num_layer_start, num_layer_end):
 
     if layer == 1: 
         start_dir=True
-        model = SpeedHeightModel()
+        model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
         vel_nom = model.dh2v(height_profile)
         velocity_profile = vel_nom
     else: 
@@ -283,7 +283,7 @@ for layer in range(num_layer_start, num_layer_end):
         # model_coeff = np.loadtxt(f"{recorded_dir}layer_{layer-1}/coeff_mat.csv", delimiter=",")
         # model_p = np.loadtxt(f"{recorded_dir}layer_{layer-1}/model_p.csv", delimiter=",")
         # model = SpeedHeightModel(a = model_coeff[0], b = model_coeff[1], p = model_p)
-        model = SpeedHeightModel()
+        model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
         vel_nom = model.dh2v(height_profile) #updated later down if model updates
 
         
