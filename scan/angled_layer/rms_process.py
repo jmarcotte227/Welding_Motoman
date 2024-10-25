@@ -135,6 +135,7 @@ for idx,flame_set in enumerate(flame_sets):
     rms_err = []
     for scan in height_err:
         rms_err.append(rms_error(scan))
+
     rms_errs.append(rms_err)
 # ax.plot(np.linspace(1,50,50),height_profile, plt_params[2])
 # ax.plot(np.linspace(1,50,50),np.zeros(50), plt_params[2])

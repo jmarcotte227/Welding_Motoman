@@ -21,9 +21,9 @@ sys.path.append('../../../toolbox')
 from angled_layers import rotate, flame_tracking, avg_by_line, calc_velocity, SpeedHeightModel
 
 config_dir = "../../../config/"
-flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320_legacy.yaml"), Loader=yaml.FullLoader)
+flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043/"
+sliced_alg = "slice_ER_4043_hot/"
 data_dir = "../../../data/" + dataset + sliced_alg
 
 with open(data_dir + "slicing.yml", "r") as file:
@@ -32,14 +32,14 @@ with open(data_dir + "slicing.yml", "r") as file:
 robot = robot_obj(
     "MA2010_A0",
     def_path=config_dir+"MA2010_A0_robot_default_config.yml",
-    tool_file_path=config_dir+"torch_no_fujimount.csv",
+    tool_file_path=config_dir+"torch.csv",
     pulse2deg_file_path=config_dir+"MA2010_A0_pulse2deg_real.csv",
     d=15,
 )
 robot2 = robot_obj(
     "MA1440_A0",
     def_path=config_dir+"MA1440_A0_robot_default_config.yml",
-    tool_file_path=config_dir+"flir.csv",
+    tool_file_path=config_dir+"flir_imaging.csv",
     pulse2deg_file_path=config_dir+"MA1440_A0_pulse2deg_real.csv",
     base_transformation_file=config_dir+"MA1440_pose.csv",
 )
@@ -73,9 +73,9 @@ flames = []
 heights = []
 
 
-record_folder = 'ER4043_bent_tube_2024_09_03_13_26_16'
+record_folder = 'ER4043_bent_tube_small_2024_10_21_13_25_58'
 recorded_dir = f'../../../../recorded_data/{record_folder}/'
-height_offset = -5.71
+height_offset = -7.81
 for layer in range(num_layer_start, num_layer_end+1):
     print(f"Starting layer {layer}", end='\r')
     ### Load Data
