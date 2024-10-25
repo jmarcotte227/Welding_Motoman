@@ -8,7 +8,7 @@ from motoman_def import *
 
 def main():
 	dataset='bent_tube/'
-	sliced_alg='slice_ER_4043_small/'
+	sliced_alg='slice_ER_4043_hot/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
