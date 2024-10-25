@@ -73,7 +73,7 @@ flames = []
 heights = []
 
 
-record_folder = 'ER4043_bent_tube_small_2024_10_21_13_25_58'
+record_folder = 'ER4043_bent_tube_hot_2024_10_21_13_25_58'
 recorded_dir = f'../../../../recorded_data/{record_folder}/'
 height_offset = -7.81
 for layer in range(num_layer_start, num_layer_end+1):
