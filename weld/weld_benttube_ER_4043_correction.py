@@ -50,12 +50,12 @@ flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320.yaml"), Loader=yaml.Full
 now = datetime.now()
 
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043_hot/"
+sliced_alg = "slice_ER_4043_large_hot/"
 data_dir = "../data/" + dataset + sliced_alg
 rec_folder = input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
-        "../../recorded_data/ER4043_bent_tube_small_%Y_%m_%d_%H_%M_%S/"
+        "../../recorded_data/ER4043_bent_tube_large_hot_%Y_%m_%d_%H_%M_%S/"
     )
 else:
     recorded_dir = "../../recorded_data/" + rec_folder + "/"
@@ -224,7 +224,7 @@ try:
     print("Average Base Height:", avg_base_height)
     print("Height Offset:", height_offset)
 except:
-    height_offset = -5.32 #float(input("Enter height offset: "))
+    height_offset = float(input("Enter height offset: ")) # -8.075
 
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
