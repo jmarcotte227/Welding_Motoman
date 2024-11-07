@@ -36,11 +36,11 @@ def main():
 
     # Initialize height-speed model
     model = al.SpeedHeightModel(a=-0.36997977, b=1.21532975)
-    # model = al.SpeedHeightModel()
+    modelc = al.SpeedHeightModel()
 
 
     max_dH = model.v2dh(min_speed)/div_factor
-    min_dH = model.v2dh(max_speed)/div_factor
+    min_dH = modelc.v2dh(max_speed)/div_factor
     mean_dH = (max_dH+min_dH)/2
 
     print('Max dH: ', max_dH)
@@ -142,10 +142,10 @@ def main():
 
     plt.show()
 
-    for layer in range(num_layers*slices_per_layer):
-        np.savetxt('slice_ER_4043_hot/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+    # for layer in range(num_layers*slices_per_layer):
+    #     np.savetxt('slice_ER_4043_hot/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
     
-    np.savetxt('slice_ER_4043_hot/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    # np.savetxt('slice_ER_4043_hot/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':
