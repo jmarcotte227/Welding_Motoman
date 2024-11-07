@@ -55,7 +55,7 @@ data_dir = "../data/" + dataset + sliced_alg
 rec_folder = input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
-        "../../recorded_data/ER4043_bent_tube_large_hot_%Y_%m_%d_%H_%M_%S/"
+        "../../recorded_data/ER4043_bent_tube_large_cold_%Y_%m_%d_%H_%M_%S/"
     )
 else:
     recorded_dir = "../../recorded_data/" + rec_folder + "/"
@@ -188,7 +188,8 @@ for layer in range(num_layer_start, num_layer_end):
     q_0[1] = q_0[1] - np.pi / 8
     ws.jog_single(robot, q_0, 4)
 
-    model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+    # model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+    model = SpeedHeightModel()
 
     # # save data
     save_path = recorded_dir + f"layer_{layer}/"
@@ -224,7 +225,7 @@ try:
     print("Average Base Height:", avg_base_height)
     print("Height Offset:", height_offset)
 except:
-    height_offset = float(input("Enter height offset: ")) # -8.075
+    height_offset = float(input("Enter height offset: ")) # -8.345
 
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
@@ -274,7 +275,8 @@ for layer in range(num_layer_start, num_layer_end):
 
     if layer == 1: 
         start_dir=True
-        model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+        # model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+        model = SpeedHeightModel()
         vel_nom = model.dh2v(height_profile)
         velocity_profile = vel_nom
     else: 
@@ -283,7 +285,8 @@ for layer in range(num_layer_start, num_layer_end):
         # model_coeff = np.loadtxt(f"{recorded_dir}layer_{layer-1}/coeff_mat.csv", delimiter=",")
         # model_p = np.loadtxt(f"{recorded_dir}layer_{layer-1}/model_p.csv", delimiter=",")
         # model = SpeedHeightModel(a = model_coeff[0], b = model_coeff[1], p = model_p)
-        model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+        # model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+        model = SpeedHeightModel()
         vel_nom = model.dh2v(height_profile) #updated later down if model updates
 
         
