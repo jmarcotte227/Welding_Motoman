@@ -23,7 +23,7 @@ from angled_layers import rotate, flame_tracking, avg_by_line, calc_velocity, Sp
 config_dir = "../../../config/"
 flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043_hot/"
+sliced_alg = "slice_ER_4043_large_hot/"
 data_dir = "../../../data/" + dataset + sliced_alg
 
 with open(data_dir + "slicing.yml", "r") as file:
@@ -56,16 +56,16 @@ H = np.loadtxt(data_dir + "curve_pose.csv", delimiter=",")
 p = H[:3, -1]
 R = H[:3, :3]
 
-height_offset = -4.85#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
+height_offset = -8.345#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
 # height_offset = [0,0,0]
 job_no_offset = 3
 point_of_rotation = np.array(
         (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"]))
 base_thickness = slicing_meta["baselayer_thickness"]
 layer_angle = np.array((slicing_meta["layer_angle"]))
-print(layer_angle)
+# print(layer_angle)
 num_layer_start = 1
-num_layer_end = 80
+num_layer_end = 106
 heights_all = []
 flames_all = []
 rms_err_all = []
@@ -73,9 +73,9 @@ flames = []
 heights = []
 
 
-record_folder = 'ER4043_bent_tube_hot_2024_10_21_13_25_58'
+record_folder = 'ER4043_bent_tube_large_hot_2024_11_06_12_27_19'
 recorded_dir = f'../../../../recorded_data/{record_folder}/'
-height_offset = -7.81
+height_offset = -8.075
 for layer in range(num_layer_start, num_layer_end+1):
     print(f"Starting layer {layer}", end='\r')
     ### Load Data

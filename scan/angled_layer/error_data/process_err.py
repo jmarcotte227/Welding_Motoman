@@ -20,7 +20,7 @@ def rms_error(data):
 
 config_dir = "../../../config/"
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043_hot/"
+sliced_alg = "slice_ER_4043_large_hot/"
 data_dir = "../../../data/" + dataset + sliced_alg
 
 # flame_set = 'processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl'
@@ -28,7 +28,9 @@ flame_set = [
     #'../processing_data/ER4043_bent_tube_2024_08_28_12_24_30_flame.pkl',
     # '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
     # 'processing_data/ER4043_bent_tube_2024_09_03_13_26_16_flame.pkl',
-    '../processing_data/ER4043_bent_tube_hot_2024_10_21_13_25_58_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_hot_2024_10_21_13_25_58_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
+    '../processing_data/ER4043_bent_tube_large_cold_2024_11_07_10_21_39_flame.pkl'
 ]
 with open(data_dir + "slicing.yml", "r") as file:
     slicing_meta = yaml.safe_load(file)

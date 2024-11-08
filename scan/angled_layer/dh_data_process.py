@@ -10,9 +10,9 @@ from angled_layers import avg_by_line, rotate
 
 config_dir = "../../config/"
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043/"
+sliced_alg = "slice_ER_4043_large_hot/"
 data_dir = "../../data/" + dataset + sliced_alg
-flame_set = 'processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl'
+flame_set = 'processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
 
 with open(data_dir + "slicing.yml", "r") as file:
     slicing_meta = yaml.safe_load(file)
@@ -72,6 +72,17 @@ for layer, flame in enumerate(flames):
     averages= avg_by_line(flame[:,0], flame[:,1:], np.linspace(0,49,50))
     height_err.append(averages[:,2])
     flames_flat.append(averages)
+
+legend = []
+fig = plt.figure()
+ax = plt.axes(projection = '3d')
+for i in range(54,60):
+    ax.scatter(flames_flat[i][:,0],flames_flat[i][:,1],flames_flat[i][:,2]) 
+    legend.append(i+1)
+ax.legend(legend)
+plt.show()
+
+
 
 with open(flame_set, 'rb') as file:
     flames = pickle.load(file)

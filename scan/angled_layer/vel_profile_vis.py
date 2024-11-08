@@ -1,15 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
-layer = 72
+layer = 80
 fig,ax=plt.subplots(1,1)
 fig.set_size_inches(10,6)
 fig.set_dpi(200)
-cap_data=f"../../../recorded_data/ER4043_bent_tube_2024_09_04_12_23_40/layer_{layer}/"
+cap_data=f"../../../recorded_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19/layer_{layer}/"
 vel_profile = np.loadtxt(
     cap_data+"velocity_profile.csv",
     delimiter = ','
 )
-plt.rcParams['text.usetex'] = True
+# plt.rcParams['text.usetex'] = True
 
 import sys
 import yaml
