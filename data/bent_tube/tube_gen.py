@@ -30,6 +30,8 @@ def PointsInCircum(r,n):
 def main():
     min_speed = 5
     max_speed = 15
+    min_dH = 1.486
+    max_dH = 1.859
     feed_speed = 160
     material = 'ER_4043'
     div_factor = 1 # change the angle between the bounds without changing the por
@@ -52,10 +54,10 @@ def main():
 
     #tube characteristics
     tube_diameter = 50
-    num_layers = 80
+    num_layers = 106
     points_per_layer=50
     point_distance = np.pi*tube_diameter/points_per_layer
-    vertical_shift = 4 #mm  ### Is this causing issues with offset height?
+    vertical_shift = 4 #mm  
 
     slices_per_layer = 1
 
@@ -142,10 +144,13 @@ def main():
 
     plt.show()
 
-    # for layer in range(num_layers*slices_per_layer):
-    #     np.savetxt('slice_ER_4043_hot/curve_sliced/slice'+str(layer+1)+'_0.csv',curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=',')
+    for layer in range(num_layers*slices_per_layer):
+        np.savetxt(
+                'slice_ER_4043_large_cold/curve_sliced/slice'+str(layer+1)+'_0.csv',
+                curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=','
+                )
     
-    # np.savetxt('slice_ER_4043_hot/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    np.savetxt('slice_ER_4043_large_cold/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':
