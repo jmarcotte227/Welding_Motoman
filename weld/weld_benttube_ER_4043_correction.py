@@ -55,7 +55,7 @@ data_dir = "../data/" + dataset + sliced_alg
 rec_folder = input("Enter folder of desired test directory (leave blank for new): ")
 if rec_folder == "":
     recorded_dir = now.strftime(
-        "../../recorded_data/ER4043_bent_tube_large_cold_%Y_%m_%d_%H_%M_%S/"
+        "../../recorded_data/ER4043_bent_tube_large_cold_OL_%Y_%m_%d_%H_%M_%S/"
     )
 else:
     recorded_dir = "../../recorded_data/" + rec_folder + "/"
@@ -409,6 +409,7 @@ for layer in range(num_layer_start, num_layer_end):
             except ValueError as e:
                 
                 velocity_profile = vel_nom
+            velocity_profile= vel_nom # ADDING FOR OPEN LOOP
     if start_dir:
         breakpoints = np.linspace(
             0, len(curve_sliced_js) - 1, num=len(curve_sliced_js)
