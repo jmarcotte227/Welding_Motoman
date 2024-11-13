@@ -29,8 +29,8 @@ flame_set = [
     # '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
     # 'processing_data/ER4043_bent_tube_2024_09_03_13_26_16_flame.pkl',
     # '../processing_data/ER4043_bent_tube_hot_2024_10_21_13_25_58_flame.pkl'
-    # '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
-    '../processing_data/ER4043_bent_tube_large_cold_2024_11_07_10_21_39_flame.pkl'
+    '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_large_cold_2024_11_07_10_21_39_flame.pkl'
 ]
 with open(data_dir + "slicing.yml", "r") as file:
     slicing_meta = yaml.safe_load(file)
@@ -109,7 +109,8 @@ for idx,flame in enumerate(flame_set):
         flames_flat.append(averages)
     rms_err = []
     for scan in height_err:
-        rms_err.append(rms_error(scan))
+        print(len(scan[1:-1]))
+        rms_err.append(rms_error(scan[1:-1]))
 
     rms_errs.append(rms_err)
 
