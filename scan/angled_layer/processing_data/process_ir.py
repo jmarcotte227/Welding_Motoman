@@ -56,7 +56,7 @@ H = np.loadtxt(data_dir + "curve_pose.csv", delimiter=",")
 p = H[:3, -1]
 R = H[:3, :3]
 
-height_offset = -8.345#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
+height_offset = -8.9564#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
 # height_offset = [0,0,0]
 job_no_offset = 3
 point_of_rotation = np.array(
@@ -72,10 +72,10 @@ rms_err_all = []
 flames = []
 heights = []
 
-
-record_folder = 'ER4043_bent_tube_large_hot_2024_11_06_12_27_19'
+# ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38
+record_folder = 'ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38'
 recorded_dir = f'../../../../recorded_data/{record_folder}/'
-height_offset = -8.075
+height_offset = -9.1457
 for layer in range(num_layer_start, num_layer_end+1):
     print(f"Starting layer {layer}", end='\r')
     ### Load Data

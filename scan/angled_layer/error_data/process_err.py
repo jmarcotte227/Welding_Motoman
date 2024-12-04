@@ -20,18 +20,21 @@ def rms_error(data):
 
 config_dir = "../../../config/"
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043_large_hot/"
+sliced_alg = "slice_ER_4043/"
 data_dir = "../../../data/" + dataset + sliced_alg
 
 # flame_set = 'processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl'
 flame_set = [
     #'../processing_data/ER4043_bent_tube_2024_08_28_12_24_30_flame.pkl',
-    # '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
+    '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
     # 'processing_data/ER4043_bent_tube_2024_09_03_13_26_16_flame.pkl',
     # '../processing_data/ER4043_bent_tube_hot_2024_10_21_13_25_58_flame.pkl'
-    '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_2024_11_07_10_21_39_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_flame.pkl'
 ]
+title=flame_set[-1].removesuffix('_flame.pkl').removeprefix('../processing_data/')
 with open(data_dir + "slicing.yml", "r") as file:
     slicing_meta = yaml.safe_load(file)
 
@@ -88,6 +91,7 @@ for idx,flame in enumerate(flame_set):
     for distance in dist_to_por:
         height_profile.append(distance * np.sin(np.deg2rad(layer_angle)))
     height_err = []
+    height_err_trim = []
     flames_flat = []
     # for layer, flame in enumerate(flames):
     for layer, flame in enumerate(flames):
@@ -111,8 +115,9 @@ for idx,flame in enumerate(flame_set):
     for scan in height_err:
         print(len(scan[1:-1]))
         rms_err.append(rms_error(scan[1:-1]))
-
+        height_err_trim.append(scan[1:-1])
     rms_errs.append(rms_err)
 
-title=flame_set[0].removesuffix('_flame.pkl').removeprefix('../processing_data/')
+
 np.savetxt(title+'_err.csv',rms_errs[0])
+np.savetxt(title+'_layer_err.csv',height_err_trim, delimiter=',')
