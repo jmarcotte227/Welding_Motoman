@@ -401,3 +401,15 @@ scan/saved_pointclouds.zip
 scan/saved_pointclouds/curve_slice_coords.csv
 scan/saved_pointclouds/ER4043_automated_tube_trimmed.stl
 scan/saved_pointclouds/flame_3d.csv
+scan/angled_layer/scan_compare/cold_CL.stl
+scan/angled_layer/scan_compare/cold_OL.mix
+scan/angled_layer/scan_compare/cold_OL.stl
+scan/angled_layer/scan_compare/cold_OL_trimmed.stl
+scan/angled_layer/scan_compare/hot_CL.mix
+scan/angled_layer/scan_compare/hot_CL.stl
+scan/angled_layer/scan_compare/hot_CL_trimmed.stl
+scan/angled_layer/scan_compare/hot_OL.mix
+scan/angled_layer/scan_compare/hot_OL.stl
+scan/angled_layer/scan_compare/hot_OL_trimmed.stl
+scan/angled_layer/scan_compare/scan_compare.py
+scan/angled_layer/scan_compare/scan_compare_highlight.py

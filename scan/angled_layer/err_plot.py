@@ -21,7 +21,8 @@ plt_styles = [
     'dashed',
     'dashdot'
 ]
-
+marker_styles = [
+]
 err_set = [
     'error_data/ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43_err.csv',
     'error_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_err.csv',
