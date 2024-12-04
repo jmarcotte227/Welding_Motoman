@@ -27,6 +27,13 @@ plt_styles = [
     'dashed',
     'dashdot'
 ]
+marker_styles = [
+    'o',
+    '^',
+    's',
+    'D'
+]
+marker_size = 2
 data_sets = [
     # 'ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43',
     # 'ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38',
@@ -45,9 +52,14 @@ height_data = plan_data[1:-1, 2]-4
 for idx, test in enumerate(data_sets):
     err_data=np.loadtxt(f'error_data/{test}_layer_err.csv', delimiter=',')
     layer_err = err_data[layer-2,:]
-    ax1.plot(np.linspace(2,49,48),height_data-layer_err, linestyle=plt_styles[2+idx])
+    ax1.scatter(np.linspace(2,49,48),height_data-layer_err, marker=marker_styles[2+idx], s=marker_size)
     vel_data = np.loadtxt(f'../../../recorded_data/{test}/layer_{layer}/velocity_profile.csv', delimiter=',',)
-    ax2.plot(np.linspace(2,49,48),np.flip(vel_data[1:-1]), linestyle=plt_styles[2+idx], label='_nolegend_')
+    ax2.plot(
+            np.linspace(2,49,48),np.flip(vel_data[1:-1]), 
+            marker=marker_styles[2+idx], 
+            s=marker_size,
+            label='_nolegend_'
+            )
 # increment artist on plot 2 once
 ax2._get_lines.get_next_color()
 # get default velocity profiles for cold and hot models

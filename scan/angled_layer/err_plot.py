@@ -8,7 +8,7 @@ plt.style.use('science')
 fig, (ax1, ax2)= plt.subplots(2,1, sharex=True)
 fig.set_size_inches(5,4)
 fig.set_dpi(300)
-marker_size = 10
+marker_size = 2
 plt_colors = [
     'blue',
     'red',
@@ -22,7 +22,12 @@ plt_styles = [
     'dashdot'
 ]
 marker_styles = [
+    'o',
+    '^',
+    's',
+    'D'
 ]
+
 err_set = [
     'error_data/ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43_err.csv',
     'error_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_err.csv',
@@ -32,8 +37,8 @@ err_set = [
 ]
 for idx,err in enumerate(err_set[:-1]):
     err_data=np.loadtxt(err, delimiter=',')
-    ax1.scatter(np.linspace(1,106,106),err_data, s=marker_size)
-    ax2.scatter(np.linspace(1,106,106),err_data, s=marker_size)
+    ax1.scatter(np.linspace(1,106,106),err_data, s=marker_size, marker=marker_styles[idx])
+    ax2.scatter(np.linspace(1,106,106),err_data, s=marker_size, marker=marker_styles[idx])
 # err_data=np.loadtxt(err_set[-1], delimiter=',')
 # ax1.plot(np.linspace(1,80,80), err_data)
 # ax2.plot(np.linspace(1,80,80), err_data)
@@ -55,5 +60,5 @@ ax1.set_title('Layer Error')
 ax2.set_title('Layer Error Zoomed')
 
 ax2.set_ylim(0,2)
-# fig.savefig('rms_plot_mod.pdf')
+fig.savefig('rms_plot_mod.pdf')
 plt.show()
