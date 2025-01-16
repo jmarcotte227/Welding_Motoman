@@ -46,7 +46,7 @@ for idx,err in enumerate(err_set[:-1]):
 ax2.set_xlabel("Layer Number")
 ax1.set_ylabel("RMSE (mm)")
 ax2.set_ylabel("RMSE (mm)")
-ax1.legend(["OC", "OH","CC", "CH"], 
+ax1.legend(["Open-Loop Cold Model", "Open-Loop Hot Model","Closed-Loop Cold Model", "Closed-Loop Hot Model"], 
            facecolor='white', 
            framealpha=0.8,
            frameon=True,
@@ -60,5 +60,5 @@ ax1.set_title('Layer Error')
 ax2.set_title('Layer Error Zoomed')
 
 ax2.set_ylim(0,2)
-fig.savefig('rms_plot_mod.pdf')
+fig.savefig('rms_plot_video.pdf')
 plt.show()
