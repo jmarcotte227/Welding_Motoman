@@ -1,8 +1,6 @@
 import sys, time, pickle, os
-sys.path.append('../../toolbox/')
-from robot_def import *
+from motoman_def import *
 from WeldSend import *
-sys.path.append('../../sensor_fusion/')
 from dx200_motion_program_exec_client import *
 from RobotRaconteur.Client import *
 from weldRRSensor import *
@@ -12,7 +10,7 @@ def main():
 
 	dataset='triangle/'
 	sliced_alg='dense_slice/'
-	data_dir='../../data/'+dataset+sliced_alg
+	data_dir='../../../geometry_data/'+dataset+sliced_alg
 	with open(data_dir+'slicing.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
 	
