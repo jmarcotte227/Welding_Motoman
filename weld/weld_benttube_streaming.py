@@ -68,4 +68,35 @@ if __name__ == '__main__':
     positioner_js=np.loadtxt(DATA_DIR+'curve_sliced_js/D500B_js0_0.csv', delimiter=',')
     p_positioner_home=np.mean([robot.fwd(rob1_js[0]).p, robot.fwd(rob1_js[-1]).p], axis=0)
     p_robot2_proj=p_positioner_home+np.array([0,0,50])
-    # TODO: Continue working through honglu's "weld_cylinder_spiral_ir_feedback.py" example
+    p2_in_base_frame=np.dot(H2010_1440[:3,:3],p_robot2_proj)+H2010_1440[:3,3]
+
+	###pointing toward positioner's X with 15deg tiltd angle looking down
+    v_z=H2010_1440[:3,:3]@np.array([0,-0.96592582628,-0.2588190451])
+
+    ###FLIR's Y pointing toward 1440's -X in 1440's base frame, projected on v_z's plane
+    v_y=VectorPlaneProjection(np.array([-1,0,0]),v_z)
+    v_x=np.cross(v_y,v_z)
+
+    ###back project measure_distance-mm away from torch
+    p2_in_base_frame=p2_in_base_frame-MEASURE_DIST*v_z
+    R2=np.vstack((v_x,v_y,v_z)).T
+    q2=robot2.inv(p2_in_base_frame,R2,last_joints=np.zeros(6))[0]
+
+
+    ######## RR FRONIUS ########
+    if ARCON:
+        fronius_sub=RRN.SubscribeService('rr+tcp://192.168.55.21:60823?service=welder')
+        fronius_client = fronius_sub.GetDefaultClientWait(1)      #connect, timeout=30s
+        hflags_const = RRN.GetConstants(
+            "experimental.fronius", 
+            fronius_client
+        )["WelderStateHighFlags"]
+        fronius_client.prepare_welder()
+
+
+    ######## RR STREAMING ########
+    RR_robot_sub = RRN.SubscribeService('rr+tcp://localhost:59945?service=robot')
+    POINT_DISTANCE=0.04
+    SS=StreamingSend(RR_robot_sub, streamingrate=125.)
+
+    # TODO: FINISH THIS
