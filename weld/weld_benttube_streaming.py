@@ -1,16 +1,24 @@
-import time, os, copy
-from motoman_def import *
-from lambda_calc import *
+import time, os, copy, yaml
+import numpy as np
+from motoman_def import robot_obj, positioner_obj
+from lambda_calc import calc_lam_cs
 from RobotRaconteur.Client import *
 from weldRRSensor import *
 from dual_robot import *
 from traj_manipulation import *
-from StreamingSend import *
+from StreamingSend import StreamingSend
+from robotics_utils import H_inv
+from scipy.interpolate import interp1d
 
 
 if __name__ == '__main__':
-
+    
+    ######## Welding Parameters ########
     ARCON = False
+    RECORDING = False
+    POINT_DISTANCE=0.04
+    V_NOMINAL = 10
+    JOB_OFFSET = 200
 
     DATASET = 'bent_tube_continuous/'
     SLICED_ALG = 'slice_ER_4043/'
@@ -96,7 +104,57 @@ if __name__ == '__main__':
 
     ######## RR STREAMING ########
     RR_robot_sub = RRN.SubscribeService('rr+tcp://localhost:59945?service=robot')
-    POINT_DISTANCE=0.04
     SS=StreamingSend(RR_robot_sub, streamingrate=125.)
 
-    # TODO: FINISH THIS
+
+    ######## LOAD POINT DATA ########
+    # I have already generated one continuous spiral, just need to import points for each robot
+    rob1_js = np.loadtxt(DATA_DIR+'curve_sliced_js/MA2010_js1_0.csv', delimiter=',')
+    positioner_js = np.loadtxt(DATA_DIR+'curve_sliced_js/D500B_js1_0.csv', delimiter=',')
+    curve_sliced_relative = np.loadtxt(DATA_DIR+'curve_sliced_relative/slice1_0.csv', delimiter=',')
+    lam_relative = calc_lam_cs(curve_sliced_relative)
+    print("------Slices Loaded------")
+
+    ######## WELD CONTINUOUSLY ########
+
+    # initialize feedrate and velocity
+    feedrate=160
+    v_cmd = 10
+
+    # jog to start position
+    SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
+
+    if RECORDING:
+        rr_sensors.start_all_sensors()
+        SS.start_recording()
+    if ARCON:
+        fronius_client.job_number = int(feedrate/10+JOB_OFFSET)
+        fronius_client.start_weld()
+
+    lam_cur=0
+    pixel_reading = []
+
+    # Looping through the entire path of the sliced part
+    while lam_cur<lam_relative[-1] - v_cmd/SS.streaming_rate:
+        loop_start = time.perf_counter()
+
+        lam_cur += v_cmd/SS.streaming_rate
+        # get closest lambda that is greater than current lambda
+        lam_idx = np.where(lam_relative>=lam_cur)[0][0]
+        # Calculate the fraction of the current lambda that has been traversed
+        lam_ratio = ((lam_cur-lam_relative[lam_idx-1])/
+                     (lam_relative[lam_idx]-lam_relative[lam_idx-1]))
+        # Apply that fraction to the joint space
+        q1 = rob1_js[lam_idx-1]*(1-lam_ratio)+rob1_js[lam_idx]*lam_ratio
+        q_positioner = positioner_js[lam_idx-1]*(1-lam_ratio) + positioner_js[lam_idx]*(lam_ratio)
+
+        #generate set of joints to command
+        q_cmd = np.hstack((q1, q2, q_positioner))
+        # TODO: Update IR Images
+
+        # TODO: Calculate Control Inputs (v_T, v_w)
+
+        # TODO: Update Welding Commands
+
+        # this function has a delay when loop_start is passed in. Ensures the update frequency is consistent
+        SS.position_cmd(q_cmd, loop_start)
