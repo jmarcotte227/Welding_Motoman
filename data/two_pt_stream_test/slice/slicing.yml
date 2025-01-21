@@ -1,0 +1,13 @@
+num_layers: 2
+num_baselayers: 0
+num_supportlayers: 0
+baselayer_thickness: 500
+supportlayer_thickness: 0
+smooth_filter: False
+q_positioner_seed: 
+  - -2.716233516185387886e-01
+  - 0
+
+
+
+

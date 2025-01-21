@@ -7,7 +7,7 @@ from weldRRSensor import *
 from dual_robot import *
 from traj_manipulation import *
 from StreamingSend import StreamingSend
-from robotics_utils import H_inv
+from robotics_utils import H_inv, VectorPlaneProjection
 from scipy.interpolate import interp1d
 
 
@@ -16,32 +16,36 @@ if __name__ == '__main__':
     ######## Welding Parameters ########
     ARCON = False
     RECORDING = False
+    ONLINE = False # Used to test without connecting to RR services
     POINT_DISTANCE=0.04
     V_NOMINAL = 10
     JOB_OFFSET = 200
+    STREAMING_RATE = 125.
 
-    DATASET = 'bent_tube_continuous/'
-    SLICED_ALG = 'slice_ER_4043/'
+    DATASET = 'two_pt_stream_test/'
+    SLICED_ALG = 'slice/'
     DATA_DIR='../data/'+DATASET+SLICED_ALG
-    with open(DATA_DIR+'slicing.yaml', 'r') as file:
+    with open(DATA_DIR+'slicing.yml', 'r') as file:
         slicing_meta = yaml.safe_load(file)
 
 
     ######## SENSORS ########
-    # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
-    cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
-	# mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
+    if ONLINE:
+        # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
+        cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
+        # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
 
-    rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
+        rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
 
     ######## FLIR PROCESS ########
     # TODO: Write a service to do the processing I need on the fly with the FLIR
     #       Update this accordingly
+    #       Below is how Honglu Implemented it, but my update process is different
 
-    sub=RRN.SubscribeService('rr+tcp://localhost:12182/?service=FLIR_RR_PROCESS')
-    ir_process_result=sub.SubscribeWire("ir_process_result")
+    # sub=RRN.SubscribeService('rr+tcp://localhost:12182/?service=FLIR_RR_PROCESS')
+    # ir_process_result=sub.SubscribeWire("ir_process_result")
     # TODO: Not sure what this does, need to fix
-    ir_process_result.WireValueChanged += ir_process_cb
+    # ir_process_result.WireValueChanged += ir_process_cb
 
     ######## ROBOTS ########
     # Define Kinematics
@@ -65,7 +69,7 @@ if __name__ == '__main__':
         def_path=CONFIG_DIR+'D500B_robot_extended_config.yml',
         tool_file_path=CONFIG_DIR+'positioner_tcp.csv',
         pulse2deg_file_path=CONFIG_DIR+'D500B_pulse2deg_real.csv',
-        base_transformation_file=CONFIG_DIR+'D500B_pose_mocap.csv'
+        base_transformation_file=CONFIG_DIR+'D500B_pose.csv'
     )
 
     # Define Start Positions
@@ -78,7 +82,7 @@ if __name__ == '__main__':
     p_robot2_proj=p_positioner_home+np.array([0,0,50])
     p2_in_base_frame=np.dot(H2010_1440[:3,:3],p_robot2_proj)+H2010_1440[:3,3]
 
-	###pointing toward positioner's X with 15deg tiltd angle looking down
+	###pointing toward positioner's X with 15deg tilted angle looking down
     v_z=H2010_1440[:3,:3]@np.array([0,-0.96592582628,-0.2588190451])
 
     ###FLIR's Y pointing toward 1440's -X in 1440's base frame, projected on v_z's plane
@@ -103,8 +107,9 @@ if __name__ == '__main__':
 
 
     ######## RR STREAMING ########
-    RR_robot_sub = RRN.SubscribeService('rr+tcp://localhost:59945?service=robot')
-    SS=StreamingSend(RR_robot_sub, streamingrate=125.)
+    if ONLINE:
+        RR_robot_sub = RRN.SubscribeService('rr+tcp://localhost:59945?service=robot')
+        SS=StreamingSend(RR_robot_sub, streamingrate=STREAMING_RATE)
 
 
     ######## LOAD POINT DATA ########
@@ -119,10 +124,10 @@ if __name__ == '__main__':
 
     # initialize feedrate and velocity
     feedrate=160
-    v_cmd = 10
+    v_cmd = 3
 
     # jog to start position
-    SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
+    if ONLINE: SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
 
     if RECORDING:
         rr_sensors.start_all_sensors()
@@ -132,13 +137,13 @@ if __name__ == '__main__':
         fronius_client.start_weld()
 
     lam_cur=0
-    pixel_reading = []
 
     # Looping through the entire path of the sliced part
-    while lam_cur<lam_relative[-1] - v_cmd/SS.streaming_rate:
+    while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
         loop_start = time.perf_counter()
 
-        lam_cur += v_cmd/SS.streaming_rate
+        lam_cur += v_cmd/STREAMING_RATE
+        print(lam_cur)
         # get closest lambda that is greater than current lambda
         lam_idx = np.where(lam_relative>=lam_cur)[0][0]
         # Calculate the fraction of the current lambda that has been traversed
@@ -157,4 +162,8 @@ if __name__ == '__main__':
         # TODO: Update Welding Commands
 
         # this function has a delay when loop_start is passed in. Ensures the update frequency is consistent
-        SS.position_cmd(q_cmd, loop_start)
+        if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
+            print("Stopping: Loop Time exceeded streaming period")
+            break
+        if ONLINE: SS.position_cmd(q_cmd, loop_start)
+    print("-----End of Job-----")
