@@ -16,9 +16,9 @@ if __name__ == '__main__':
     ######## Welding Parameters ########
     ARCON = False
     RECORDING = False
-    ONLINE = False # Used to test without connecting to RR services
+    ONLINE = True # Used to test without connecting to RR services
     POINT_DISTANCE=0.04
-    V_NOMINAL = 10
+    V_NOMINAL = 3
     JOB_OFFSET = 200
     STREAMING_RATE = 125.
 
@@ -32,11 +32,11 @@ if __name__ == '__main__':
     ######## SENSORS ########
     if ONLINE:
         # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
-        cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
+        # cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
         # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
 
-        rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
-
+        # rr_sensors = WeldRRSensor(weld_service=None,cam_service=cam_ser,microphone_service=None)
+        pass
     ######## FLIR PROCESS ########
     # TODO: Write a service to do the processing I need on the fly with the FLIR
     #       Update this accordingly
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     ######## RR STREAMING ########
     if ONLINE:
         RR_robot_sub = RRN.SubscribeService('rr+tcp://localhost:59945?service=robot')
-        SS=StreamingSend(RR_robot_sub, streamingrate=STREAMING_RATE)
+        SS=StreamingSend(RR_robot_sub, streaming_rate=STREAMING_RATE)
 
 
     ######## LOAD POINT DATA ########
@@ -124,9 +124,10 @@ if __name__ == '__main__':
 
     # initialize feedrate and velocity
     feedrate=160
-    v_cmd = 3
+    v_cmd = V_NOMINAL
 
     # jog to start position
+    input("Press Enter to jog to start position")
     if ONLINE: SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
 
     if RECORDING:
@@ -139,11 +140,12 @@ if __name__ == '__main__':
     lam_cur=0
 
     # Looping through the entire path of the sliced part
+    input("press enter to start streaming")
     while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
         loop_start = time.perf_counter()
 
         lam_cur += v_cmd/STREAMING_RATE
-        print(lam_cur)
+        # print(lam_cur)
         # get closest lambda that is greater than current lambda
         lam_idx = np.where(lam_relative>=lam_cur)[0][0]
         # Calculate the fraction of the current lambda that has been traversed
@@ -165,5 +167,6 @@ if __name__ == '__main__':
         if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
             print("Stopping: Loop Time exceeded streaming period")
             break
+        # input("sending vel command")
         if ONLINE: SS.position_cmd(q_cmd, loop_start)
     print("-----End of Job-----")
