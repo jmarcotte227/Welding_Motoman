@@ -18,7 +18,7 @@ if __name__ == '__main__':
     RECORDING = False
     ONLINE = True # Used to test without connecting to RR services
     POINT_DISTANCE=0.04
-    V_NOMINAL = 3
+    V_NOMINAL = 20
     JOB_OFFSET = 200
     STREAMING_RATE = 125.
 
@@ -28,6 +28,9 @@ if __name__ == '__main__':
     with open(DATA_DIR+'slicing.yml', 'r') as file:
         slicing_meta = yaml.safe_load(file)
 
+    ######## Create Directories ########
+    recorded_dir=f'../../recorded_data/streaming/{V_NOMINAL}/'
+    os.makedirs(recorded_dir, exist_ok=True)
 
     ######## SENSORS ########
     if ONLINE:
@@ -176,7 +179,5 @@ if __name__ == '__main__':
         
     print("-----End of Job-----")
     js_recording = SS.stop_recording()
-    recorded_dir=f'../../recorded_data/streaming/{V_NOMINAL}/'
-    os.makedirs(recorded_dir, exist_ok=True)
     np.savetxt(recorded_dir+'weld_js_cmd.csv',np.array(q_cmd_all),delimiter=',')
     np.savetxt(recorded_dir+'weld_js_exe.csv',np.array(js_recording),delimiter=',')
