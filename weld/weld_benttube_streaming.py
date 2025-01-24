@@ -138,9 +138,11 @@ if __name__ == '__main__':
         fronius_client.start_weld()
 
     lam_cur=0
+    q_cmd_all = []
 
     # Looping through the entire path of the sliced part
     input("press enter to start streaming")
+    SS.start_recording()
     while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
         loop_start = time.perf_counter()
 
@@ -162,11 +164,19 @@ if __name__ == '__main__':
         # TODO: Calculate Control Inputs (v_T, v_w)
 
         # TODO: Update Welding Commands
-
+        
+        # log q_cmd
+        q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
         # this function has a delay when loop_start is passed in. Ensures the update frequency is consistent
-        if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
-            print("Stopping: Loop Time exceeded streaming period")
-            break
+        # if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
+        #     print("Stopping: Loop Time exceeded streaming period")
+        #     break
         # input("sending vel command")
         if ONLINE: SS.position_cmd(q_cmd, loop_start)
+        
     print("-----End of Job-----")
+    js_recording = SS.stop_recording()
+    recorded_dir=f'../../recorded_data/streaming/{V_NOMINAL}/'
+    os.makedirs(recorded_dir, exist_ok=True)
+    np.savetxt(recorded_dir+'weld_js_cmd.csv',np.array(q_cmd_all),delimiter=',')
+    np.savetxt(recorded_dir+'weld_js_exe.csv',np.array(js_recording),delimiter=',')
