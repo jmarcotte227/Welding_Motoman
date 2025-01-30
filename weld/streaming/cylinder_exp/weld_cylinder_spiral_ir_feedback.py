@@ -84,7 +84,6 @@ def main():
 	RR_robot_sub = RRN.SubscribeService('rr+tcp://localhost:59945?service=robot')
 	point_distance=0.04		###STREAMING POINT INTERPOLATED DISTANCE
 	SS=StreamingSend(RR_robot_sub,streaming_rate=125.)
-	exit()
 	#################################################################robot 1 welding params####################################################################
 	R=np.array([[-0.7071, 0.7071, -0.    ],
 				[ 0.7071, 0.7071,  0.    ],

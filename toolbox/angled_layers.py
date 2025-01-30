@@ -3,6 +3,7 @@ Contains the relevant python functions and objects for welding parts
 using non-uniform height profiles.
 """
 
+import time
 import pickle
 import numpy as np
 import cv2
@@ -166,10 +167,11 @@ def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_
     for start_time in timeslot[:-1]:
         start_idx = np.argmin(np.abs(ir_ts - ir_ts[0] - start_time))
         end_idx = np.argmin(np.abs(ir_ts - ir_ts[0] - start_time - duration))
-
+    ## including for tracking purposes
+    time_diffs = []
     # find all pixel regions to record from flame detection
     for i in range(start_idx, end_idx):
-
+        start_time_tracking = time.perf_counter()
         ir_image = ir_recording[i]
         try:
             centroid, _ = flame_detection_aluminum(ir_image, percentage_threshold=0.8)
@@ -202,13 +204,18 @@ def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_
             intersection[2] = intersection[2]+height_offset
             intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
             torch = positioner_pose.R.T @ (robot1_pose.p - positioner_pose.p)
-
+            time_dif_tracking=time.perf_counter()-start_time_tracking
+            time_diffs.append(time_dif_tracking)
             flame_3d.append(intersection)
             torch_path.append(torch)
             job_no.append(int(joint_angle[joint_idx][1]))
     flame_3d = np.array(flame_3d)
     torch_path = np.array(torch_path)
     job_no = np.array(job_no)
+    ## processing timing data
+    time_diffs=np.array(time_diffs)
+    print("Average: ", np.mean(time_diffs))
+    print("Worst: ", np.max(time_diffs))
     return flame_3d, torch_path, job_no
 
 
