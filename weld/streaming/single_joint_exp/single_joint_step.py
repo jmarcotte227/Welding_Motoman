@@ -14,22 +14,22 @@ from scipy.interpolate import interp1d
 if __name__ == '__main__':
     
     ######## Parameters ########
-    V_NOMINAL = 0.01 # rad/s
-    JOINT_NUM = 0
+    V_NOMINAL = 1 # rad/s
+    JOINT_NUM = 5
     ANGLE_START = 0 # rad
-    ANGLE_END = 30*np.pi/180 # rad
+    ANGLE_END = -20*np.pi/180 # rad
     RECORDING = False
     ONLINE = True # Used to test without connecting to RR services
     STREAMING_RATE = 125.
-    STEP_DIST = 0.15 # rad
+    STEP_DIST = 0.01 # rad
 
     ######## Create Directories ########
-    recorded_dir=f'../../../recorded_data/streaming/single_joint_{JOINT_NUM}_vel_{V_NOMINAL}/'
+    recorded_dir=f'../../../../recorded_data/streaming/single_joint_{JOINT_NUM}_vel_{V_NOMINAL}_end_{ANGLE_END*180/np.pi}/'
     os.makedirs(recorded_dir, exist_ok=True)
 
     ######## ROBOTS ########
     # Define Kinematics
-    CONFIG_DIR = '../config/'
+    CONFIG_DIR = '../../../config/'
     robot=robot_obj(
         'MA2010_A0',
         def_path=CONFIG_DIR+'MA2010_A0_robot_default_config.yml',
@@ -62,24 +62,24 @@ if __name__ == '__main__':
 
     # jog to start position
     input("Press Enter to jog to start position")
-    if ONLINE: SS.jog2q(np.zeros(14)) # should be home, double check
+    q1_home = np.radians([0,0,0,0,0,0])
+    q2_home = np.radians([90,0,0,0,0,0])
+    pos_home = np.radians([-15,0])
+    if ONLINE: SS.jog2q(np.hstack((q1_home,q2_home,pos_home))) # should be home, double check
 
     if RECORDING:
         rr_sensors.start_all_sensors()
         SS.start_recording()
-    if ARCON:
-        fronius_client.job_number = int(feedrate/10+JOB_OFFSET)
-        fronius_client.start_weld()
 
     joint_cur=0
-    q2 = np.zeros(6)
-    q_positioner = np.zeros(2)
+    q2 = q2_home
+    q_positioner = pos_home
     q_cmd_all = []
 
     # Looping through the entire path of the sliced part
     input("press enter to start streaming")
     SS.start_recording()
-    while joint_cur<ANGLE_END - v_cmd/STREAMING_RATE:
+    while np.abs(joint_cur)<np.abs(ANGLE_END - v_cmd/STREAMING_RATE):
         loop_start = time.perf_counter()
 
         joint_cur += v_cmd/STREAMING_RATE
@@ -93,8 +93,8 @@ if __name__ == '__main__':
         # log q_cmd
         q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
 
-        print("Commanding jointset: ", q_cmd)
-        input("sending vel command")
+        # print("Commanding jointset: ", q_cmd)
+        # input("sending vel command")
         if ONLINE:
             SS.position_cmd(q_cmd, loop_start)
 
