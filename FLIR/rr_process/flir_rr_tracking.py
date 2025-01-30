@@ -65,6 +65,8 @@ class FLIR_RR_TRACKING(object):
         '''
         while pipe_ep.Available > 0:
             # read the joint angles first
+            wire_val=robot_serivce.robot_state.PeekInValue()
+            q_cur=wire_val.joint_position
             # TODO: Check and see if this is actually quick enough to be accurate
 
             # read the image
