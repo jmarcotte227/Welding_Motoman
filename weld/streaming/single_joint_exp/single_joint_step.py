@@ -21,9 +21,10 @@ if __name__ == '__main__':
     RECORDING = False
     ONLINE = True # Used to test without connecting to RR services
     STREAMING_RATE = 125.
+    STEP_DIST = 0.15 # rad
 
     ######## Create Directories ########
-    recorded_dir=f'../../../recorded_data/streaming/single_joint{V_NOMINAL}/'
+    recorded_dir=f'../../../recorded_data/streaming/single_joint_{JOINT_NUM}_vel_{V_NOMINAL}/'
     os.makedirs(recorded_dir, exist_ok=True)
 
     ######## ROBOTS ########
@@ -61,7 +62,7 @@ if __name__ == '__main__':
 
     # jog to start position
     input("Press Enter to jog to start position")
-    if ONLINE: SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
+    if ONLINE: SS.jog2q(np.zeros(14)) # should be home, double check
 
     if RECORDING:
         rr_sensors.start_all_sensors()
@@ -92,6 +93,7 @@ if __name__ == '__main__':
         # log q_cmd
         q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
 
+        print("Commanding jointset: ", q_cmd)
         input("sending vel command")
         if ONLINE:
             SS.position_cmd(q_cmd, loop_start)
