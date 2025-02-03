@@ -18,9 +18,11 @@ if __name__ == '__main__':
     RECORDING = False
     ONLINE = True # Used to test without connecting to RR services
     POINT_DISTANCE=0.04
-    V_NOMINAL = 20
+    V_NOMINAL =20
     JOB_OFFSET = 200
     STREAMING_RATE = 125.
+
+    DELAY_CORRECTION = 0.0007
 
     DATASET = 'two_pt_stream_test/'
     SLICED_ALG = 'slice/'
@@ -29,7 +31,7 @@ if __name__ == '__main__':
         slicing_meta = yaml.safe_load(file)
 
     ######## Create Directories ########
-    recorded_dir=f'../../recorded_data/streaming/{V_NOMINAL}/'
+    recorded_dir=f'../../recorded_data/streaming_corrected/{V_NOMINAL}/'
     os.makedirs(recorded_dir, exist_ok=True)
 
     ######## SENSORS ########
@@ -175,7 +177,7 @@ if __name__ == '__main__':
         #     print("Stopping: Loop Time exceeded streaming period")
         #     break
         # input("sending vel command")
-        if ONLINE: SS.position_cmd(q_cmd, loop_start)
+        if ONLINE: SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) # adding delay to counteract delay in streaming send
         
     print("-----End of Job-----")
     js_recording = SS.stop_recording()
