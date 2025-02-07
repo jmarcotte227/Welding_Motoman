@@ -53,11 +53,11 @@ def main():
     print('------------------------')
 
     #tube characteristics
-    tube_diameter = 50
+    tube_diameter = 25
     num_layers = 106
     points_per_layer=50
     point_distance = np.pi*tube_diameter/points_per_layer
-    vertical_shift = 4 #mm  
+    vertical_shift = 4 #mm
 
     slices_per_layer = 1
 
@@ -146,11 +146,11 @@ def main():
 
     for layer in range(num_layers*slices_per_layer):
         np.savetxt(
-                'slice_ER_4043_large_cold/curve_sliced/slice'+str(layer+1)+'_0.csv',
+                'slice_ER_4043_skinny/curve_sliced/slice'+str(layer+1)+'_0.csv',
                 curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=','
                 )
     
-    np.savetxt('slice_ER_4043_large_cold/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    np.savetxt('slice_ER_4043_skinny/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':

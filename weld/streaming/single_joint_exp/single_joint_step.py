@@ -19,7 +19,7 @@ if __name__ == '__main__':
     ANGLE_START = 0 # rad
     ANGLE_END = -20*np.pi/180 # rad
     RECORDING = False
-    ONLINE = True # Used to test without connecting to RR services
+    ONLINE = False # Used to test without connecting to RR services
     STREAMING_RATE = 125.
     STEP_DIST = 0.01 # rad
 
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     # Looping through the entire path of the sliced part
     input("press enter to start streaming")
-    SS.start_recording()
+    if ONLINE: SS.start_recording()
     while np.abs(joint_cur)<np.abs(ANGLE_END - v_cmd/STREAMING_RATE):
         loop_start = time.perf_counter()
 
@@ -98,7 +98,12 @@ if __name__ == '__main__':
         if ONLINE:
             SS.position_cmd(q_cmd, loop_start)
 
+        print(joint_cur)
+        print(v_cmd/STREAMING_RATE)
+        print(STREAMING_RATE)
+        exit()
+
     print("-----End of Job-----")
-    js_recording = SS.stop_recording()
-    np.savetxt(recorded_dir+'weld_js_cmd.csv',np.array(q_cmd_all),delimiter=',')
-    np.savetxt(recorded_dir+'weld_js_exe.csv',np.array(js_recording),delimiter=',')
+    # js_recording = SS.stop_recording()
+    # np.savetxt(recorded_dir+'weld_js_cmd.csv',np.array(q_cmd_all),delimiter=',')
+    # np.savetxt(recorded_dir+'weld_js_exe.csv',np.array(js_recording),delimiter=',')

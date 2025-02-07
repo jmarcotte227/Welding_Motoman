@@ -1,0 +1,18 @@
+num_layers: 81
+num_baselayers: 0
+line_resolution: 0.1
+baselayer_thickness: 4
+point_distance: 3.141592653589793
+dh_max: 2.468475190539253
+dh_min: 1.4860946104132609
+point_of_rotation: 100.6131657840027
+layer_angle: 1.1257976619508032
+tube_diameter: 50
+smooth_filter: False
+q_positioner_seed: 
+  - -0.261799387799149
+  - 4.833336940642538160
+
+
+
+
