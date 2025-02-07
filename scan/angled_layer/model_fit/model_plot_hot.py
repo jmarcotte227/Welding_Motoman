@@ -46,7 +46,7 @@ fit_plot = np.array([np.log(data[0,:]), fit_points])
 print(data[0,:])
 print(fit_points)
 
-ax1.plot(np.log(data[0]), fit_points, color=marker_colors[1])
+ax1.plot(data[0], fit_points, color=marker_colors[1])
 # err_data=np.loadtxt(err_set[-1], delimiter=',')
 # ax1.plot(np.linspace(1,80,80), err_data)
 # ax2.plot(np.linspace(1,80,80), err_data)

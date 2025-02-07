@@ -14,8 +14,8 @@ from scipy.interpolate import interp1d
 if __name__ == '__main__':
     
     ######## Parameters ########
-    V_NOMINAL = 1 # rad/s
-    JOINT_NUM = 5
+    V_NOMINAL = 0.01 # rad/s
+    JOINT_NUM = 1
     ANGLE_START = 0 # rad
     ANGLE_END = -20*np.pi/180 # rad
     RECORDING = False
@@ -23,8 +23,10 @@ if __name__ == '__main__':
     STREAMING_RATE = 125.
     STEP_DIST = 0.01 # rad
 
+    CORRECTION_DELAY = 0.0007
+
     ######## Create Directories ########
-    recorded_dir=f'../../../../recorded_data/streaming/single_joint_{JOINT_NUM}_vel_{V_NOMINAL}_end_{ANGLE_END*180/np.pi}/'
+    recorded_dir=f'../../../../recorded_data/streaming_delay/single_joint_{JOINT_NUM}_vel_{V_NOMINAL}_end_{ANGLE_END*180/np.pi}/'
     os.makedirs(recorded_dir, exist_ok=True)
 
     ######## ROBOTS ########
@@ -96,7 +98,7 @@ if __name__ == '__main__':
         # print("Commanding jointset: ", q_cmd)
         # input("sending vel command")
         if ONLINE:
-            SS.position_cmd(q_cmd, loop_start)
+            SS.position_cmd(q_cmd, loop_start+CORRECTION_DELAY) # adding delay to counteract delay in streaming send 
 
         print(joint_cur)
         print(v_cmd/STREAMING_RATE)
