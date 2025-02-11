@@ -125,7 +125,7 @@ def main():
             
             # assign previous layer's y coordinate
               curve_curved[(layer+1)*points_per_layer+point,1] = curve_curved[layer*points_per_layer+point,1]
-    vis_step=10
+    vis_step=1
     #plt.rc('text', usetex=True)
     #plt.rc('font', family='serif')
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
