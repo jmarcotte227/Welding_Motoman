@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np 
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import sys
@@ -69,6 +69,7 @@ def main():
     mid_angle = np.rad2deg(layer_angle)*int(num_layers/2)
     rot_point_2 = rotate([rot_point, vertical_shift],[-rot_point+curve_seg_length, vertical_shift], -np.deg2rad(mid_angle))
     print(rot_point_2)
+    print("adjusted rot point 2: ", -rot_point+curve_seg_length)
     print('Layer Angle:', np.rad2deg(layer_angle))
     print('Mid Angle:', mid_angle)
     print('Point of Rotation:', rot_point)
@@ -120,6 +121,7 @@ def main():
             # assign previous layer's y coordinate
               curve_curved[(layer+1)*points_per_layer+point,1] = curve_curved[layer*points_per_layer+point,1]
     # do the second point
+    print(layer)
     for layer in range((num_layers-mid_slices)-1,num_layers-1):
         for point in range(points_per_layer):
               #rotate x coordinates

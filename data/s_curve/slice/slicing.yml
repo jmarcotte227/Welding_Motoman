@@ -1,15 +1,20 @@
-num_layers: 30
+num_layers: 107
 num_baselayers: 0
 line_resolution: 0.1
-baselayer_thickness: 0
+baselayer_thickness: 4
 point_distance: 0.5
-dh_max: 2.468475190539253
+dh_max: 1.8586869198094167
 dh_min: 1.4860946104132609
+point_of_rotation: 124.69933192829497
+point_of_rotation_2_x: -33.25458063380405
+point_of_rotation_2_y: 163.39046974944148
+# point_of_rotation_2: -99.69933192829497
+layer_angle: 0.8539502875333207
+mid_angle: 45.259365239265996
+tube_diameter: 
 smooth_filter: False
 q_positioner_seed: 
-  - -2.716233516185387886e-01
-  - 0
-
-
+  - -0.261799387799149
+  - 4.7123888038468
 
 

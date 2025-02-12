@@ -6,7 +6,7 @@ from motoman_def import *
 
 
 def main():
-	dataset='two_pt_stream_test/'
+	dataset='s_curve/'
 
 	sliced_alg='slice/'
 	data_dir='../data/'+dataset+sliced_alg
@@ -49,7 +49,7 @@ def main():
 	# 		H=rr.baseline_pose()
 
 	
-	H[2,-1]+=slicing_meta['num_baselayers']*slicing_meta['baselayer_thickness']+slicing_meta['num_supportlayers']*slicing_meta['supportlayer_thickness']
+	H[2,-1]+=slicing_meta['num_baselayers']*slicing_meta['baselayer_thickness']#+slicing_meta['num_supportlayers']*slicing_meta['supportlayer_thickness']
 
 	np.savetxt(data_dir+'curve_pose.csv',H,delimiter=',')
 
@@ -104,15 +104,15 @@ def main():
 
 	support_layer_temp[0]=np.vstack((init_ext,support_layer_temp[0],end_ext))
 
-	for i in range(slicing_meta['num_supportlayers']):
-		curve_sliced_relative_support.append(copy.deepcopy(support_layer_temp))
-		for x in range(len(curve_sliced_relative[0])):
+	# for i in range(slicing_meta['num_supportlayers']):
+	# 	curve_sliced_relative_support.append(copy.deepcopy(support_layer_temp))
+	# 	for x in range(len(curve_sliced_relative[0])):
 
-			curve_sliced_relative_support[-1][x][:,2]-=(slicing_meta['num_supportlayers']-i)*slicing_meta['supportlayer_thickness']
-			ax.plot3D(curve_sliced_relative_support[i][x][::vis_step,0],curve_sliced_relative_support[i][x][::vis_step,1],curve_sliced_relative_support[i][x][::vis_step,2],'g.-')
-			ax.quiver(curve_sliced_relative_support[i][x][::vis_step,0],curve_sliced_relative_support[i][x][::vis_step,1],curve_sliced_relative_support[i][x][::vis_step,2],curve_sliced_relative_support[i][x][::vis_step,3],curve_sliced_relative_support[i][x][::vis_step,4],curve_sliced_relative_support[i][x][::vis_step,5],length=0.3, normalize=True)
+	# 		curve_sliced_relative_support[-1][x][:,2]-=(slicing_meta['num_supportlayers']-i)*slicing_meta['supportlayer_thickness']
+	# 		ax.plot3D(curve_sliced_relative_support[i][x][::vis_step,0],curve_sliced_relative_support[i][x][::vis_step,1],curve_sliced_relative_support[i][x][::vis_step,2],'g.-')
+	# 		ax.quiver(curve_sliced_relative_support[i][x][::vis_step,0],curve_sliced_relative_support[i][x][::vis_step,1],curve_sliced_relative_support[i][x][::vis_step,2],curve_sliced_relative_support[i][x][::vis_step,3],curve_sliced_relative_support[i][x][::vis_step,4],curve_sliced_relative_support[i][x][::vis_step,5],length=0.3, normalize=True)
 	
-			np.savetxt(data_dir+'curve_sliced_relative/support_slice'+str(i)+'_'+str(x)+'.csv',curve_sliced_relative_support[i][x],delimiter=',')
+	# 		np.savetxt(data_dir+'curve_sliced_relative/support_slice'+str(i)+'_'+str(x)+'.csv',curve_sliced_relative_support[i][x],delimiter=',')
 
 
 

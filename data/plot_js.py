@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 
 
 def main():
-	dataset='bent_tube/'
-	sliced_alg='slice_ER_4043_large_hot/'
+	dataset='s_curve/'
+	sliced_alg='slice/'
 	data_dir='../data/'+dataset+sliced_alg
-	num_layers=151
+	num_layers=106
 	num_baselayers=0
 	curve_sliced_js=[]
 	positioner_js=[]
