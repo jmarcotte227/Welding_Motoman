@@ -234,6 +234,9 @@ num_layer_end = 152
 point_of_rotation = np.array(
         (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"])
     )
+point_of_rotation_2 = np.array(
+        (slicing_meta["point_of_rotation_2_x"], slicing_meta["point_of_rotation_2_z"])
+    )
 q_prev = client.getJointAnglesDB(positioner.pulse2deg)
 # q_prev = np.array([9.53e-02, -2.71e00])  ###for motosim tests only
 
@@ -241,6 +244,7 @@ base_thickness = slicing_meta["baselayer_thickness"]
 print("start layer: ", num_layer_start)
 print("end layer: ", num_layer_end)
 layer_angle = np.array((slicing_meta["layer_angle"]))
+mid_angle = np.array((slicing_meta["mid_angle"]))
 
 
 for layer in range(num_layer_start, num_layer_end):
