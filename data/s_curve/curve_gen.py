@@ -141,7 +141,7 @@ def main():
     #plt.rc('font', family='serif')
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
-    ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
+    # ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     ax.quiver(X=rot_point,Y=-20,Z=0,U=0,V=1,W=0,length = 40,color='g')
     ax.quiver(X=rot_point_2[0],Y=-20,Z=rot_point_2[1],U=0,V=1,W=0,length = 40,color='g')
 
