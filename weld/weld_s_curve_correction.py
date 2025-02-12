@@ -231,7 +231,7 @@ height_offset = -8.9564
 
 ###########################################layer welding############################################
 print("----------Normal Layers-----------")
-num_layer_start = 53###modify layer num here
+num_layer_start = 54###modify layer num here
 num_layer_end = 105
 mid_layer=53
 point_of_rotation = np.array(
@@ -270,15 +270,26 @@ for layer in range(num_layer_start, num_layer_end):
     dh_min = slicing_meta["dh_min"]
     
     ##calculate distance to point of rotation
-    dist_to_por = []
-    for i in range(len(curve_sliced)):
-        point = np.array((curve_sliced[i, 0], curve_sliced[i, 2]))
-        dist = np.linalg.norm(point - point_of_rotation)
-        dist_to_por.append(dist)
+    if layer >= mid_layer:
+        dist_to_por = []
+        for i in range(len(curve_sliced)):
+            point = np.array((curve_sliced[i, 0], curve_sliced[i, 2]))
+            dist = np.linalg.norm(point - point_of_rotation_2)
+            dist_to_por.append(dist)
 
-    height_profile = []
-    for distance in dist_to_por:
-        height_profile.append(distance * np.sin(np.deg2rad(layer_angle)))
+        height_profile = []
+        for distance in dist_to_por:
+            height_profile.append(distance * np.sin(np.deg2rad(layer_angle)))
+    else:
+        dist_to_por = []
+        for i in range(len(curve_sliced)):
+            point = np.array((curve_sliced[i, 0], curve_sliced[i, 2]))
+            dist = np.linalg.norm(point - point_of_rotation)
+            dist_to_por.append(dist)
+
+        height_profile = []
+        for distance in dist_to_por:
+            height_profile.append(distance * np.sin(np.deg2rad(layer_angle)))
 
     if layer == 1: 
         start_dir=True
@@ -287,9 +298,7 @@ for layer in range(num_layer_start, num_layer_end):
         vel_nom = model.dh2v(height_profile)
         velocity_profile = vel_nom
     else: 
-        ### UNCOMMENT NEXT LINE
-        # start_dir = not np.loadtxt(f"{recorded_dir}layer_{layer-1}/start_dir.csv", delimiter=",")
-        start_dir=True
+        start_dir = not np.loadtxt(f"{recorded_dir}layer_{layer-1}/start_dir.csv", delimiter=",")
 
         # Initialize model with previous layer's coefficients
         # model_coeff = np.loadtxt(f"{recorded_dir}layer_{layer-1}/coeff_mat.csv", delimiter=",")
@@ -302,21 +311,15 @@ for layer in range(num_layer_start, num_layer_end):
         
         ir_error_flag = False
         ### Process IR data prev 
-        # try:
-        #     flame_3d_prev, _, job_no_prev = flame_tracking(f"{recorded_dir}layer_{layer-1}/", robot, robot2, positioner, flir_intrinsic, height_offset)
-        #     if flame_3d_prev.shape[0] == 0:
-        #         raise ValueError("No flame detected")
-        # except ValueError as e:
-        #     print(e)
-        #     flame_3d_prev = None
-        #     ir_error_flag = True
-        # REMOVE THIS
-        if False:
-            pass
+        try:
+            flame_3d_prev, _, job_no_prev = flame_tracking(f"{recorded_dir}layer_{layer-1}/", robot, robot2, positioner, flir_intrinsic, height_offset)
+            if flame_3d_prev.shape[0] == 0:
+                raise ValueError("No flame detected")
+        except ValueError as e:
+            print(e)
+            flame_3d_prev = None
+            ir_error_flag = True
         else:
-            test_flame = np.loadtxt(data_dir+f"curve_sliced_relative/slice{layer-1}_0.csv", delimiter=",")
-            flame_3d_prev = deepcopy(test_flame[:,:3])
-            print(flame_3d_prev.shape)
             # rotate to flat
             for i in range(flame_3d_prev.shape[0]):
                 flame_3d_prev[i] = R.T @ (flame_3d_prev[i]-p) 
@@ -345,17 +348,14 @@ for layer in range(num_layer_start, num_layer_end):
                 flame_3d_prev[:, 2] = new_z - base_thickness
             
             # plotting to check
-            fig,ax=plt.subplots()
-            ax.plot(flame_3d_prev[:,0], flame_3d_prev[:,2])
+            # fig,ax=plt.subplots()
+            # ax.plot(flame_3d_prev[:,0], flame_3d_prev[:,2])
             # ax.scatter(point_of_rotation[0], point_of_rotation[1])
             # ax.scatter(point_of_rotation_2[0], point_of_rotation_2[1])
-            print(flame_3d_prev[0,2])
-            print(flame_3d_prev[-1,2])
             # ax.plot(test_flame[:,0], test_flame[:,1], test_flame[:,2])
-            ax.set_aspect("equal")
-            ax.grid()
-            plt.show()
-            exit()
+            # ax.set_aspect("equal")
+            # ax.grid()
+            # plt.show()
             job_no_prev = [i - job_no_offset for i in job_no_prev]
             averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(curve_sliced_js)-1,len(curve_sliced_js)))
             heights_prev = averages_prev[:,2]
