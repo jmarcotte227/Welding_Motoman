@@ -6,7 +6,7 @@ from motoman_def import *
 
 
 def main():
-	dataset='s_curve/'
+	dataset='s_curve_angled/'
 
 	sliced_alg='slice/'
 	data_dir='../data/'+dataset+sliced_alg
