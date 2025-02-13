@@ -15,6 +15,6 @@ tube_diameter:
 smooth_filter: False
 q_positioner_seed: 
   - -0.261799387799149
-  - 0.463647609000806
+  - 3.141592653589793116
 
 
