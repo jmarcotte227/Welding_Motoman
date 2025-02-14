@@ -6,7 +6,7 @@ from motoman_def import *
 
 
 def main():
-	dataset='s_curve/'
+	dataset='s_curve_angled/'
 
 	sliced_alg='slice/'
 	data_dir='../data/'+dataset+sliced_alg
@@ -40,16 +40,16 @@ def main():
 	H=rr.baseline_pose(vec=np.array([0,1]))
 
 
-	# try:
-	# 	H=np.array(slicing_meta['H'])
-	# except KeyError:
-	# 	try:
-	# 		H=rr.baseline_pose(vec=slicing_meta['placing_vector'])
-	# 	except KeyError:
-	# 		H=rr.baseline_pose()
+	try:
+		H=np.array(slicing_meta['H'])
+	except KeyError:
+		try:
+			H=rr.baseline_pose(vec=slicing_meta['placing_vector'])
+		except KeyError:
+			H=rr.baseline_pose()
 
 	
-	H[2,-1]+=slicing_meta['num_baselayers']*slicing_meta['baselayer_thickness']#+slicing_meta['num_supportlayers']*slicing_meta['supportlayer_thickness']
+	# H[2,-1]+=slicing_meta['num_baselayers']*slicing_meta['baselayer_thickness']#+slicing_meta['num_supportlayers']*slicing_meta['supportlayer_thickness']
 
 	np.savetxt(data_dir+'curve_pose.csv',H,delimiter=',')
 
