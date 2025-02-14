@@ -43,9 +43,8 @@ marker_colors = [
     '#FF9500',
     '#FF2C00',
     '#845B97',
-    '#474747',
-    '#9e9e9e'
-
+    '#0D8577',
+    '#FF459E'
 ]
 marker_size = 5
 data_sets = [
@@ -123,5 +122,5 @@ ax2.grid()
 ax1.set_title('Layer 100 Target Deposition Height')
 ax2.set_title('Layer 101 Planned Velocity Profile')
 plt.tight_layout()
-fig.savefig(f'vel_plot_layer_{layer}_dh.pdf')
+# fig.savefig(f'vel_plot_layer_{layer}_dh.pdf')
 plt.show()
