@@ -161,13 +161,13 @@ def main():
     plt.locator_params(axis='y', nbins=4)
 
     plt.show()
-    for layer in range(num_layers):
-        np.savetxt(
-                'slice/curve_sliced/slice'+str(layer+1)+'_0.csv',
-                curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=','
-                )
+    # for layer in range(num_layers):
+    #     np.savetxt(
+    #             'slice/curve_sliced/slice'+str(layer+1)+'_0.csv',
+    #             curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=','
+    #             )
     
-    np.savetxt('slice/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
+    # np.savetxt('slice/curve_sliced/slice0_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':

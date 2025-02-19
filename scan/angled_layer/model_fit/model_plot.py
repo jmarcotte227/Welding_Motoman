@@ -71,16 +71,16 @@ ax1.scatter(data_hot[:,1],data_hot[:,0], s=marker_size, marker=marker_styles[0],
 ax1.plot(np.log(vel_data), hot_model(vel_data), color=marker_colors[1], label="Hot Model")
 # plotting error bounds in slightly lighter opacity
 ax1.fill_between(np.log(vel_data), hot_model(vel_data)+error_hot, hot_model(vel_data)-error_hot, color=marker_colors[1], alpha=0.2)
-ax1.plot(np.log(vel_data), hot_model(vel_data)-error_hot, color=marker_colors[1], linestyle='dashed')
-ax1.plot(np.log(vel_data), hot_model(vel_data)+error_hot, color=marker_colors[1], linestyle='dashed')
+ax1.plot(np.log(vel_data), hot_model(vel_data)-error_hot, color=marker_colors[1], linestyle='dashed', linewidth=0.5)
+ax1.plot(np.log(vel_data), hot_model(vel_data)+error_hot, color=marker_colors[1], linestyle='dashed', linewidth=0.5)
 
 # Plot cold data
 # fit_points = np.exp(-0.4619*np.log(data_cold[0,:])+1.647)
 ax1.scatter(np.log(data_cold[0,:]),np.log(data_cold[1,:]), s=marker_size, marker=marker_styles[1], color=marker_colors[0], alpha=0.5)
 ax1.plot(np.log(vel_data), cold_model(vel_data), color=marker_colors[0], label="Cold Model")
 ax1.fill_between(np.log(vel_data), cold_model(vel_data)+error_cold, cold_model(vel_data)-error_cold, color=marker_colors[0], alpha=0.2)
-ax1.plot(np.log(vel_data), cold_model(vel_data)+error_cold, color=marker_colors[0], linestyle='dashed')
-ax1.plot(np.log(vel_data), cold_model(vel_data)-error_cold, color=marker_colors[0], linestyle='dashed')
+ax1.plot(np.log(vel_data), cold_model(vel_data)+error_cold, color=marker_colors[0], linestyle='dashed',linewidth=0.5)
+ax1.plot(np.log(vel_data), cold_model(vel_data)-error_cold, color=marker_colors[0], linestyle='dashed',linewidth=0.5)
 # Format Plot
 ax1.set_ylabel("$\ln(\Delta h)$ (mm)")
 ax1.set_xlabel("$\ln(v_T)$ (mm/s)")
