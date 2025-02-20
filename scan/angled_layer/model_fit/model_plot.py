@@ -31,9 +31,13 @@ plt_styles = [
 ]
 marker_styles = [
     '.',
-    '^',
+    'x',
     's',
     'D'
+]
+shaded_colors = [
+    '#93CDFF',
+    '#B5FFD0'
 ]
 marker_colors = [
     '#0C5DA5',
@@ -67,18 +71,23 @@ print("Cold Model Error: ", error_cold_standard)
 
 # Plot hot data
 vel_data = np.linspace(3.5,20)
-ax1.scatter(data_hot[:,1],data_hot[:,0], s=marker_size, marker=marker_styles[0], color=marker_colors[1], alpha=0.2)
-ax1.plot(np.log(vel_data), hot_model(vel_data), color=marker_colors[1], label="Hot Model")
-# plotting error bounds in slightly lighter opacity
+# plot fill data first
+# ax1.fill_between(np.log(vel_data), hot_model(vel_data)+error_hot, hot_model(vel_data)-error_hot, color=shaded_colors[1])
+# ax1.fill_between(np.log(vel_data), cold_model(vel_data)+error_cold, cold_model(vel_data)-error_cold, color=shaded_colors[0])
 ax1.fill_between(np.log(vel_data), hot_model(vel_data)+error_hot, hot_model(vel_data)-error_hot, color=marker_colors[1], alpha=0.2)
+ax1.fill_between(np.log(vel_data), cold_model(vel_data)+error_cold, cold_model(vel_data)-error_cold, color=marker_colors[0], alpha=0.5)
+
+
+ax1.scatter(data_hot[:,1],data_hot[:,0], s=marker_size, marker=marker_styles[0], color=marker_colors[1], label="Hot Data Points", alpha=0.2)
+ax1.plot(np.log(vel_data), hot_model(vel_data), color=marker_colors[1], label="Hot Model Fit")
+# plotting error bounds in slightly lighter opacity
 ax1.plot(np.log(vel_data), hot_model(vel_data)-error_hot, color=marker_colors[1], linestyle='dashed', linewidth=0.5)
 ax1.plot(np.log(vel_data), hot_model(vel_data)+error_hot, color=marker_colors[1], linestyle='dashed', linewidth=0.5)
 
 # Plot cold data
 # fit_points = np.exp(-0.4619*np.log(data_cold[0,:])+1.647)
-ax1.scatter(np.log(data_cold[0,:]),np.log(data_cold[1,:]), s=marker_size, marker=marker_styles[1], color=marker_colors[0], alpha=0.5)
-ax1.plot(np.log(vel_data), cold_model(vel_data), color=marker_colors[0], label="Cold Model")
-ax1.fill_between(np.log(vel_data), cold_model(vel_data)+error_cold, cold_model(vel_data)-error_cold, color=marker_colors[0], alpha=0.2)
+ax1.scatter(np.log(data_cold[0,:]),np.log(data_cold[1,:]), s=marker_size+2, marker=marker_styles[1], color=marker_colors[0],  label="Cold Data Points")
+ax1.plot(np.log(vel_data), cold_model(vel_data), color=marker_colors[0], label="Cold Model Fit")
 ax1.plot(np.log(vel_data), cold_model(vel_data)+error_cold, color=marker_colors[0], linestyle='dashed',linewidth=0.5)
 ax1.plot(np.log(vel_data), cold_model(vel_data)-error_cold, color=marker_colors[0], linestyle='dashed',linewidth=0.5)
 # Format Plot

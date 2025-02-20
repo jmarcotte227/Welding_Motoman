@@ -43,8 +43,9 @@ marker_colors = [
     '#FF9500',
     '#FF2C00',
     '#845B97',
+    # '#FF459E'
+    '#870B5C',
     '#0D8577',
-    '#FF459E'
 ]
 marker_size = 5
 data_sets = [
@@ -108,7 +109,7 @@ ax1.scatter(
 ax2.set_xlabel("Segment Number")
 ax1.set_ylabel("$\Delta h_{d}^{(100)}$ (mm)")
 # ax1.set_ylabel("Error (mm)")
-ax2.set_ylabel("$v_T^{(101)}$ (mm/s)")
+ax2.set_ylabel("$v_T^{(100)}$ (mm/s)")
 fig.legend(["CC", "CH", "Nominal Height Profile", "Cold Model Nominal Velocity", "Hot Model Nominal Velocity"],
            facecolor='white',
            framealpha=0.8,
@@ -120,7 +121,7 @@ fig.legend(["CC", "CH", "Nominal Height Profile", "Cold Model Nominal Velocity",
 ax1.grid()
 ax2.grid()
 ax1.set_title('Layer 100 Target Deposition Height')
-ax2.set_title('Layer 101 Planned Velocity Profile')
+ax2.set_title('Layer 100 Planned Velocity Profile')
 plt.tight_layout()
-# fig.savefig(f'vel_plot_layer_{layer}_dh.pdf')
+fig.savefig(f'vel_plot_layer_{layer}_dh_revised.eps')
 plt.show()

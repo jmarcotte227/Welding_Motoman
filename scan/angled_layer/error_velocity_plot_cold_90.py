@@ -13,7 +13,7 @@ layer = 70
 
 fig, (ax1, ax2)= plt.subplots(2,1, sharex=True)
 
-fig.set_size_inches(5,4)
+fig.set_size_inches(5,3)
 fig.set_dpi(300)
 plt_colors = [
     'blue',
@@ -26,6 +26,16 @@ plt_styles = [
     'dotted',
     'dashed',
     'dashdot'
+]
+marker_colors = [
+    '#0C5DA5',
+    '#00B945',
+    '#FF9500',
+    '#FF2C00',
+    '#845B97',
+    # '#FF459E'
+    '#870B5C',
+    '#0D8577',
 ]
 data_sets = [
     # 'ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43',
@@ -45,16 +55,16 @@ marker_styles = [
     'p'
 
 ]
-marker_colors = [
-    '#0C5DA5',
-    '#00B945',
-    '#FF9500',
-    '#FF2C00',
-    '#845B97',
-    '#474747',
-    '#9e9e9e'
+# marker_colors = [
+#     '#0C5DA5',
+#     '#00B945',
+#     '#FF9500',
+#     '#FF2C00',
+#     '#845B97',
+#     '#474747',
+#     '#9e9e9e'
 
-]
+# ]
 marker_size=5
 # plot blank plots to increment color cycler
 # ax1._get_lines.get_next_color()
@@ -101,19 +111,19 @@ ax1.scatter(np.linspace(2,49,48), height_data, marker=marker_styles[4], color=ma
 ax2.set_xlabel("Segment Number")
 ax1.set_ylabel("$\Delta h_{d}^{(70)}$ (mm)")
 # ax1.set_ylabel("Error (mm)")
-ax2.set_ylabel("$v_T^{(71)}$ (mm/s)")
+ax2.set_ylabel("$v_T^{(70)}$ (mm/s)")
 fig.legend(["Closed-Loop Cold Model 90$^{\circ}$", "Nominal Height Profile", "Nominal Velocity Profile"],
            facecolor='white',
            framealpha=0.8,
            frameon=True,
            loc='lower center',
            ncol=2,
-           bbox_to_anchor=(0.5,-0.1)
+           bbox_to_anchor=(0.5,-0.12)
            )
 ax1.grid()
 ax2.grid()
 ax1.set_title('Layer 70 Target Deposition Height')
-ax2.set_title('Layer 71 Planned Velocity Profile')
+ax2.set_title('Layer 70 Planned Velocity Profile')
 plt.tight_layout()
-fig.savefig(f'cold_90_vel_plot_layer_{layer}_dh.pdf')
+fig.savefig(f'cold_90_vel_plot_layer_{layer}_dh_revised.eps')
 plt.show()
