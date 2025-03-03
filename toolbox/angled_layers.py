@@ -312,3 +312,10 @@ def line_intersect(p1,v1,p2,v2):
     closest_point = p1 + sc * v1
 
     return closest_point
+
+def vel_adjust(trans_flame, k=0.1, h_d=None):
+    # assume flame rotated to flat if no h_d
+    if h_d==None:
+        h_d = 0
+    vel_correction = k*(h_d-trans_flame)
+    return vel_correction
