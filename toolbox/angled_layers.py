@@ -248,11 +248,11 @@ def flame_temp(save_path):
 
         if centroid is not None:
             # crop to bbox image
-            plt.imshow(ir_image, cmap='inferno')
-            plt.show()
+            # plt.imshow(ir_image, cmap='inferno')
+            # plt.show()
             ir_crop = ir_image[bbox[1]:bbox[1]+bbox[3],bbox[0]:bbox[0]+bbox[2]]
-            plt.imshow(ir_crop, cmap='inferno')
-            plt.show()
+            # plt.imshow(ir_crop, cmap='inferno')
+            # plt.show()
             joint_idx = np.argmin(np.abs(ir_ts[i] - joint_angle[:, 0]))
             job_no.append(int(joint_angle[joint_idx][1]))
             max_temp.append(np.max(ir_crop))

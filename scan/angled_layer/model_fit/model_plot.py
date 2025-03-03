@@ -91,8 +91,8 @@ ax1.plot(np.log(vel_data), cold_model(vel_data), color=marker_colors[0], label="
 ax1.plot(np.log(vel_data), cold_model(vel_data)+error_cold, color=marker_colors[0], linestyle='dashed',linewidth=0.5)
 ax1.plot(np.log(vel_data), cold_model(vel_data)-error_cold, color=marker_colors[0], linestyle='dashed',linewidth=0.5)
 # Format Plot
-ax1.set_ylabel("$\ln(\Delta h)$ (mm)")
-ax1.set_xlabel("$\ln(v_T)$ (mm/s)")
+ax1.set_ylabel("$\ln(\Delta h)$ ($\ln$(mm))")
+ax1.set_xlabel("$\ln(v_T)$ ($\ln$(mm/s))")
 ax1.legend(facecolor='white', 
            framealpha=0.8,
            frameon=True,)
