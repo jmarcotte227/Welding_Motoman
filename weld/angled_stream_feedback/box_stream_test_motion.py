@@ -24,17 +24,15 @@ if __name__ == '__main__':
 
     DELAY_CORRECTION = 0.0007
 
-    DATASET = 'bent_tube/'
-    SLICED_ALG = 'slice_ER_4043_hot/'
+    DATASET = 'two_pt_stream_test/'
+    SLICED_ALG = 'slice/'
     DATA_DIR='../../data/'+DATASET+SLICED_ALG
     with open(DATA_DIR+'slicing.yml', 'r') as file:
         slicing_meta = yaml.safe_load(file)
 
     ######## Create Directories ########
-        recorded_dir = now.strftime(
-        "../../recorded_data/ER4043_bent_tube_large_hot_OL_%Y_%m_%d_%H_%M_%S/"
-    )
-    os.makedirs(recorded_dir)
+    recorded_dir=f'../../../recorded_data/streaming_corrected/{V_NOMINAL}/'
+    os.makedirs(recorded_dir, exist_ok=True)
 
     ######## SENSORS ########
     if ONLINE:
@@ -118,73 +116,71 @@ if __name__ == '__main__':
     if ONLINE:
         RR_robot_sub = RRN.SubscribeService('rr+tcp://localhost:59945?service=robot')
         SS=StreamingSend(RR_robot_sub, streaming_rate=STREAMING_RATE)
-    
-    ######## NORMAL LAYERS ########
-    num_layer_start = int(0)
-    num_layer_end = int(1)
-    for layer in range(num_layer_start, num_layer_end):
-        ######## LOAD POINT DATA ########
-        rob1_js = np.loadtxt(DATA_DIR+'curve_sliced_js/MA2010_js1_0.csv', delimiter=',')
-        positioner_js = np.loadtxt(DATA_DIR+'curve_sliced_js/D500B_js1_0.csv', delimiter=',')
-        curve_sliced_relative = np.loadtxt(DATA_DIR+'curve_sliced_relative/slice1_0.csv', delimiter=',')
-        lam_relative = calc_lam_cs(curve_sliced_relative)
-        print("------Slice Loaded------")
 
-        ######## WELD CONTINUOUSLY ########
 
-        # initialize feedrate and velocity
-        feedrate=160
-        v_cmd = V_NOMINAL
+    ######## LOAD POINT DATA ########
+    # I have already generated one continuous spiral, just need to import points for each robot
+    rob1_js = np.loadtxt(DATA_DIR+'curve_sliced_js/MA2010_js1_0.csv', delimiter=',')
+    positioner_js = np.loadtxt(DATA_DIR+'curve_sliced_js/D500B_js1_0.csv', delimiter=',')
+    curve_sliced_relative = np.loadtxt(DATA_DIR+'curve_sliced_relative/slice1_0.csv', delimiter=',')
+    lam_relative = calc_lam_cs(curve_sliced_relative)
+    print("------Slices Loaded------")
 
-        # jog to start position
-        input("Press Enter to jog to start position")
-        if ONLINE: SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
+    ######## WELD CONTINUOUSLY ########
 
-        if RECORDING:
-            rr_sensors.start_all_sensors()
-            SS.start_recording()
-        if ARCON:
-            fronius_client.job_number = int(feedrate/10+JOB_OFFSET)
-            fronius_client.start_weld()
+    # initialize feedrate and velocity
+    feedrate=160
+    v_cmd = V_NOMINAL
 
-        lam_cur=0
-        q_cmd_all = []
+    # jog to start position
+    input("Press Enter to jog to start position")
+    if ONLINE: SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
 
-        # Looping through the entire path of the sliced part
-        input("press enter to start layer")
+    if RECORDING:
+        rr_sensors.start_all_sensors()
         SS.start_recording()
-        while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
-            loop_start = time.perf_counter()
+    if ARCON:
+        fronius_client.job_number = int(feedrate/10+JOB_OFFSET)
+        fronius_client.start_weld()
 
-            lam_cur += v_cmd/STREAMING_RATE
-            # print(lam_cur)
-            # get closest lambda that is greater than current lambda
-            lam_idx = np.where(lam_relative>=lam_cur)[0][0]
-            # Calculate the fraction of the current lambda that has been traversed
-            lam_ratio = ((lam_cur-lam_relative[lam_idx-1])/
-                         (lam_relative[lam_idx]-lam_relative[lam_idx-1]))
-            # Apply that fraction to the joint space
-            q1 = rob1_js[lam_idx-1]*(1-lam_ratio)+rob1_js[lam_idx]*lam_ratio
-            q_positioner = positioner_js[lam_idx-1]*(1-lam_ratio) + positioner_js[lam_idx]*(lam_ratio)
+    lam_cur=0
+    q_cmd_all = []
 
-            #generate set of joints to command
-            q_cmd = np.hstack((q1, q2, q_positioner))
-            # TODO: Update IR Images
+    # Looping through the entire path of the sliced part
+    input("press enter to start streaming")
+    SS.start_recording()
+    while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
+        loop_start = time.perf_counter()
 
-            # TODO: Calculate Control Inputs (v_T, v_w)
+        lam_cur += v_cmd/STREAMING_RATE
+        # print(lam_cur)
+        # get closest lambda that is greater than current lambda
+        lam_idx = np.where(lam_relative>=lam_cur)[0][0]
+        # Calculate the fraction of the current lambda that has been traversed
+        lam_ratio = ((lam_cur-lam_relative[lam_idx-1])/
+                     (lam_relative[lam_idx]-lam_relative[lam_idx-1]))
+        # Apply that fraction to the joint space
+        q1 = rob1_js[lam_idx-1]*(1-lam_ratio)+rob1_js[lam_idx]*lam_ratio
+        q_positioner = positioner_js[lam_idx-1]*(1-lam_ratio) + positioner_js[lam_idx]*(lam_ratio)
 
-            # TODO: Update Welding Commands
-            
-            # log q_cmd
-            q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
-            # this function has a delay when loop_start is passed in. Ensures the update frequency is consistent
-            # if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
-            #     print("Stopping: Loop Time exceeded streaming period")
-            #     break
-            # input("sending vel command")
-            if ONLINE: SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) # adding delay to counteract delay in streaming send
-            
-        print(f"-----End of Layer {layer}-----")
-        js_recording = SS.stop_recording()
-        np.savetxt(recorded_dir+'weld_js_cmd.csv',np.array(q_cmd_all),delimiter=',')
-        np.savetxt(recorded_dir+'weld_js_exe.csv',np.array(js_recording),delimiter=',')
+        #generate set of joints to command
+        q_cmd = np.hstack((q1, q2, q_positioner))
+        # TODO: Update IR Images
+
+        # TODO: Calculate Control Inputs (v_T, v_w)
+
+        # TODO: Update Welding Commands
+        
+        # log q_cmd
+        q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
+        # this function has a delay when loop_start is passed in. Ensures the update frequency is consistent
+        # if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
+        #     print("Stopping: Loop Time exceeded streaming period")
+        #     break
+        # input("sending vel command")
+        if ONLINE: SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) # adding delay to counteract delay in streaming send
+        
+    print("-----End of Job-----")
+    js_recording = SS.stop_recording()
+    np.savetxt(recorded_dir+'weld_js_cmd.csv',np.array(q_cmd_all),delimiter=',')
+    np.savetxt(recorded_dir+'weld_js_exe.csv',np.array(js_recording),delimiter=',')

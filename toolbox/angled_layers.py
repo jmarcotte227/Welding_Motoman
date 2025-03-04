@@ -209,6 +209,7 @@ def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_
             flame_3d.append(intersection)
             torch_path.append(torch)
             job_no.append(int(joint_angle[joint_idx][1]))
+
     flame_3d = np.array(flame_3d)
     torch_path = np.array(torch_path)
     job_no = np.array(job_no)
