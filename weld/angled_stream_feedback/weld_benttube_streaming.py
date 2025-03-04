@@ -200,7 +200,7 @@ if __name__ == '__main__':
             # calculate nominal vel of segment
             vel_idx = np.where(lam_relative<=lam_cur)[0][-1]
             v_cmd = vel_profile[vel_idx]
-            print(v_cmd)
+            # print(v_cmd)
 
             lam_cur += v_cmd/STREAMING_RATE
             # print(lam_cur)
