@@ -6,16 +6,43 @@ from RobotRaconteur.Client import *
 from weldRRSensor import *
 from dual_robot import *
 from traj_manipulation import *
-from StreamingSend import StreamingSend
+# from StreamingSend import StreamingSend
 from robotics_utils import H_inv, VectorPlaneProjection
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize, Bounds
 from numpy.linalg import norm
 from matplotlib import pyplot as plt
+from scipy.signal import iirfilter, sosfilt
 
 sys.path.append("../../toolbox/")
 sys.path.append("")
 from angled_layers import *
+import numpy as np
+
+class LiveFilter():
+    '''
+    Filter for live data based on a butterworth filter from Scipy.
+    When calling process, the filter state is updated and the filtered measurement is output.
+    '''
+    def __init__(self):
+        self.order = 2
+        self.Wn = 1
+        self.btype = 'lowpass'
+        self.ftype = 'butter'
+        self.output = 'sos'
+        self.fs = 30
+
+        self.sos = iirfilter(N=self.order,
+                             Wn = self.Wn,
+                             btype=self.btype,
+                             ftype=self.ftype,
+                             output=self.output,
+                             fs=self.fs)
+        self.zi = np.zeros((1,2))
+    def process(self,x):
+        y, self.zi = sosfilt(self.sos, x, zi=self.zi)
+        return y
+        
 
 if __name__ == '__main__':
     LAYER = 45
@@ -47,10 +74,10 @@ if __name__ == '__main__':
     )
     positioner = positioner_obj(
         "D500B",
-        def_path=CONFIG_DIR+"D500B_robot_extended_config.yml",
+        def_path=CONFIG_DIR+"D500B_robot_default_config.yml",
         tool_file_path=CONFIG_DIR+"positioner_tcp.csv",
         pulse2deg_file_path=CONFIG_DIR+"D500B_pulse2deg_real.csv",
-        base_transformation_file=CONFIG_DIR+"D500B_pose.csv",
+        base_transformation_file=CONFIG_DIR+"D500B_pose_large_tube.csv",
     )
     base_thickness = slicing_meta["baselayer_thickness"]
     layer_angle = np.array((slicing_meta["layer_angle"]))
@@ -97,6 +124,7 @@ if __name__ == '__main__':
                                                        positioner,
                                                        flir_intrinsic,
                                                        HEIGHT_OFFSET)
+        print(flame_3d_prev)
         vel_planned = np.loadtxt(FLAME_DATA_DIR+f'layer_{LAYER-1}/velocity_profile.csv', delimiter=',')
         if flame_3d_prev.shape[0] == 0:
             raise ValueError("No flame detected")
@@ -108,18 +136,13 @@ if __name__ == '__main__':
         # rotate to flat
         times = []
         for i in range(flame_3d_prev.shape[0]):
-            time_start = time.perf_counter() 
-            flame_3d_prev[i] = R.T @ flame_3d_prev[i] 
+            flame_3d_prev[i,:] = R.T @ flame_3d_prev[i,:] 
 
             new_x, new_z = rotate(
                 point_of_rotation, (flame_3d_prev[i, 0], flame_3d_prev[i, 2]), to_flat_angle
             )
             flame_3d_prev[i, 0] = new_x
-            flame_3d_prev[i, 2] = new_z - base_thickness + 6 # artificially shifting for sake of tuning
-            time_diff = time.perf_counter()-time_start
-            times.append(time_diff)
-    print("average: ", np.mean(times))
-    print("max: ", np.max(times))
+            flame_3d_prev[i, 2] = new_z - base_thickness  
 
     # vel_planned = np.flip(vel_planned)
     # prune non-job number layers
@@ -135,10 +158,24 @@ if __name__ == '__main__':
             vel_list.append(vel_planned[val-JOB_NO_OFFSET])
     
     flame_3d_prev=np.delete(flame_3d_prev, del_idx, axis=0)
+    error = flame_3d_prev[:,2]
+
+    # mimic filter 
+    out = []
+    # empty first element to account for sample delay
+    vel_correction = [np.nan]
+    filter = LiveFilter()
+    for e in error:
+        e_filt = filter.process([e])
+        out.append(e_filt)
+        vel_correction.append(vel_adjust(e_filt, k=-2)[0])
+    print(vel_correction)
 
     # calculate correction
-    for i in range(flame_3d_prev.shape[0]):
-        vel_correction.append(vel_adjust(flame_3d_prev[i,2], k=-2))
+    # for i in range(flame_3d_prev.shape[0]):
+    #     vel_correction.append(vel_adjust(flame_3d_prev[i,2], k=-2))
+    # appending nan to account for sample delay
+    vel_list.append(np.nan)
     vel_list = np.array(vel_list)
     vel_correction = np.array(vel_correction)
     # calculate deposition for nominal model

@@ -48,7 +48,7 @@ positioner = positioner_obj(
     def_path=config_dir+"D500B_robot_default_config.yml",
     tool_file_path=config_dir+"positioner_tcp.csv",
     pulse2deg_file_path=config_dir+"D500B_pulse2deg_real.csv",
-    base_transformation_file=config_dir+"D500B_pose.csv",
+    base_transformation_file=config_dir+"D500B_pose_large_tube.csv",
 )
 
 H2010_1440 = H_inv(robot2.base_H)
@@ -56,7 +56,7 @@ H = np.loadtxt(data_dir + "curve_pose.csv", delimiter=",")
 p = H[:3, -1]
 R = H[:3, :3]
 
-height_offset = -6.963543839366356 #-8.9564#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
+height_offset = -8.345#  [-7.770, -4.85 , -5.71] #float(input("Enter height offset: "))
 # height_offset = [0,0,0]
 job_no_offset = 3
 point_of_rotation = np.array(
@@ -65,20 +65,18 @@ base_thickness = slicing_meta["baselayer_thickness"]
 layer_angle = np.array((slicing_meta["layer_angle"]))
 # print(layer_angle)
 num_layer_start = 1
-num_layer_end = 105
+num_layer_end = 106
 heights_all = []
 flames_all = []
 rms_err_all = []
 flames = []
 heights = []
 
-# ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38
-# record_folder = 's_curve_angled_2025_02_18_11_01_10'
+
 record_folder = 'ER4043_bent_tube_large_hot_2024_11_06_12_27_19'
 recorded_dir = f'../../../../recorded_data/{record_folder}/'
 height_offset = -8.075
-# for layer in range(num_layer_start, num_layer_end+1):
-for layer in [44]:
+for layer in [44]: #range(num_layer_start, num_layer_end+1):
     print(f"Starting layer {layer}", end='\r')
     ### Load Data
     curve_sliced_js = np.loadtxt(
@@ -99,11 +97,11 @@ for layer in [44]:
     dh_min = slicing_meta["dh_min"]
     
     ##calculate distance to point of rotation
-    # dist_to_por = []
+    dist_to_por = []
     for i in range(len(curve_sliced)):
         point = np.array((curve_sliced[i, 0], curve_sliced[i, 2]))
-        # dist = np.linalg.norm(point - point_of_rotation)
-        # dist_to_por.append(dist)
+        dist = np.linalg.norm(point - point_of_rotation)
+        dist_to_por.append(dist)
 
     try:
         flame_3d, _, job_no = flame_tracking(f"{recorded_dir}layer_{layer}/", robot, robot2, positioner, flir_intrinsic, height_offset)
@@ -120,6 +118,7 @@ for layer in [44]:
         job_no = job_no.reshape((-1,1))
         output_array = np.hstack((job_no, flame_3d))
         flames.append(output_array)
-    print(output_array)
-# with open(f"{record_folder}_flame.pkl", 'wb') as file:
-#     pickle.dump(flames, file)
+    
+print(flames)
+with open(f"{record_folder}_legacy_flame.pkl", 'wb') as file:
+    pickle.dump(flames, file)

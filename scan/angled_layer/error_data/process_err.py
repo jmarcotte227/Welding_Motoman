@@ -20,16 +20,16 @@ def rms_error(data):
 
 config_dir = "../../../config/"
 dataset = "bent_tube/"
-sliced_alg = "slice_ER_4043/"
+sliced_alg = "slice_ER_4043_large_hot/"
 data_dir = "../../../data/" + dataset + sliced_alg
 
 # flame_set = 'processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl'
 flame_set = [
     #'../processing_data/ER4043_bent_tube_2024_08_28_12_24_30_flame.pkl',
-    '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
+    # '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
     # 'processing_data/ER4043_bent_tube_2024_09_03_13_26_16_flame.pkl',
     # '../processing_data/ER4043_bent_tube_hot_2024_10_21_13_25_58_flame.pkl'
-    # '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
+    '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_2024_11_07_10_21_39_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_flame.pkl'
@@ -72,6 +72,8 @@ for idx,flame in enumerate(flame_set):
     with open(flame, 'rb') as file:
         flames = pickle.load(file)
     print("Flames Loaded, plotting")
+    print(len(flames[43]))
+    exit()
 
     # Rotation parameters
     job_no_offset = 3
@@ -95,6 +97,9 @@ for idx,flame in enumerate(flame_set):
     flames_flat = []
     # for layer, flame in enumerate(flames):
     for layer, flame in enumerate(flames):
+        if layer==45:
+            print(flame)
+            exit()
         to_flat_angle = np.deg2rad(layer_angle*(layer+layer_start))
         for i in range(flame.shape[0]):
             flame[i,1:] = R.T @ flame[i,1:]
@@ -105,19 +110,16 @@ for idx,flame in enumerate(flame_set):
         flame[:, 1] = new_x
         flame[:, 3] = new_z - base_thickness
 
-        print(flame[:,0])
         flame[:,0] = flame[:,0]-job_no_offset
         averages= avg_by_line(flame[:,0], flame[:,1:], np.linspace(0,49,50))
-        print(averages)
         height_err.append(averages[:,2])
         flames_flat.append(averages)
     rms_err = []
     for scan in height_err:
-        print(len(scan[1:-1]))
         rms_err.append(rms_error(scan[1:-1]))
         height_err_trim.append(scan[1:-1])
     rms_errs.append(rms_err)
 
 
-np.savetxt(title+'_err.csv',rms_errs[0])
-np.savetxt(title+'_layer_err.csv',height_err_trim, delimiter=',')
+# np.savetxt(title+'_err.csv',rms_errs[0])
+# np.savetxt(title+'_layer_err.csv',height_err_trim, delimiter=',')
