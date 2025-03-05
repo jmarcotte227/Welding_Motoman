@@ -7,7 +7,7 @@ import inspect, traceback, os, sys, yaml
 import matplotlib.pyplot as plt
 sys.path.append("../../toolbox/")
 sys.path.append("")
-from angled_layers import flame_detection_aluminum, line_intersect
+from angled_layers import flame_detection_aluminum, line_intersect, LiveFilter
 
 ir_process="""
 service experimental.ir_process
@@ -29,12 +29,13 @@ class FLIR_RR_TRACKING(object):
         self.cam_pipe.PacketReceivedEvent+=self.ir_cb
         try:
             self.flir_service.start_streaming()
-        except:
+        except Exception as e:
+            print(e)
             print("unable to start streaming")
 
         self.ir_process_struct=RRN.NewStructure("experimental.ir_process.ir_process_struct")
         self.flame_centroid_history = []
-        self.height_offset = 0
+        self.height_offset = 7.68
 
         ######## ROBOTS ########
         # Define Kinematics
@@ -104,8 +105,9 @@ class FLIR_RR_TRACKING(object):
 
             ir_image = np.rot90(display_mat, k=-1)
             centroid, _ = flame_detection_aluminum(ir_image)
-            print("centroid: ", centroid)
+            # print("centroid: ", centroid)
             if centroid is not None:
+                print(centroid)
                 # find world frame coordinates of flame
                 vector = np.array(
                     [
@@ -115,27 +117,35 @@ class FLIR_RR_TRACKING(object):
                     ]
                 )
                 vector = np.linalg.norm(vector)
+                print(q_cur)
+                print("vector")
                 robot2_pose_world = self.robot2.fwd(q_cur[6:12], world=True)
+                print("rob2")
                 p2 = robot2_pose_world.p
                 v2 = robot2_pose_world.R @ vector
                 robot1_pose = self.robot.fwd(q_cur[:6])
+                print("rob1")
                 p1 = robot1_pose.p
                 v1 = robot1_pose.R[:, 2]
                 positioner_pose = self.positioner.fwd(q_cur[12:14], world=True)
+                print("positioner_pose")
 
                 # find intersection point
                 intersection = line_intersect(p1, v1, p2, v2)
                 # offset by height_offset
                 intersection[2] = intersection[2]+self.height_offset
                 intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
+                print("intersection")
                 # filter the position
                 intersection = self.filter.process(intersection)
+                print(intersection)
                 try:
                     self.ir_process_struct.flame_position=intersection.astype(np.float)
                     self.ir_process_result.OutValue=self.ir_process_struct
                 except:
                     traceback.print_exc()
-
+                print("end")
+                
 if __name__ == '__main__':
     with RR.ServerNodeSetup("experimental.ir_process", 12182):
         flir_service=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')

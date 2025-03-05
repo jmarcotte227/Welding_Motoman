@@ -152,6 +152,74 @@ def flame_detection_aluminum(
     return centroid, bbox
 
 
+def flame_tracking_stream(save_path, robot, robot2, positioner, flir_intrinsic, height_offset=0):
+    with open(save_path + "ir_recording.pickle", "rb") as file:
+        ir_recording = pickle.load(file)
+    ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
+    if ir_ts.shape[0] == 0:
+        raise ValueError("No flame detected")
+    joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
+    timeslot = [ir_ts[0] - ir_ts[0], ir_ts[-1] - ir_ts[0]]
+    duration = np.mean(np.diff(timeslot))
+
+    flame_3d = []
+    job_no = []
+    torch_path = []
+    for start_time in timeslot[:-1]:
+        start_idx = np.argmin(np.abs(ir_ts - ir_ts[0] - start_time))
+        end_idx = np.argmin(np.abs(ir_ts - ir_ts[0] - start_time - duration))
+    ## including for tracking purposes
+    time_diffs = []
+    # find all pixel regions to record from flame detection
+    for i in range(start_idx, end_idx):
+        start_time_tracking = time.perf_counter()
+        ir_image = ir_recording[i]
+        try:
+            centroid, _ = flame_detection_aluminum(ir_image, percentage_threshold=0.8)
+        except ValueError:
+            centroid = None
+
+        if centroid is not None:
+            # find spatial vector ray from camera sensor
+            vector = np.array(
+                [
+                    (centroid[0] - flir_intrinsic["c0"]) / flir_intrinsic["fsx"],
+                    (centroid[1] - flir_intrinsic["r0"]) / flir_intrinsic["fsy"],
+                    1,
+                ]
+            )
+            vector = vector / np.linalg.norm(vector)
+            # find index closest in time of joint_angle
+            joint_idx = np.argmin(np.abs(ir_ts[i] - joint_angle[:, 0]))
+            robot2_pose_world = robot2.fwd(joint_angle[joint_idx][9:-2], world=True)
+            p2 = robot2_pose_world.p
+            v2 = robot2_pose_world.R @ vector
+            robot1_pose = robot.fwd(joint_angle[joint_idx][3:9])
+            p1 = robot1_pose.p
+            v1 = robot1_pose.R[:, 2]
+            positioner_pose = positioner.fwd(joint_angle[joint_idx][-2:], world=True)
+
+            # find intersection point
+            intersection = line_intersect(p1, v1, p2, v2)
+            # offset by height_offset
+            intersection[2] = intersection[2]+height_offset
+            intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
+            torch = positioner_pose.R.T @ (robot1_pose.p - positioner_pose.p)
+            time_dif_tracking=time.perf_counter()-start_time_tracking
+            time_diffs.append(time_dif_tracking)
+            flame_3d.append(intersection)
+            torch_path.append(torch)
+            job_no.append(int(joint_angle[joint_idx][1]))
+
+    flame_3d = np.array(flame_3d)
+    torch_path = np.array(torch_path)
+    job_no = np.array(job_no)
+    ## processing timing data
+    time_diffs=np.array(time_diffs)
+    print("Average: ", np.mean(time_diffs))
+    print("Worst: ", np.max(time_diffs))
+    return flame_3d, torch_path, job_no
+
 def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_offset=0):
     with open(save_path + "ir_recording.pickle", "rb") as file:
         ir_recording = pickle.load(file)
