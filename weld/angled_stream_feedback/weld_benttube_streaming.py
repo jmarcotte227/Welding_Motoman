@@ -12,7 +12,10 @@ from dx200_motion_program_exec_client import *
 from scipy.interpolate import interp1d
 from datetime import datetime
 sys.path.append("../../toolbox")
-from angled_layers import SpeedHeightModel
+from angled_layers import SpeedHeightModel, LiveFilter, rotate
+
+ir_updated_flag = False
+ir_process_packet = None
 
 def ir_process_cb(sub, value, ts):
 	global ir_updated_flag, ir_process_packet
@@ -21,6 +24,9 @@ def ir_process_cb(sub, value, ts):
 	ir_updated_flag=True
 
 if __name__ == '__main__':
+
+    ######## IR VARIABLES #########
+    global ir_updated_flag, ir_process_packet
 
     ######## Welding Parameters ########
     ARCON = False
@@ -38,6 +44,9 @@ if __name__ == '__main__':
     DATA_DIR='../../data/'+DATASET+SLICED_ALG
     with open(DATA_DIR+'slicing.yml', 'r') as file:
         slicing_meta = yaml.safe_load(file)
+
+    ####### CONTROLLER PARAMETERS #######
+    V_GAIN = 0.39922 # gradient of model at 3mm/s lower bound
 
     ######## Create Directories ########
     now = datetime.now()
@@ -81,7 +90,7 @@ if __name__ == '__main__':
         base_transformation_file=CONFIG_DIR+'D500B_pose.csv'
     )
 
-    
+
 
     ######## RR FRONIUS ########
     if ARCON:
@@ -110,6 +119,7 @@ if __name__ == '__main__':
     ir_process_result=sub.SubscribeWire("ir_process_result")
     # TODO: Not sure what this does, need to fix
     ir_process_result.WireValueChanged += ir_process_cb
+
     ######## NORMAL LAYERS ########
     num_layer_start = int(0)
     num_layer_end = int(30)
@@ -137,6 +147,12 @@ if __name__ == '__main__':
             )
         base_thickness = slicing_meta["baselayer_thickness"]
         layer_angle = np.array((slicing_meta["layer_angle"]))
+        to_flat_angle = np.deg2rad(layer_angle * (layer - 1))
+        H = np.loadtxt(data_dir + "curve_pose.csv", delimiter=",")
+        p = H[:3, -1]
+        R = H[:3, :3]
+
+
         # initialize feedrate and velocity
         feedrate=160
         v_cmd = 0
@@ -180,10 +196,13 @@ if __name__ == '__main__':
 
         # jog to start position
         input("Press Enter to jog to start position")
-        if ONLINE: 
+        if ONLINE:
             SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
 
 
+        ######## FILTER ########
+        filter = LiveFilter()
+        error=0
         lam_cur=0
         q_cmd_all = []
 
@@ -197,13 +216,27 @@ if __name__ == '__main__':
             fronius_client.start_weld()
         while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
             loop_start = time.perf_counter()
+
             # calculate nominal vel of segment
             vel_idx = np.where(lam_relative<=lam_cur)[0][-1]
-            v_cmd = vel_profile[vel_idx]
-            # print(v_cmd)
+            v_plan = vel_profile[vel_idx]
+            if ir_updated_flag:
+                ir_updated_flag=False
+                # transform to neutral
+                # TODO: See if this brings in more than one image reading
+                flame_3d = R.T @ ir_process_packet.flame_position
+                # rotate to flat
+                new_x, new_z = rotate(
+                    point_of_rotation, (flame_3d[0], flame_3d[2]), to_flat_angle
+                )
+                error = filter.process(new_z - base_thickness)
+            # update with P control
+            v_cmd = v_plan+V_GAIN*error
+
+            # threshold to stop value from being outside
+            v_cmd = max(min(v_cmd, v_upper),v_lower)
 
             lam_cur += v_cmd/STREAMING_RATE
-            # print(lam_cur)
             # get closest lambda that is greater than current lambda
             lam_idx = np.where(lam_relative>=lam_cur)[0][0]
             # Calculate the fraction of the current lambda that has been traversed
@@ -215,10 +248,6 @@ if __name__ == '__main__':
 
             #generate set of joints to command
             q_cmd = np.hstack((q1, q2, q_positioner))
-
-            # TODO: Calculate Control Inputs (v_T, v_w)
-
-            # TODO: Update Welding Commands
 
             # log q_cmd
             q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))

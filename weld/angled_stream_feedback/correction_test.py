@@ -19,31 +19,6 @@ sys.path.append("")
 from angled_layers import *
 import numpy as np
 
-class LiveFilter():
-    '''
-    Filter for live data based on a butterworth filter from Scipy.
-    When calling process, the filter state is updated and the filtered measurement is output.
-    '''
-    def __init__(self):
-        self.order = 2
-        self.Wn = 1
-        self.btype = 'lowpass'
-        self.ftype = 'butter'
-        self.output = 'sos'
-        self.fs = 30
-
-        self.sos = iirfilter(N=self.order,
-                             Wn = self.Wn,
-                             btype=self.btype,
-                             ftype=self.ftype,
-                             output=self.output,
-                             fs=self.fs)
-        self.zi = np.zeros((1,2))
-    def process(self,x):
-        y, self.zi = sosfilt(self.sos, x, zi=self.zi)
-        return y
-        
-
 if __name__ == '__main__':
     LAYER = 45
     HEIGHT_OFFSET = -8.075

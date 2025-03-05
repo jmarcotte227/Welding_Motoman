@@ -74,8 +74,6 @@ class FLIR_RR_TRACKING(object):
         while pipe_ep.Available > 0:
             # read the joint angles first
             q_cur=self.robot_service.robot_state.PeekInValue()[0].joint_position
-            print("q_cur: ", q_cur)
-            break
             # TODO: Check and see if this is actually quick enough to be accurate
 
             # read the image
