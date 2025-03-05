@@ -61,6 +61,9 @@ class FLIR_RR_TRACKING(object):
             base_transformation_file=CONFIG_DIR+'D500B_pose.csv'
         )
         self.flir_intrinsic = yaml.load(open(CONFIG_DIR + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
+        # initialize filter
+        self.filter = LiveFilter()
+
     # initialize display
         # self.fig, self.ax = plt.subplots()
         # self.ax.imshow(np.zeros((480,640)))
@@ -125,6 +128,8 @@ class FLIR_RR_TRACKING(object):
                 # offset by height_offset
                 intersection[2] = intersection[2]+self.height_offset
                 intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
+                # filter the position
+                intersection = self.filter.process(intersection)
                 try:
                     self.ir_process_struct.flame_position=intersection.astype(np.float)
                     self.ir_process_result.OutValue=self.ir_process_struct

@@ -12,7 +12,6 @@ from scipy.interpolate import interp1d
 from scipy.optimize import minimize, Bounds
 from numpy.linalg import norm
 from matplotlib import pyplot as plt
-from scipy.signal import iirfilter, sosfilt
 
 sys.path.append("../../toolbox/")
 sys.path.append("")
@@ -110,9 +109,12 @@ if __name__ == '__main__':
     else:
         # rotate to flat
         times = []
+        filter = LiveFilter()
         for i in range(flame_3d_prev.shape[0]):
-            flame_3d_prev[i,:] = R.T @ flame_3d_prev[i,:] 
-
+            #filtering flame instead
+            filt_out = filter.process(R.T @ flame_3d_prev[i,:])
+            print(filt_out)
+            flame_3d_prev[i,:] = filt_out
             new_x, new_z = rotate(
                 point_of_rotation, (flame_3d_prev[i, 0], flame_3d_prev[i, 2]), to_flat_angle
             )
@@ -139,12 +141,13 @@ if __name__ == '__main__':
     out = []
     # empty first element to account for sample delay
     vel_correction = [np.nan]
-    filter = LiveFilter()
     for e in error:
-        e_filt = filter.process([e])
-        out.append(e_filt)
-        vel_correction.append(vel_adjust(e_filt, k=-2)[0])
-    print(vel_correction)
+        # e_filt = filter.process([e])
+        # out.append(e_filt)
+        out.append(e)
+        # vel_correction.append(vel_adjust(e_filt, k=-2)[0])
+        vel_correction.append(vel_adjust(e, k=-2))
+    # print(vel_correction)
 
     # calculate correction
     # for i in range(flame_3d_prev.shape[0]):

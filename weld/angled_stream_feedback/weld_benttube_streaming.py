@@ -10,6 +10,7 @@ from StreamingSend import StreamingSend
 from robotics_utils import H_inv, VectorPlaneProjection
 from dx200_motion_program_exec_client import *
 from scipy.interpolate import interp1d
+from scipy.optimize import minimize, Bounds
 from datetime import datetime
 sys.path.append("../../toolbox")
 from angled_layers import SpeedHeightModel, LiveFilter, rotate
@@ -22,6 +23,13 @@ def ir_process_cb(sub, value, ts):
 
 	ir_process_packet=copy.deepcopy(value)
 	ir_updated_flag=True
+
+def v_opt(v_next, v_prev, h_err, h_targ, model, beta=0.11):
+    return (
+        norm(h_targ + h_err - model.v2dh(v_next), 2) ** 2
+        + beta * norm(delta_v(v_next), 2) ** 2
+    )
+bounds = Bounds(3, 17)
 
 if __name__ == '__main__':
 
@@ -47,6 +55,8 @@ if __name__ == '__main__':
 
     ####### CONTROLLER PARAMETERS #######
     V_GAIN = 0.39922 # gradient of model at 3mm/s lower bound
+    V_LOWER = 3 # mm/s
+    V_UPPER = 17 # mm/s
 
     ######## Create Directories ########
     now = datetime.now()
@@ -90,8 +100,6 @@ if __name__ == '__main__':
         base_transformation_file=CONFIG_DIR+'D500B_pose.csv'
     )
 
-
-
     ######## RR FRONIUS ########
     if ARCON:
         fronius_sub=RRN.SubscribeService('rr+tcp://192.168.55.21:60823?service=welder')
@@ -123,6 +131,8 @@ if __name__ == '__main__':
     ######## NORMAL LAYERS ########
     num_layer_start = int(0)
     num_layer_end = int(30)
+    
+    start_dir = True
     for layer in range(num_layer_start, num_layer_end):
         ######## INITIALIZE SAVE DIR #######
         save_path = recorded_dir + f"layer_{layer}/"
@@ -168,11 +178,147 @@ if __name__ == '__main__':
         height_profile = []
         for distance in dist_to_por:
             height_profile.append(distance * np.sin(np.deg2rad(layer_angle)))
+        if layer == 1:
+            start_dir=True
+            model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+                # model = SpeedHeightModel()
+            vel_nom = model.dh2v(height_profile)
+            vel_profile = vel_nom
+        else:
+            start_dir = not np.loadtxt(f"{recorded_dir}layer_{layer-1}/start_dir.csv", delimiter=",")
+            model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+            vel_nom = model.dh2v(height_profile)
 
-        model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
-            # model = SpeedHeightModel()
-        vel_nom = model.dh2v(height_profile)
-        vel_profile = vel_nom
+            ir_error_flag = False
+            ### Process IR data prev 
+            try:
+                flame_3d_prev, _, job_no_prev = flame_tracking(
+                        f"{recorded_dir}layer_{layer-1}/",
+                        robot,
+                        robot2,
+                        positioner,
+                        flir_intrinsic,
+                        height_offset
+                        )
+
+                if flame_3d_prev.shape[0] == 0:
+                    raise ValueError("No flame detected")
+            except ValueError as e:
+                print(e)
+                flame_3d_prev = None
+                ir_error_flag = True
+            else:
+                # rotate to flat
+                for i in range(flame_3d_prev.shape[0]):
+                    flame_3d_prev[i] = R.T @ flame_3d_prev[i] 
+                
+                new_x, new_z = rotate(
+                    point_of_rotation, (flame_3d_prev[:, 0], flame_3d_prev[:, 2]), to_flat_angle
+                )
+                flame_3d_prev[:, 0] = new_x
+                flame_3d_prev[:, 2] = new_z - base_thickness
+
+                averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(curve_sliced_js)-1,len(curve_sliced_js)))
+                heights_prev = averages_prev[:,2]
+                if start_dir: heights_prev = np.flip(heights_prev)
+                # Find Valid datapoints for height correction
+                prev_idx = np.argwhere(np.invert(np.isnan(heights_prev)))
+
+                ### Process IR data 2 prev
+                try:
+                    flame_3d_prev_2, _, job_no_prev_2 = flame_tracking(
+                            f"{recorded_dir}layer_{layer-2}/",
+                            robot,
+                            robot2,
+                            positioner,
+                            flir_intrinsic,
+                            height_offset
+                    )
+                    print(flame_3d_prev_2.shape)
+                except ValueError as e:
+                    print(e)
+                    ir_error_flag = True
+                else:
+                    print(ir_error_flag)
+                    # rotate to flat
+                    for i in range(flame_3d_prev_2.shape[0]):
+                        flame_3d_prev_2[i] = R.T @ flame_3d_prev_2[i] 
+                    
+                    new_x, new_z = rotate(
+                        point_of_rotation, 
+                        (flame_3d_prev_2[:, 0], flame_3d_prev_2[:, 2]),
+                        to_flat_angle
+                    )
+                    flame_3d_prev_2[:, 0] = new_x
+                    flame_3d_prev_2[:, 2] = new_z - base_thickness
+
+                    averages_prev_2 = avg_by_line(job_no_prev_2, flame_3d_prev_2, np.linspace(0,len(curve_sliced_js)-1,len(curve_sliced_js)))
+                   
+                    heights_prev_2 = averages_prev_2[:,2]
+                    if not start_dir: heights_prev_2 = np.flip(heights_prev_2)
+                    # Find Valid datapoints for height correction
+                    prev_idx_2 = np.argwhere(np.invert(np.isnan(heights_prev_2)))
+
+                    # Calculate Cartesian Velocity
+                    # calc_vel, job_nos_vel, _ = calc_velocity(f"{recorded_dir}layer_{layer-1}/",robot)
+                    # job_nos_vel = [i - job_no_offset for i in job_nos_vel]
+                    # vel_avg = avg_by_line(job_nos_vel, calc_vel, np.linspace(0,len(curve_sliced_js)-1, len(curve_sliced_js))).reshape(-1)
+                    
+                    # correct direction if start dir is in the opposite direction
+                    # if start_dir:
+                    #     vel_avg = np.flip(vel_avg)
+                    # vel_valid_idx = np.argwhere(np.invert(np.isnan(vel_avg)))
+                    
+                    # valid_idx = np.intersect1d(np.intersect1d(prev_idx, prev_idx_2), vel_valid_idx)
+                    # dh = heights_prev[valid_idx]-heights_prev_2[valid_idx]
+                    # print(dh)
+                    # update model coefficients
+                    # print("Update, vel_avg: ", vel_avg[valid_idx]) print("Update, dh: ", dh)
+                    # model.model_update_rls(vel_avg[valid_idx], dh)
+                    vel_nom = model.dh2v(height_profile)
+                    print(vel_nom)
+                    # if np.any(np.isnan(vel_nom)):
+                    #     print("bum model")
+                    #     model_coeff = np.loadtxt(f"{recorded_dir}layer_{layer-2}/coeff_mat.csv", delimiter=",")
+                    #     model_p = np.loadtxt(f"{recorded_dir}layer_{layer-2}/model_p.csv", delimiter=",")
+                    #     model = SpeedHeightModel(a = model_coeff[0], b = model_coeff[1], p = model_p)
+                    #     vel_nom = model.dh2v(height_profile)
+                heights_prev = interpolate_heights(height_profile, heights_prev)
+                height_err = 0-heights_prev
+                # plt.plot(heights_prev)
+                # plt.plot(heights_prev_2)
+                # plt.show()
+                # plt.close()
+                # ax = plt.figure().add_subplot(projection='3d')
+                # ax.plot3D(flame_3d_prev[:,0], flame_3d_prev[:,1], flame_3d_prev[:,2])
+                # ax.plot3D(flame_3d_prev_2[:,0], flame_3d_prev_2[:,1], flame_3d_prev_2[:,2])
+                # plt.show()
+                # plt.close()
+
+                # nan_vel_idx = np.argwhere(np.isnan(vel_avg))
+                # vel_avg[nan_vel_idx] = vel_nom[nan_vel_idx]
+                opt_result = minimize(
+                    v_opt,
+                    vel_nom,
+                    (vel_avg, height_err, height_profile, model),
+                    bounds=bounds,
+                    options={"maxfun": 100000},
+                )
+                try:
+                    if not opt_result.success:
+                        print(opt_result)
+                        raise ValueError(opt_result.message)
+
+                    velocity_profile = opt_result.x
+
+                except ValueError as e:
+                    velocity_profile = vel_nom
+                # velocity_profile= vel_nom # ADDING FOR OPEN LOOP
+
+        if start_dir:
+            pass
+        else:
+            rob1_js = np.flip(rob1_js,axis=0)
 
         # Define Start Positions
         MEASURE_DIST = 500 # mm?
@@ -201,10 +347,10 @@ if __name__ == '__main__':
 
 
         ######## FILTER ########
-        filter = LiveFilter()
         error=0
         lam_cur=0
         q_cmd_all = []
+        job_no = []
 
         # Looping through the entire path of the sliced part
         input("press enter to start layer")
@@ -229,12 +375,12 @@ if __name__ == '__main__':
                 new_x, new_z = rotate(
                     point_of_rotation, (flame_3d[0], flame_3d[2]), to_flat_angle
                 )
-                error = filter.process(new_z - base_thickness)
+                error = new_z - base_thickness
             # update with P control
             v_cmd = v_plan+V_GAIN*error
 
             # threshold to stop value from being outside
-            v_cmd = max(min(v_cmd, v_upper),v_lower)
+            v_cmd = max(min(v_cmd, V_UPPER),V_LOWER)
 
             lam_cur += v_cmd/STREAMING_RATE
             # get closest lambda that is greater than current lambda
@@ -251,13 +397,16 @@ if __name__ == '__main__':
 
             # log q_cmd
             q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
+            job_no.append(vel_idx)
+
             # this function has a delay when loop_start is passed in. 
             # Ensures the update frequency is consistent
             # if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
             #     print("Stopping: Loop Time exceeded streaming period")
             #     break
-            # input("sending vel command")
-            if ONLINE: SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) # adding delay to counteract delay in streaming send
+
+            # adding delay to counteract delay in streaming send
+            if ONLINE: SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) 
         if ARCON:
             fronius_client.stop_weld()
         print(f"-----End of Layer {layer}-----")
@@ -265,9 +414,11 @@ if __name__ == '__main__':
             js_recording = SS.stop_recording()
             rr_sensors.stop_all_sensors()
             rr_sensors.save_all_sensors(save_path)
-            np.savetxt(save_path+'weld_js_cmd.csv',np.array(q_cmd_all),delimiter=',')
-            np.savetxt(save_path+'weld_js_exe.csv',np.array(js_recording),delimiter=',')
+            np.savetxt(save_path+'weld_js_cmd.csv',np.array([q_cmd_all[:,0],vel_idx,q_cmd_all[:,1:]]),delimiter=',')
+            np.savetxt(save_path+'weld_js_exe.csv',np.array([js_recording[:,0],vel_idx,js_recording[:,1:]]),delimiter=',')
 
+        # delay right after welding before jogging
+        time.sleep(1)
         # jog arm1 out of the way
         if ONLINE:
             q_0 = client.getJointAnglesMH(robot.pulse2deg)

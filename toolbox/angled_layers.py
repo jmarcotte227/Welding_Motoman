@@ -9,6 +9,7 @@ import numpy as np
 import cv2
 from flir_toolbox import *
 import matplotlib.pyplot as plt
+from scipy.signal import iirfilter, sosfilt
 
 
 
@@ -325,6 +326,7 @@ class LiveFilter():
     '''
     Filter for live data based on a butterworth filter from Scipy.
     When calling process, the filter state is updated and the filtered measurement is output.
+    3 Filters, one for each cartesian position direction
     '''
     def __init__(self):
         self.order = 2
@@ -340,8 +342,13 @@ class LiveFilter():
                              ftype=self.ftype,
                              output=self.output,
                              fs=self.fs)
-        self.zi = np.zeros((1,2))
+        self.zi_1 = np.zeros((1,2))
+        self.zi_2 = np.zeros((1,2))
+        self.zi_3 = np.zeros((1,2))
     def process(self,x):
-        y, self.zi = sosfilt(self.sos, x, zi=self.zi)
+        y = np.zeros(3)
+        y[0], self.zi_1 = sosfilt(self.sos, [x[0]], zi=self.zi_1)
+        y[1], self.zi_2 = sosfilt(self.sos, [x[1]], zi=self.zi_2)
+        y[2], self.zi_3 = sosfilt(self.sos, [x[2]], zi=self.zi_3)
         return y
         
