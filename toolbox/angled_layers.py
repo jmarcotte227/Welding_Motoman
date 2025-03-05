@@ -209,6 +209,7 @@ def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_
             flame_3d.append(intersection)
             torch_path.append(torch)
             job_no.append(int(joint_angle[joint_idx][1]))
+
     flame_3d = np.array(flame_3d)
     torch_path = np.array(torch_path)
     job_no = np.array(job_no)
@@ -248,11 +249,11 @@ def flame_temp(save_path):
 
         if centroid is not None:
             # crop to bbox image
-            plt.imshow(ir_image, cmap='inferno')
-            plt.show()
+            # plt.imshow(ir_image, cmap='inferno')
+            # plt.show()
             ir_crop = ir_image[bbox[1]:bbox[1]+bbox[3],bbox[0]:bbox[0]+bbox[2]]
-            plt.imshow(ir_crop, cmap='inferno')
-            plt.show()
+            # plt.imshow(ir_crop, cmap='inferno')
+            # plt.show()
             joint_idx = np.argmin(np.abs(ir_ts[i] - joint_angle[:, 0]))
             job_no.append(int(joint_angle[joint_idx][1]))
             max_temp.append(np.max(ir_crop))
@@ -319,3 +320,28 @@ def vel_adjust(trans_flame, k=0.1, h_d=None):
         h_d = 0
     vel_correction = k*(h_d-trans_flame)
     return vel_correction
+
+class LiveFilter():
+    '''
+    Filter for live data based on a butterworth filter from Scipy.
+    When calling process, the filter state is updated and the filtered measurement is output.
+    '''
+    def __init__(self):
+        self.order = 2
+        self.Wn = 1
+        self.btype = 'lowpass'
+        self.ftype = 'butter'
+        self.output = 'sos'
+        self.fs = 30
+
+        self.sos = iirfilter(N=self.order,
+                             Wn = self.Wn,
+                             btype=self.btype,
+                             ftype=self.ftype,
+                             output=self.output,
+                             fs=self.fs)
+        self.zi = np.zeros((1,2))
+    def process(self,x):
+        y, self.zi = sosfilt(self.sos, x, zi=self.zi)
+        return y
+        

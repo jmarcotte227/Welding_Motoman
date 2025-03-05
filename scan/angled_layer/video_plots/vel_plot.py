@@ -13,7 +13,7 @@ layer = 100
 
 fig, ax1= plt.subplots(1,1)
 
-fig.set_size_inches(5,2)
+fig.set_size_inches(7,2)
 fig.set_dpi(300)
 plt_colors = [
     'blue',
@@ -73,7 +73,7 @@ for idx, test in enumerate(data_sets):
             )
 
 ax1.set_xlabel("Segment Number")
-ax1.set_ylabel("$v_T$ (mm)")
+ax1.set_ylabel("$v_T$ (mm/s)")
 # ax1.set_ylabel("Error (mm)")
 # fig.legend(["CC", "CH", "Nominal Height Profile", "Cold Model Nominal Velocity", "Hot Model Nominal Velocity"],
 #            facecolor='white',
@@ -86,5 +86,5 @@ ax1.set_ylabel("$v_T$ (mm)")
 ax1.grid()
 ax1.set_title('Optimal $v_T$')
 plt.tight_layout()
-fig.savefig(f'vel_plot_layer.pdf')
+fig.savefig(f'vel_plot_layer_long.png', dpi=600)
 plt.show()

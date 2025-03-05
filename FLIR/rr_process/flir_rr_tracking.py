@@ -3,17 +3,16 @@ RRN=RR.RobotRaconteurNode.s
 import numpy as np
 from flir_toolbox import *
 from motoman_def import robot_obj, positioner_obj
-import inspect, traceback, os, sys
+import inspect, traceback, os, sys, yaml
 import matplotlib.pyplot as plt
 sys.path.append("../../toolbox/")
 sys.path.append("")
-from angled_layers import flame_detection_aluminum
+from angled_layers import flame_detection_aluminum, line_intersect
 
 ir_process="""
 service experimental.ir_process
 struct ir_process_struct
-    field uint16 pixel_reading
-    field uint16[] flame_position
+    field double[] flame_position
 end
 object ir_process_obj
     wire ir_process_struct ir_process_result [readonly]
@@ -35,6 +34,7 @@ class FLIR_RR_TRACKING(object):
 
         self.ir_process_struct=RRN.NewStructure("experimental.ir_process.ir_process_struct")
         self.flame_centroid_history = []
+        self.height_offset = 0
 
         ######## ROBOTS ########
         # Define Kinematics
@@ -60,10 +60,11 @@ class FLIR_RR_TRACKING(object):
             pulse2deg_file_path=CONFIG_DIR+'D500B_pulse2deg_real.csv',
             base_transformation_file=CONFIG_DIR+'D500B_pose.csv'
         )
+        self.flir_intrinsic = yaml.load(open(CONFIG_DIR + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
     # initialize display
-        self.fig, self.ax = plt.subplots()
-        self.ax.imshow(np.zeros((480,640)))
-        plt.show()
+        # self.fig, self.ax = plt.subplots()
+        # self.ax.imshow(np.zeros((480,640)))
+        # plt.show()
 
 
     def ir_cb(self,pipe_ep):
@@ -73,7 +74,6 @@ class FLIR_RR_TRACKING(object):
         while pipe_ep.Available > 0:
             # read the joint angles first
             q_cur=self.robot_service.robot_state.PeekInValue()[0].joint_position
-            # print("q_cur: ", q_cur)
             # TODO: Check and see if this is actually quick enough to be accurate
 
             # read the image
@@ -100,20 +100,33 @@ class FLIR_RR_TRACKING(object):
                 display_mat = mat
 
             ir_image = np.rot90(display_mat, k=-1)
-            self.ax.imshow(ir_image)
-            self.fig.canvas.draw()
             centroid, _ = flame_detection_aluminum(ir_image)
             print("centroid: ", centroid)
             if centroid is not None:
-                center_x = centroid[0]
-                center_y = centroid[1]
-                pixel_coord=(center_x, center_y)
-                ## Not sure what this function does, need to track down
-                flame_reading=get_pixel_value(ir_image, pixel_coord,self.ir_pixel_window_size)
-                print(flame_reading, centroid)
+                # find world frame coordinates of flame
+                vector = np.array(
+                    [
+                        (centroid[0] - self.flir_intrinsic["c0"]) / self.flir_intrinsic["fsx"],
+                        (centroid[1] - self.flir_intrinsic["r0"]) / self.flir_intrinsic["fsy"],
+                        1,
+                    ]
+                )
+                vector = np.linalg.norm(vector)
+                robot2_pose_world = self.robot2.fwd(q_cur[6:12], world=True)
+                p2 = robot2_pose_world.p
+                v2 = robot2_pose_world.R @ vector
+                robot1_pose = self.robot.fwd(q_cur[:6])
+                p1 = robot1_pose.p
+                v1 = robot1_pose.R[:, 2]
+                positioner_pose = self.positioner.fwd(q_cur[12:14], world=True)
+
+                # find intersection point
+                intersection = line_intersect(p1, v1, p2, v2)
+                # offset by height_offset
+                intersection[2] = intersection[2]+self.height_offset
+                intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
                 try:
-                    self.ir_process_struct.flame_reading=int(flame_reading)
-                    self.ir_process_struct.flame_position=centroid.astype(np.uint16)
+                    self.ir_process_struct.flame_position=intersection.astype(np.float)
                     self.ir_process_result.OutValue=self.ir_process_struct
                 except:
                     traceback.print_exc()
