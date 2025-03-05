@@ -85,7 +85,6 @@ positioner = positioner_obj(
 )
 
 H2010_1440 = H_inv(robot2.base_H)
-
 client = MotionProgramExecClient()
 ws = WeldSend(client)
 
