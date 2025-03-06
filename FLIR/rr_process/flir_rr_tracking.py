@@ -35,7 +35,7 @@ class FLIR_RR_TRACKING(object):
 
         self.ir_process_struct=RRN.NewStructure("experimental.ir_process.ir_process_struct")
         self.flame_centroid_history = []
-        self.height_offset = 7.68
+        self.height_offset = 7
 
         ######## ROBOTS ########
         # Define Kinematics
@@ -64,6 +64,7 @@ class FLIR_RR_TRACKING(object):
         self.flir_intrinsic = yaml.load(open(CONFIG_DIR + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
         # initialize filter
         self.filter = LiveFilter()
+        print("service started")
 
     # initialize display
         # self.fig, self.ax = plt.subplots()
@@ -77,8 +78,9 @@ class FLIR_RR_TRACKING(object):
         '''
         while pipe_ep.Available > 0:
             # read the joint angles first
-            q_cur=self.robot_service.robot_state.PeekInValue()[0].joint_position
-            # TODO: Check and see if this is actually quick enough to be accurate
+            r_state=self.robot_service.robot_state.PeekInValue()
+            q_cur = r_state[0].joint_position
+            # print("q_cur: ", q_cur)
 
             # read the image
             rr_img = pipe_ep.ReceivePacket()
@@ -102,12 +104,14 @@ class FLIR_RR_TRACKING(object):
                 display_mat = (mat*0.1)-273.15
             else:
                 display_mat = mat
-
-            ir_image = np.rot90(display_mat, k=-1)
-            centroid, _ = flame_detection_aluminum(ir_image)
+            # ir_image = np.rot90(display_mat, k=-1)
+            try:
+                ir_image = np.array(display_mat)
+                centroid, _ = flame_detection_aluminum(ir_image)
+            except: 
+                traceback.print_exc()
             # print("centroid: ", centroid)
             if centroid is not None:
-                print(centroid)
                 # find world frame coordinates of flame
                 vector = np.array(
                     [
@@ -116,35 +120,33 @@ class FLIR_RR_TRACKING(object):
                         1,
                     ]
                 )
-                vector = np.linalg.norm(vector)
-                print(q_cur)
-                print("vector")
-                robot2_pose_world = self.robot2.fwd(q_cur[6:12], world=True)
-                print("rob2")
-                p2 = robot2_pose_world.p
-                v2 = robot2_pose_world.R @ vector
-                robot1_pose = self.robot.fwd(q_cur[:6])
-                print("rob1")
-                p1 = robot1_pose.p
-                v1 = robot1_pose.R[:, 2]
-                positioner_pose = self.positioner.fwd(q_cur[12:14], world=True)
-                print("positioner_pose")
+                try:
+                    vector = vector/np.linalg.norm(vector)
+                    # print("vector: ", vector)
+                    robot2_pose_world = self.robot2.fwd(q_cur[6:12], world=True)
+                    p2 = robot2_pose_world.p
+                    v2 = robot2_pose_world.R @ vector
+                    # print("v2: ", v2)
+                    robot1_pose = self.robot.fwd(q_cur[:6])
+                    p1 = robot1_pose.p
+                    v1 = robot1_pose.R[:, 2]
+                    # print("v1: ", v1)
+                    positioner_pose = self.positioner.fwd(q_cur[12:14], world=True)
+                except:
+                    traceback.print_exc()
 
                 # find intersection point
                 intersection = line_intersect(p1, v1, p2, v2)
                 # offset by height_offset
                 intersection[2] = intersection[2]+self.height_offset
                 intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
-                print("intersection")
                 # filter the position
                 intersection = self.filter.process(intersection)
-                print(intersection)
                 try:
-                    self.ir_process_struct.flame_position=intersection.astype(np.float)
+                    self.ir_process_struct.flame_position=intersection
                     self.ir_process_result.OutValue=self.ir_process_struct
                 except:
                     traceback.print_exc()
-                print("end")
                 
 if __name__ == '__main__':
     with RR.ServerNodeSetup("experimental.ir_process", 12182):

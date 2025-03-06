@@ -216,8 +216,8 @@ def flame_tracking_stream(save_path, robot, robot2, positioner, flir_intrinsic, 
     job_no = np.array(job_no)
     ## processing timing data
     time_diffs=np.array(time_diffs)
-    print("Average: ", np.mean(time_diffs))
-    print("Worst: ", np.max(time_diffs))
+    # print("Average: ", np.mean(time_diffs))
+    # print("Worst: ", np.max(time_diffs))
     return flame_3d, torch_path, job_no
 
 def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_offset=0):

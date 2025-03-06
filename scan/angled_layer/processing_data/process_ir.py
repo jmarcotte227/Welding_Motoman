@@ -18,7 +18,7 @@ import matplotlib.animation as animation
 import pickle
 
 sys.path.append('../../../toolbox')
-from angled_layers import rotate, flame_tracking, avg_by_line, calc_velocity, SpeedHeightModel
+from angled_layers import rotate, flame_tracking_stream, avg_by_line, calc_velocity, SpeedHeightModel
 
 config_dir = "../../../config/"
 flir_intrinsic = yaml.load(open(config_dir + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
@@ -74,11 +74,11 @@ heights = []
 
 # ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38
 # record_folder = 's_curve_angled_2025_02_18_11_01_10'
-record_folder = 'ER4043_bent_tube_large_hot_2024_11_06_12_27_19'
+record_folder = 'ER4043_bent_tube_large_hot_streaming_2025_03_06_feedback_troubleshooting'
 recorded_dir = f'../../../../recorded_data/{record_folder}/'
-height_offset = -8.075
+height_offset = -8.0564
 # for layer in range(num_layer_start, num_layer_end+1):
-for layer in [44]:
+for layer in [2]:
     print(f"Starting layer {layer}", end='\r')
     ### Load Data
     curve_sliced_js = np.loadtxt(
@@ -106,7 +106,7 @@ for layer in [44]:
         # dist_to_por.append(dist)
 
     try:
-        flame_3d, _, job_no = flame_tracking(f"{recorded_dir}layer_{layer}/", robot, robot2, positioner, flir_intrinsic, height_offset)
+        flame_3d, _, job_no = flame_tracking_stream(f"{recorded_dir}layer_{layer}/", robot, robot2, positioner, flir_intrinsic, height_offset)
         if flame_3d.shape[0] == 0:
             raise ValueError("No flame detected")
     except ValueError as e:
@@ -120,6 +120,6 @@ for layer in [44]:
         job_no = job_no.reshape((-1,1))
         output_array = np.hstack((job_no, flame_3d))
         flames.append(output_array)
-    print(output_array)
-# with open(f"{record_folder}_flame.pkl", 'wb') as file:
-#     pickle.dump(flames, file)
+    # print(output_array)
+with open(f"{record_folder}_flame.pkl", 'wb') as file:
+    pickle.dump(flames, file)

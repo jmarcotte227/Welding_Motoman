@@ -18,12 +18,13 @@ from angled_layers import SpeedHeightModel, rotate, flame_tracking_stream, delta
 
 ir_updated_flag = False
 ir_process_packet = None
+ir_process_output = []
 
 def ir_process_cb(sub, value, ts):
-	global ir_updated_flag, ir_process_packet
-
-	ir_process_packet=copy.deepcopy(value)
-	ir_updated_flag=True
+    global ir_updated_flag, ir_process_packet, ir_process_output
+    ir_process_packet=copy.deepcopy(value)
+    ir_process_output.append(ir_process_packet.flame_position)
+    ir_updated_flag=True
 
 def v_opt(v_next, v_prev, h_err, h_targ, model, beta=0.11):
     return (
@@ -35,7 +36,7 @@ bounds = Bounds(3, 17)
 def main():
 
     ######## IR VARIABLES #########
-    global ir_updated_flag, ir_process_packet
+    global ir_updated_flag, ir_process_packet, ir_process_output
 
     ######## Welding Parameters ########
     ARCON = True
@@ -58,7 +59,7 @@ def main():
         slicing_meta = yaml.safe_load(file)
 
     ####### CONTROLLER PARAMETERS #######
-    V_GAIN = 0.39922 # gradient of model at 3mm/s lower bound
+    V_GAIN = 3.612# changed from this at layer 72 700.39922 # gradient of model at 3mm/s lower bound
     V_LOWER = 3 # mm/s
     V_UPPER = 17 # mm/s
 
@@ -67,8 +68,8 @@ def main():
     # recorded_dir = now.strftime(
     #     "../../../recorded_data/ER4043_bent_tube_large_hot_streaming_%Y_%m_%d_%H_%M_%S/"
     # )
+    recorded_dir = "../../../recorded_data/ER4043_bent_tube_large_hot_streaming_2025_03_06_feedback_troubleshooting/"
     # os.makedirs(recorded_dir)
-    recorded_dir = "../../../recorded_data/ER4043_bent_tube_large_hot_streaming_2025_03_05_15_31_04/"
 
     ######## SENSORS ########
     if ONLINE:
@@ -242,6 +243,11 @@ def main():
     #        ))
     #    np.savetxt(save_path+'weld_js_cmd.csv',cmd_out,delimiter=',')
     #    np.savetxt(save_path+'weld_js_exe.csv',exe_out,delimiter=',')
+    #    np.savetxt(save_path + "rr_ir_data.csv", np.array(ir_process_output), delimiter=",")
+    #    # np.savetxt(save_path + "vel_profile.csv", vel_profile, delimiter=",")
+    #    # np.savetxt(save_path + "error.csv", np.array(e_all), delimiter=",")
+    #    ir_process_output = []
+
 
     ## delay right after welding before jogging
     #time.sleep(1)
@@ -269,9 +275,9 @@ def main():
     #except:
     #    height_offset = float(input("Enter height offset: ")) # -8.9564 -9.1457
 
-    height_offset = 7.68
+    height_offset = 7
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
-    input("Fix height offset, then press enter to continue")
+    # input("Fix height offset, then press enter to continue")
     
     sub=RRN.SubscribeService('rr+tcp://localhost:12182/?service=FLIR_RR_PROCESS')
     ir_process_result=sub.SubscribeWire("ir_process_result")
@@ -279,8 +285,8 @@ def main():
     ir_process_result.WireValueChanged += ir_process_cb
 
     ######## NORMAL LAYERS ########
-    num_layer_start = int(3)
-    num_layer_end = int(30)
+    num_layer_start = int(73)
+    num_layer_end = int(106)
 
     start_dir = True
     for layer in range(num_layer_start, num_layer_end):
@@ -308,6 +314,7 @@ def main():
         base_thickness = slicing_meta["baselayer_thickness"]
         layer_angle = np.array((slicing_meta["layer_angle"]))
         to_flat_angle = np.deg2rad(layer_angle * (layer - 1))
+        to_flat_live = np.deg2rad(layer_angle * layer)
         H = np.loadtxt(DATA_DIR + "curve_pose.csv", delimiter=",")
         p = H[:3, -1]
         R = H[:3, :3]
@@ -350,7 +357,6 @@ def main():
                         flir_intrinsic,
                         height_offset
                         )
-
                 if flame_3d_prev.shape[0] == 0:
                     raise ValueError("No flame detected")
             except ValueError as e:
@@ -447,6 +453,7 @@ def main():
 
                 # nan_vel_idx = np.argwhere(np.isnan(vel_avg))
                 # vel_avg[nan_vel_idx] = vel_nom[nan_vel_idx]
+                print("Height Error: ", height_err)
                 opt_result = minimize(
                     v_opt,
                     vel_nom,
@@ -493,7 +500,7 @@ def main():
         print("Planned vel: ", vel_profile)
 
         # jog to start position
-        input("Press Enter to jog to start position")
+        # input("Press Enter to jog to start position")
         if ONLINE:
             SS.jog2q(np.hstack((rob1_js[0], q2, positioner_js[0])))
 
@@ -503,9 +510,12 @@ def main():
         lam_cur=0
         q_cmd_all = []
         job_no = []
+        e_all = []
+        v_cmds = []
+        v_plans = []
 
         # Looping through the entire path of the sliced part
-        input("press enter to start layer")
+        # input("press enter to start layer")
         if RECORDING:
             rr_sensors.start_all_sensors()
             SS.start_recording()
@@ -518,22 +528,25 @@ def main():
             # calculate nominal vel of segment
             vel_idx = np.where(lam_relative<=lam_cur)[0][-1]
             v_plan = vel_profile[vel_idx]
+            v_plans.append(v_plan)
             if ir_updated_flag:
                 ir_updated_flag=False
                 # transform to neutral
                 # TODO: See if this brings in more than one image reading
                 flame_3d = R.T @ ir_process_packet.flame_position
+                # print(flame_3d)
                 # rotate to flat
                 new_x, new_z = rotate(
-                    point_of_rotation, (flame_3d[0], flame_3d[2]), to_flat_angle
+                    point_of_rotation, (flame_3d[0], flame_3d[2]), to_flat_live
                 )
                 error = new_z - base_thickness
+                e_all.append(error)
             # update with P control
             v_cmd = v_plan+V_GAIN*error
 
             # threshold to stop value from being outside
             v_cmd = max(min(v_cmd, V_UPPER),V_LOWER)
-
+            v_cmds.append(v_cmd)
             lam_cur += v_cmd/STREAMING_RATE
             # get closest lambda that is greater than current lambda
             lam_idx = np.where(lam_relative>=lam_cur)[0][0]
@@ -589,6 +602,13 @@ def main():
             np.savetxt(save_path+'weld_js_cmd.csv',cmd_out,delimiter=',')
             np.savetxt(save_path+'weld_js_exe.csv',exe_out,delimiter=',')
             np.savetxt(save_path + "start_dir.csv", [start_dir], delimiter=",")
+            np.savetxt(save_path + "rr_ir_data.csv", np.array(ir_process_output), delimiter=",")
+            np.savetxt(save_path + "vel_profile.csv", vel_profile, delimiter=",")
+            np.savetxt(save_path + "error.csv", np.array(e_all), delimiter=",")
+            np.savetxt(save_path + "v_cmd.csv", np.array(v_plans), delimiter=",")
+            np.savetxt(save_path + "v_plan.csv", np.array(v_cmds), delimiter=",")
+
+            ir_process_output = []
 
         # delay right after welding before jogging
         time.sleep(1)
@@ -597,6 +617,8 @@ def main():
             q_0 = client.getJointAnglesMH(robot.pulse2deg)
             q_0[1] = q_0[1] - np.pi / 8
             SS.jog2q(np.hstack((q_0, q2, positioner_js[-1])))
+
+        time.sleep(15)
 
 
 if __name__ == '__main__':
