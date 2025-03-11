@@ -336,6 +336,38 @@ def flame_temp(save_path):
     return max_temp, avg_temp, min_temp, job_no
 
 
+def calc_velocity_stream(save_path, robot):
+    joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
+
+    joint_angles_prev = joint_angle[0, :]
+    joint_angles_layer = joint_angle[1:, :]
+    pose_prev = robot.fwd(joint_angles_prev[3:9]).p
+    time_prev = joint_angles_prev[0]
+
+    time_series_layer = []
+    job_nos_layer = []
+    calc_vel_layer = []
+    for i in range(joint_angles_layer.shape[0]):
+        # calculate instantatneous velocity
+        robot1_pose = robot.fwd(joint_angles_layer[i, 3:9])
+        cart_dif = robot1_pose.p - pose_prev
+        time_stamp = joint_angles_layer[i][0]
+        time_dif = time_stamp - time_prev
+        time_prev = time_stamp
+        cart_vel = cart_dif / time_dif
+        time_prev = time_stamp
+        pose_prev = robot1_pose.p
+        lin_vel = np.sqrt(
+            cart_vel[0] ** 2 + cart_vel[1] ** 2 + cart_vel[2] ** 2
+        )
+        calc_vel_layer.append(lin_vel)
+        job_nos_layer.append(joint_angles_layer[i][1])
+        time_series_layer.append(time_stamp)
+    calc_vel_layer = np.array(calc_vel_layer)
+    job_nos_layer = np.array(job_nos_layer)
+    time_series_layer = np.array(time_series_layer)
+    return calc_vel_layer, job_nos_layer, time_series_layer
+
 def calc_velocity(save_path, robot):
     joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
 
@@ -428,17 +460,19 @@ class LiveAverageFilter():
     '''
     def __init__(self):
         # initialize cumulative sum to zero
-        self.cum_sum = np.zeros(3)
+        self.cum_sum = np.zeros((3,1))
         # initialize sample count to zero
         self.samp_count = 0
     def log_reading(self, x):
-        self.cum_sum+= x
+        self.cum_sum[0]+= x[0]
+        self.cum_sum[1]+= x[1]
+        self.cum_sum[2]+= x[2]
         self.samp_count +=1
     def read_filter(self):
         if self.samp_count != 0:
             output = self.cum_sum/self.samp_count
-            self.cum_sum = np.zeros(3)
+            self.cum_sum = np.zeros((3,1))
             self.samp_count = 0
         else:
-            output = 0
+            output = np.zeros((3,1))
         return output
