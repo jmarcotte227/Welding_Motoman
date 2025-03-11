@@ -63,7 +63,7 @@ class SpeedHeightModel:
     ln(h) = a ln(v) + b
     """
 
-    def __init__(self, lam=0.05, beta=1, a=-0.4619, b=1.647, p = None):
+    def __init__(self, lam=0.05, beta=0.99, a=-0.4619, b=1.647, p = None):
         # Beta == 1 for non-exponentail updates
         self.coeff_mat = np.array([a, b])
         self.nom_a = a
@@ -420,3 +420,25 @@ class LiveFilter():
         y[2], self.zi_3 = sosfilt(self.sos, [x[2]], zi=self.zi_3)
         return y
         
+class LiveAverageFilter():
+    '''
+    Filters live data using averaging on a motion segment
+    Counts number of samples, and keeps a cumulative sum
+    averages when the output is called and clears the sum 
+    '''
+    def __init__(self):
+        # initialize cumulative sum to zero
+        self.cum_sum = np.zeros(3)
+        # initialize sample count to zero
+        self.samp_count = 0
+    def log_reading(self, x):
+        self.cum_sum+= x
+        self.samp_count +=1
+    def read_filter(self):
+        if self.samp_count != 0:
+            output = self.cum_sum/self.samp_count
+            self.cum_sum = np.zeros(3)
+            self.samp_count = 0
+        else:
+            output = 0
+        return output

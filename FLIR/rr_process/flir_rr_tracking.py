@@ -63,7 +63,8 @@ class FLIR_RR_TRACKING(object):
         )
         self.flir_intrinsic = yaml.load(open(CONFIG_DIR + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
         # initialize filter
-        self.filter = LiveFilter()
+        # toggling to filter in main loop
+        # self.filter = LiveFilter()
         print("service started")
 
     # initialize display
@@ -141,7 +142,8 @@ class FLIR_RR_TRACKING(object):
                 intersection[2] = intersection[2]+self.height_offset
                 intersection = positioner_pose.R.T @ (intersection - positioner_pose.p)
                 # filter the position
-                intersection = self.filter.process(intersection)
+                # Note: toggling off to filer in main scritp
+                # intersection = self.filter.process(intersection)
                 try:
                     self.ir_process_struct.flame_position=intersection
                     self.ir_process_result.OutValue=self.ir_process_struct
