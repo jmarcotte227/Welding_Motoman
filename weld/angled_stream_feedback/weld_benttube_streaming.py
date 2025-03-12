@@ -74,8 +74,8 @@ def main():
     # recorded_dir = now.strftime(
     #     "../../../recorded_data/ER4043_bent_tube_large_hot_streaming_%Y_%m_%d_%H_%M_%S/"
     # )
-    recorded_dir = "../../../recorded_data/ER4043_bent_tube_large_hot_streaming_2025_03_11_13_56_45/"
     # os.makedirs(recorded_dir)
+    recorded_dir = "../../../recorded_data/ER4043_bent_tube_large_hot_streaming_2025_03_12_09_32_31/"
 
     ######## SENSORS ########
     if ONLINE:
@@ -281,7 +281,7 @@ def main():
     #except:
     #    height_offset = float(input("Enter height offset: ")) # -8.9564 -9.1457
 
-    height_offset = 5.044
+    height_offset = 5.904
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
     input("Fix height offset, then press enter to continue")
 
@@ -291,7 +291,7 @@ def main():
     ir_process_result.WireValueChanged += ir_process_cb
 
     ######## NORMAL LAYERS ########
-    num_layer_start = int(46)
+    num_layer_start = int(3)
     num_layer_end = int(108)
 
     start_dir = True
@@ -342,18 +342,12 @@ def main():
         height_profile = []
         for distance in dist_to_por:
             height_profile.append(distance * np.sin(np.deg2rad(layer_angle)))
-        if layer == 5:
+        if layer == 1:
             start_dir=True
             model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
                 # model = SpeedHeightModel()
             vel_nom = model.dh2v(height_profile)
             vel_profile = vel_nom
-        elif layer == 4:
-            start_dir=False
-            model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
-                # model = SpeedHeightModel()
-            vel_nom = model.dh2v(height_profile)
-            vel_profile = vel_nom   
         else:
             start_dir = not np.loadtxt(f"{recorded_dir}layer_{layer-1}/start_dir.csv", delimiter=",")
             # initialize model coeff from previous layer
@@ -414,41 +408,41 @@ def main():
                 else:
                     print("IR Error Flag: ", ir_error_flag)
                     # rotate to flat
-                    for i in range(flame_3d_prev_2.shape[0]):
-                        flame_3d_prev_2[i] = R.T @ flame_3d_prev_2[i] 
+                    # for i in range(flame_3d_prev_2.shape[0]):
+                    #     flame_3d_prev_2[i] = R.T @ flame_3d_prev_2[i] 
                     
-                    new_x, new_z = rotate(
-                        point_of_rotation, 
-                        (flame_3d_prev_2[:, 0], flame_3d_prev_2[:, 2]),
-                        to_flat_angle
-                    )
-                    flame_3d_prev_2[:, 0] = new_x
-                    flame_3d_prev_2[:, 2] = new_z - base_thickness
+                    # new_x, new_z = rotate(
+                    #     point_of_rotation, 
+                    #     (flame_3d_prev_2[:, 0], flame_3d_prev_2[:, 2]),
+                    #     to_flat_angle
+                    # )
+                    # flame_3d_prev_2[:, 0] = new_x
+                    # flame_3d_prev_2[:, 2] = new_z - base_thickness
 
-                    averages_prev_2 = avg_by_line(job_no_prev_2, flame_3d_prev_2, np.linspace(0,len(rob1_js)-1,len(rob1_js)))
+                    # averages_prev_2 = avg_by_line(job_no_prev_2, flame_3d_prev_2, np.linspace(0,len(rob1_js)-1,len(rob1_js)))
                    
-                    heights_prev_2 = averages_prev_2[:,2]
-                    if not start_dir: heights_prev_2 = np.flip(heights_prev_2)
-                    # Find Valid datapoints for height correction
-                    prev_idx_2 = np.argwhere(np.invert(np.isnan(heights_prev_2)))
+                    # heights_prev_2 = averages_prev_2[:,2]
+                    # if not start_dir: heights_prev_2 = np.flip(heights_prev_2)
+                    # # Find Valid datapoints for height correction
+                    # prev_idx_2 = np.argwhere(np.invert(np.isnan(heights_prev_2)))
 
                     # Calculate Cartesian Velocity
-                    calc_vel, job_nos_vel, _ = calc_velocity_stream(f"{recorded_dir}layer_{layer-1}/",robot)
-                    vel_avg = avg_by_line(job_nos_vel, calc_vel, np.linspace(0,len(rob1_js)-1, len(rob1_js))).reshape(-1)
+                    # calc_vel, job_nos_vel, _ = calc_velocity_stream(f"{recorded_dir}layer_{layer-1}/",robot)
+                    # vel_avg = avg_by_line(job_nos_vel, calc_vel, np.linspace(0,len(rob1_js)-1, len(rob1_js))).reshape(-1)
                     
                     # correct direction if start dir is in the opposite direction
-                    if start_dir:
-                        vel_avg = np.flip(vel_avg)
-                    vel_valid_idx = np.argwhere(np.invert(np.isnan(vel_avg)))
+                    # if start_dir:
+                    #     vel_avg = np.flip(vel_avg)
+                    # vel_valid_idx = np.argwhere(np.invert(np.isnan(vel_avg)))
                     
-                    valid_idx = np.intersect1d(np.intersect1d(prev_idx, prev_idx_2), vel_valid_idx)
-                    dh = heights_prev[valid_idx]-heights_prev_2[valid_idx]
-                    print(dh)
+                    # valid_idx = np.intersect1d(np.intersect1d(prev_idx, prev_idx_2), vel_valid_idx)
+                    # dh = heights_prev[valid_idx]-heights_prev_2[valid_idx]
+                    # print(dh)
                     # update model coefficients
-                    print("Update, vel_avg: ", vel_avg[valid_idx]) 
-                    print("Update, dh: ", dh)
+                    # print("Update, vel_avg: ", vel_avg[valid_idx]) 
+                    # print("Update, dh: ", dh)
                     # model.model_update_rls(vel_avg[valid_idx], dh)
-                    vel_nom = model.dh2v(height_profile)
+                    # vel_nom = model.dh2v(height_profile)
                     # print(vel_nom)
                     # if np.any(np.isnan(vel_nom)):
                     #     print("bum model")
@@ -458,7 +452,7 @@ def main():
                     #     vel_nom = model.dh2v(height_profile)
                 heights_prev = interpolate_heights(height_profile, heights_prev)
                 height_err = 0-heights_prev
-                if start_dir: height_err = np.flip(height_err)
+                # if start_dir: height_err = np.flip(height_err)
                 # plt.plot(heights_prev)
                 # plt.plot(heights_prev_2)
                 # plt.show()
@@ -469,8 +463,8 @@ def main():
                 # plt.show()
                 # plt.close()
 
-                nan_vel_idx = np.argwhere(np.isnan(vel_avg))
-                vel_avg[nan_vel_idx] = vel_nom[nan_vel_idx]
+                # nan_vel_idx = np.argwhere(np.isnan(vel_avg))
+                # vel_avg[nan_vel_idx] = vel_nom[nan_vel_idx]
 
                 print("Height Error: ", height_err)
                 opt_result = minimize(
@@ -563,7 +557,7 @@ def main():
                         point_of_rotation, (flame_3d[0], flame_3d[2]), to_flat_live
                     )
                     error = new_z - base_thickness
-                    print(error)
+                    # print(error)
                     e_all.append(error[0])
                     v_corr = V_GAIN*error[0]
 
