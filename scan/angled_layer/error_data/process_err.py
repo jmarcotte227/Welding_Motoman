@@ -29,11 +29,11 @@ flame_set = [
     # '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
     # 'processing_data/ER4043_bent_tube_2024_09_03_13_26_16_flame.pkl',
     # '../processing_data/ER4043_bent_tube_hot_2024_10_21_13_25_58_flame.pkl'
-    '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_2024_11_07_10_21_39_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_flame.pkl'
-    # '../processing_data/ER4043_bent_tube_large_hot_streaming_2025_03_06_feedback_troubleshooting_flame.pkl'
+    '../processing_data/ER4043_bent_tube_large_hot_streaming_2025_03_06_feedback_troubleshooting_flame.pkl'
 ]
 title=flame_set[-1].removesuffix('_flame.pkl').removeprefix('../processing_data/')
 with open(data_dir + "slicing.yml", "r") as file:
@@ -112,7 +112,6 @@ for idx,flame in enumerate(flame_set):
         averages= avg_by_line(flame[:,0], flame[:,1:], np.linspace(0,49,50))
         height_err.append(averages[:,2])
         flames_flat.append(averages)
-        print(flames_flat)
     rms_err = []
     for scan in height_err:
         rms_err.append(rms_error(scan[1:-1]))
@@ -120,5 +119,5 @@ for idx,flame in enumerate(flame_set):
     rms_errs.append(rms_err)
 
 
-# np.savetxt(title+'_err.csv',rms_errs[0])
-# np.savetxt(title+'_layer_err.csv',height_err_trim, delimiter=',')
+np.savetxt(title+'_err.csv',rms_errs[0])
+np.savetxt(title+'_layer_err.csv',height_err_trim, delimiter=',')
