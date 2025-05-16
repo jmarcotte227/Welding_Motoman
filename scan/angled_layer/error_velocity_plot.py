@@ -39,8 +39,8 @@ marker_styles = [
 ]
 marker_colors = [
     '#0C5DA5',
-    '#00B945',
     '#FF9500',
+    '#00B945',
     '#FF2C00',
     '#845B97',
     # '#FF459E'

@@ -37,13 +37,13 @@ marker_colors = [
     '#9e9e9e'
 
 ]
-marker_size = 2
+marker_size = 5
 err_set = [
     'error_data/ER4043_bent_tube_2024_09_04_12_23_40_err.csv',
 ]
 for idx,err in enumerate(err_set):
     err_data=np.loadtxt(err, delimiter=',')
-    ax.scatter(np.linspace(1,80,80),err_data, marker=marker_styles[idx+2], color=marker_colors[idx+2], s=marker_size)
+    ax.scatter(np.linspace(1,80,80),err_data, marker=marker_styles[idx+2], color=marker_colors[idx+1], s=marker_size)
 
 ax.legend(["Closed-Loop Cold Model 90$^{\circ}$"], 
            facecolor='white', 

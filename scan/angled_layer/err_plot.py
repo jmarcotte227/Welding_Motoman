@@ -76,8 +76,8 @@ fig.set_dpi(300)
 marker_size = 2
 plt_colors = [
     '#0C5DA5',
-    '#00B945',
     '#FF9500',
+    '#00B945',
     '#FF2C00',
 ]
 plt_styles = [
@@ -139,7 +139,8 @@ for idx,err in enumerate(err_set[:-1]):
     ax2.plot(
             np.linspace(1,106,106), 
             err_data, 
-            alpha=0.3
+            alpha=0.3,
+            color = plt_colors[idx]
             )
 # err_data=np.loadtxt(err_set[-1], delimiter=',')
 # ax1.plot(np.linspace(1,80,80), err_data)
@@ -161,5 +162,5 @@ zoom_outside(ax1, [-5, -0.5, 111, 2], ax2, color='black', linewidth=0.5)
 ax1.set_title('Layer Error')
 # ax2.set_title('Layer Error Zoomed')
 ax2.set_ylim(0,2)
-fig.savefig('rms_plot_rev.eps', dpi=fig.dpi)
+fig.savefig('rms_plot_rev.pdf', dpi=fig.dpi)
 plt.show()

@@ -82,7 +82,7 @@ for idx, test in enumerate(data_sets):
         np.linspace(2,49,48),
         height_data-layer_err,
         marker=marker_styles[2+idx],
-        color=marker_colors[2+idx],
+        color=marker_colors[1+idx],
         s=marker_size
     )
     vel_data = np.loadtxt(f'../../../recorded_data/{test}/layer_{layer}/velocity_profile.csv', delimiter=',',)
@@ -90,7 +90,7 @@ for idx, test in enumerate(data_sets):
             np.linspace(2,49,48),np.flip(vel_data[1:-1]), 
             marker=marker_styles[2+idx], 
             s=marker_size,
-            color=marker_colors[2+idx],
+            color=marker_colors[1+idx],
             label='_nolegend_'
             )
 # increment artist on plot 2 once
