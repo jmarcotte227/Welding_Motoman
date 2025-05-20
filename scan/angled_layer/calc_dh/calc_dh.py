@@ -7,6 +7,7 @@ from motoman_def import robot_obj, positioner_obj
 from robotics_utils import H_inv
 sys.path.append('../../../toolbox')
 from angled_layers import avg_by_line, rotate
+from copy import deepcopy
 
 def rms_error(data):
     data = np.array(data)
@@ -29,10 +30,10 @@ flame_set = [
     # '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
     # 'processing_data/ER4043_bent_tube_2024_09_03_13_26_16_flame.pkl',
     # '../processing_data/ER4043_bent_tube_hot_2024_10_21_13_25_58_flame.pkl'
-    '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_2024_11_07_10_21_39_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43_flame.pkl'
-    # '../processing_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_flame.pkl'
+    '../processing_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_hot_streaming_2025_03_06_feedback_troubleshooting_flame.pkl'
 ]
 title=flame_set[-1].removesuffix('_flame.pkl').removeprefix('../processing_data/')
@@ -91,9 +92,8 @@ for idx,flame in enumerate(flame_set):
     dhs = []
     fig,ax = plt.subplots()
     for layer, flame in enumerate(flames[:-1]):
-        ax.plot(flame[:,1], flame[:,3])
         # looking ahead to next layer to calculate dh
-        flame_next = flames[layer+1]
+        flame_next = deepcopy(flames[layer+1])
         to_flat_angle = np.deg2rad(layer_angle*(layer+layer_start))
         for i in range(flame.shape[0]):
             flame[i,1:] = R.T @ flame[i,1:]
@@ -118,8 +118,9 @@ for idx,flame in enumerate(flame_set):
 
         flame_next[:,0] = flame_next[:,0]-job_no_offset
         flat_averages= avg_by_line(flame[:,0], flame[:,1:], np.linspace(0,49,50))
-        print(flat_averages)
         next_averages= avg_by_line(flame_next[:,0], flame_next[:,1:], np.linspace(0,49,50))
         dhs.append(next_averages[:,2]-flat_averages[:,2])
+        ax.plot(flame[:,1], flame[:,3])
+        print(dhs)
     plt.show()
     np.savetxt(title+'_dhs.csv',dhs)
