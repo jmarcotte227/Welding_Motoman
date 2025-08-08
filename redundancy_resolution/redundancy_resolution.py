@@ -128,15 +128,37 @@ class redundancy_resolution(object):
 
 				if start_idx==0 and (end_idx>start_idx):
 					positioner_js[i][x][start_idx:end_idx]=positioner_js[i][x][end_idx]
+				
+				# plt.plot(np.degrees(positioner_js[i][x][:,0]),'-o')
+				# plt.show()
 
+		return positioner_js
+	
+	def positioner_joint_limit_interpolation(self,positioner_js):
+		###interpolate to the nearest joint limit
+		for i in range(len(positioner_js)):
+			for x in range(len(positioner_js[i])):
+				for j in range(len(positioner_js[i][x])):
+					if np.any(positioner_js[i][x][j]>self.positioner.upper_limit) or np.any(positioner_js[i][x][j]<self.positioner.lower_limit):
+						print("layer:",i,"section:",x,"joint:",j)
+						for k in range(j+1,len(positioner_js[i][x])):
+							if np.all(positioner_js[i][x][k]<=self.positioner.upper_limit) and np.all(positioner_js[i][x][k]>=self.positioner.lower_limit):
+								print("interpolating from",j,"to",k)
+								positioner_js[i][x][j-1:k+1] = np.linspace(positioner_js[i][x][j-1],positioner_js[i][x][k],k-j+2)
+								break
 		return positioner_js
 
 
 
 	def baseline_joint(self,R_torch,curve_sliced_relative,curve_sliced_relative_support,curve_sliced_relative_base,q_init=np.zeros(6),q_positioner_seed=[0,-2],smooth_filter=True):
+		
+		print("Solve positioner js first")
 		####baseline redundancy resolution, with fixed orientation
 		positioner_js=self.positioner_resolution(curve_sliced_relative,q_seed=q_positioner_seed,smooth_filter=smooth_filter)		#solve for positioner first
 		
+		### if exceed joint limit, interpolate to the nearest joint limit
+		positioner_js = self.positioner_joint_limit_interpolation(positioner_js)
+
 		###singularity js smoothing
 		positioner_js=self.introducing_tolerance2(positioner_js)
 		positioner_js=self.conditional_rolling_average(positioner_js)
@@ -144,7 +166,7 @@ class redundancy_resolution(object):
 			positioner_js=self.rolling_average(positioner_js)
 		positioner_js[0][0][:,1]=positioner_js[1][0][0,1]
 
-		
+		print("Solve robot js at baselayers")
 		###append base layers positioner
 		positioner_js_base_value=positioner_js[0][0][0]
 		positioner_js_base=[]
@@ -169,6 +191,7 @@ class redundancy_resolution(object):
 			curve_sliced_js_base.append(curve_sliced_js_base_ith_layer)
 			positioner_js_base.append(positioner_js_base_ith_layer)
 
+		print("Solve robot js at support layers")
 		positioner_js_support=None
 		curve_sliced_js_support=None
 		if len(curve_sliced_relative_support)>0:
@@ -196,6 +219,7 @@ class redundancy_resolution(object):
 				curve_sliced_js_support.append(curve_sliced_js_support_ith_layer)
 				positioner_js_support.append(positioner_js_support_ith_layer)
 
+		print("Solve robot js at curve layers")
 		curve_sliced_js=[]
 		for i in range(len(curve_sliced_relative)):			#solve for robot invkin
 			curve_sliced_js_ith_layer=[]
@@ -369,7 +393,7 @@ class redundancy_resolution(object):
 				
 				positioner_js_ith_layer_xth_section=self.positioner.find_curve_js(-curve_sliced_relative[i][x][:,3:],q_prev)
 
-				q_prev=q_seed # positioner_js_ith_layer_xth_section[-1]
+				q_prev=positioner_js_ith_layer_xth_section[-1]
 				###filter noise
 				if smooth_filter:
 					positioner_js_ith_layer_xth_section[:,0]=moving_average(positioner_js_ith_layer_xth_section[:,0],padding=True)
@@ -395,7 +419,7 @@ class redundancy_resolution(object):
 		n_next=self.positioner.base_H[:3,:3]@self.positioner.fwd_rotation(q_next)@n_d ###get current pointing direction
 		return get_angle(n_next,[0,0,1])
 
-	def rob2_flir_resolution(self,rob1_curve_js,robot2,measure_distance=500):
+	def rob2_flir_resolution(self,rob1_curve_js,robot2,measure_distance=500,rotate_angle=np.radians(15),y_direction=np.array([-1,0,0])):
 		###determine second robot trajectory with FLIR
 		#rob1_curve_js: 2010 trajectory
 		#robot2: 1440 with FLIR TOOL defs
@@ -409,10 +433,10 @@ class redundancy_resolution(object):
 				for j in range(len(rob1_curve_js[i][x])):
 					p=self.robot.fwd(rob1_curve_js[i][x][j]).p
 					p_in_base_frame=np.dot(H2010_1440[:3,:3],p)+H2010_1440[:3,3]
-					v_z=H2010_1440[:3,:3]@np.array([0,-0.96592582628,-0.2588190451]) ###pointing toward positioner's X with 15deg tiltd angle looking down
+					v_z=H2010_1440[:3,:3]@rot(np.array([1,0,0]),rotate_angle)@np.array([0,-1,0]) ###pointing toward positioner's X with 15deg tiltd angle looking down
 					# v_z=H2010_1440[:3,:3]@self.positioner.base_H[:3,0]	###pointing toward positioner's X on horizontal plane in 1440's base frame
 					# v_z=VectorPlaneProjection(v_z,np.array([0,0,1]))	###project on gravity plane
-					v_y=VectorPlaneProjection(np.array([-1,0,0]),v_z)	###FLIR's Y pointing toward 1440's -X in 1440's base frame, projected on v_z's plane
+					v_y=VectorPlaneProjection(y_direction,v_z)	###FLIR's Y pointing toward 1440's "y_direction" in 1440's base frame, projected on v_z's plane
 					v_x=np.cross(v_y,v_z)
 					p_in_base_frame=p_in_base_frame-measure_distance*v_z			###back project measure_distance-mm away from torch
 					R=np.vstack((v_x,v_y,v_z)).T
@@ -423,13 +447,6 @@ class redundancy_resolution(object):
 			rob2_curve_js.append(rob2_js_ith_layer)
 		
 		return rob2_curve_js
-
-
-
-
-
-
-
 
 	def positioner_resolution_qp(self,curve_sliced_relative,q_seed=[0,-1.],tolerance=np.radians(3)):
 		###NOT WORKING YET
