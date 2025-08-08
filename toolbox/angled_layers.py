@@ -335,7 +335,6 @@ def flame_temp(save_path):
     job_no = np.array(job_no)
     return max_temp, avg_temp, min_temp, job_no
 
-
 def calc_velocity_stream(save_path, robot):
     joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
 

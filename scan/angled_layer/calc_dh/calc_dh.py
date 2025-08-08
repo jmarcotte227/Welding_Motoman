@@ -30,10 +30,10 @@ flame_set = [
     # '../processing_data/ER4043_bent_tube_2024_09_04_12_23_40_flame.pkl',
     # 'processing_data/ER4043_bent_tube_2024_09_03_13_26_16_flame.pkl',
     # '../processing_data/ER4043_bent_tube_hot_2024_10_21_13_25_58_flame.pkl'
-    # '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
+    '../processing_data/ER4043_bent_tube_large_hot_2024_11_06_12_27_19_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_2024_11_07_10_21_39_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_cold_OL_2024_11_14_11_56_43_flame.pkl'
-    '../processing_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_flame.pkl'
+    # '../processing_data/ER4043_bent_tube_large_hot_OL_2024_11_14_13_05_38_flame.pkl'
     # '../processing_data/ER4043_bent_tube_large_hot_streaming_2025_03_06_feedback_troubleshooting_flame.pkl'
 ]
 title=flame_set[-1].removesuffix('_flame.pkl').removeprefix('../processing_data/')
@@ -90,6 +90,10 @@ for idx,flame in enumerate(flame_set):
         dist_to_por.append(dist)
 
     dhs = []
+    # append empty list to dhs to 
+    nan_list = np.empty(50)
+    nan_list[:]=np.nan
+    dhs.append(nan_list)
     fig,ax = plt.subplots()
     for layer, flame in enumerate(flames[:-1]):
         # looking ahead to next layer to calculate dh
@@ -100,6 +104,7 @@ for idx,flame in enumerate(flame_set):
         # now the next layer
         for i in range(flame_next.shape[0]):
             flame_next[i,1:] = R.T @ flame_next[i,1:]
+        
 
         # flat flame
         new_x, new_z = rotate(
@@ -119,8 +124,12 @@ for idx,flame in enumerate(flame_set):
         flame_next[:,0] = flame_next[:,0]-job_no_offset
         flat_averages= avg_by_line(flame[:,0], flame[:,1:], np.linspace(0,49,50))
         next_averages= avg_by_line(flame_next[:,0], flame_next[:,1:], np.linspace(0,49,50))
+
+        # flip flame so datapoint matches flame_next position
+        flat_averages=np.flip(flat_averages, axis=0)
+
         dhs.append(next_averages[:,2]-flat_averages[:,2])
         ax.plot(flame[:,1], flame[:,3])
-        print(dhs)
     plt.show()
-    np.savetxt(title+'_dhs.csv',dhs)
+    print(np.array(dhs))
+    np.savetxt(title+'_dhs.csv',dhs, delimiter=',')
