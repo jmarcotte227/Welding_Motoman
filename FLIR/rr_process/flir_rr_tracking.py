@@ -13,6 +13,7 @@ ir_process="""
 service experimental.ir_process
 struct ir_process_struct
     field double[] flame_position
+    field double[] avg_flame_temp
 end
 object ir_process_obj
     wire ir_process_struct ir_process_result [readonly]
@@ -108,11 +109,14 @@ class FLIR_RR_TRACKING(object):
             # ir_image = np.rot90(display_mat, k=-1)
             try:
                 ir_image = np.array(display_mat)
-                centroid, _ = flame_detection_aluminum(ir_image)
+                centroid, temp = flame_detection_aluminum(ir_image, percentage_threshold=0.8)
             except: 
                 traceback.print_exc()
             # print("centroid: ", centroid)
             if centroid is not None:
+                # check temperature
+                ir_crop = ir_image[bbox[1]:bbox[1]+bbox[3],bbox[0]:bbox[0]+bbox[2]]
+                avg_temp = np.average(ir_crop)
                 # find world frame coordinates of flame
                 vector = np.array(
                     [
@@ -146,6 +150,7 @@ class FLIR_RR_TRACKING(object):
                 # intersection = self.filter.process(intersection)
                 try:
                     self.ir_process_struct.flame_position=intersection
+                    self.ir_process_struct.avg_flame_temp=avg_temp
                     self.ir_process_result.OutValue=self.ir_process_struct
                 except:
                     traceback.print_exc()
