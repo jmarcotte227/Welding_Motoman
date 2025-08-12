@@ -9,7 +9,7 @@ def main():
     dataset='wall/'
     sliced_alg='1_5mm_slice/'
     data_dir='../data/'+dataset+sliced_alg
-    num_layers=1
+    num_layers=29
     num_baselayers=0
     num_sections = 1
     curve_sliced_js=[]
@@ -20,13 +20,13 @@ def main():
         for x in range(num_sections):
             if i % 2 == 0:
                 # curve_sliced_js.append(np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(i)+'_'+str(x)+'.csv',delimiter=','))
-                positioner_js.append(np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(i)+'_'+str(x)+'_forward.csv',delimiter=','))
-                rob_js.append(np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(i)+'_'+str(x)+'_forward.csv',delimiter=','))
+                positioner_js.append(np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(i)+'_'+str(x)+'.csv',delimiter=','))
+                rob_js.append(np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(i)+'_'+str(x)+'.csv',delimiter=','))
             
             else:
                 # curve_sliced_js.append(np.flip(np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(i)+'_'+str(x)+'.csv',delimiter=','),axis=0))
-                positioner_js.append(np.flip(np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(i)+'_'+str(x)+'_forward.csv',delimiter=','),axis=0))
-                rob_js.append(np.flip(np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(i)+'_'+str(x)+'_forward.csv',delimiter=','),axis=0))
+                positioner_js.append(np.flip(np.loadtxt(data_dir+'curve_sliced_js/D500B_js'+str(i)+'_'+str(x)+'.csv',delimiter=','),axis=0))
+                rob_js.append(np.flip(np.loadtxt(data_dir+'curve_sliced_js/MA2010_js'+str(i)+'_'+str(x)+'.csv',delimiter=','),axis=0))
 
     # curve_sliced_js=np.concatenate( curve_sliced_js, axis=0)
     positioner_js=np.concatenate( positioner_js, axis=0 )

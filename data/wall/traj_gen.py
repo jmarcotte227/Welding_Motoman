@@ -40,7 +40,7 @@ for layer in range(num_base):
 
 curve_base[:,-1]=-np.ones(len(curve_base))
 
-for layer in range(num_layers):
+for layer in range(num_base):
 	np.savetxt('1_5mm_slice/curve_sliced_relative/baselayer'+str(layer)+'_0.csv',
             curve_base[layer*points_per_base:(layer+1)*points_per_base],
             delimiter=',')
