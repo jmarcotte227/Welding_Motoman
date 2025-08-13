@@ -36,7 +36,7 @@ class FLIR_RR_TRACKING(object):
 
         self.ir_process_struct=RRN.NewStructure("experimental.ir_process.ir_process_struct")
         self.flame_centroid_history = []
-        self.height_offset = 5.904
+        self.height_offset = 0
 
         ######## ROBOTS ########
         # Define Kinematics
