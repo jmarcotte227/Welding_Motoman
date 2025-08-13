@@ -12,17 +12,18 @@ from StreamingSend import StreamingSend
 from robotics_utils import H_inv, VectorPlaneProjection
 from dx200_motion_program_exec_client import *
 from scipy.interpolate import interp1d
-from scipy.optimize import minimize, Bounds
+import torch
 sys.path.append("../../toolbox")
 from angled_layers import SpeedHeightModel, rotate, flame_tracking_stream, delta_v, avg_by_line, interpolate_heights, LiveAverageFilter, calc_velocity_stream
+from lstm_model_next_step_fast import WeldLSTM
 
 ir_updated_flag = False
 ir_process_packet = None
 ir_process_output = []
 
 # Initialize Filters
-pos_filter = LiveAverageFilter()
-temp_filter = LiveAverageFilter()
+pos_filter = LiveAverageFilterPos()
+temp_filter = LiveAverageFilterScalar()
 
 
 def ir_process_cb(sub, value, ts):
@@ -30,20 +31,19 @@ def ir_process_cb(sub, value, ts):
     ir_process_packet=copy.deepcopy(value)
     ir_process_output.append(ir_process_packet.flame_position)
     # add z position to averaging filter
-    pos_obj.log_reading(ir_process_packet.flame_position)
-    temp_obj.log_reading(ir_process_packet.avg_flame_temp)
+    pos_filter.log_reading(ir_process_packet.flame_position)
+    temp_filter.log_reading(ir_process_packet.avg_flame_temp)
     ir_updated_flag=True
 
 def main():
 
     ######## IR VARIABLES #########
-    global ir_updated_flag, ir_process_packet, ir_process_output, filter_obj
+    global ir_updated_flag, ir_process_packet, ir_process_output, pos_filter, temp_filter
 
     ######## Welding Parameters ########
     ARCON = False
     RECORDING = True
     ONLINE = True # Used to test without connecting to RR services
-    POINT_DISTANCE=0.04
     V_NOMINAL =20
     BASE_VEL = 3
     BASE_FEEDRATE= 300
@@ -394,11 +394,35 @@ def main():
         lam_cur=0
         q_cmd_all = []
         job_no = []
-        e_all = []
+        dh_prev_all = []
         v_cmds = []
+        lstm_pred
         # current correction Index
         v_cor_idx = 0
         v_corr = 0
+
+        ######## SET INITIAL V #######
+        v_cmd=v_nom
+
+        ######## INIT LSTM #######
+        lstm = torch.load('../multi_output/saved_model_8_next_step.pt')
+        lstm.eval()
+        
+        # reg parameters
+        mean = torch.load('mean.pt')
+        std = torch.load('std.pt')
+
+        h = torch.zeros(1,HID_DIM)
+        c = torch.zeros(1,HID_DIM)
+        state = (h,c)
+        u_prev = v_cmd # v_nom
+        T_prev = 0.0
+        dh_prev = 0.0
+
+        # run one iteration to load the model into cache
+        # first iteration takes too long
+
+        _, _ = model(torch.unsqueeze(torch.zeros(3), dim=0),hidden_state = state)
 
         # Looping through the entire path of the sliced part
         input("press enter to start layer")
@@ -413,42 +437,50 @@ def main():
 
             # calculate nominal vel of segment
             seg_idx = np.where(lam_relative<=lam_cur)[0][-1]
-            dh_d_seg = vel_profile[vel_idx]
-            v_plans.append(v_plan)
             # checks if we have moved onto the next motion segment
-            # print("Vel idx: ", vel_idx)
-            # print("vel cor idx: ", v_cor_idx)
-            if vel_idx != v_cor_idx:
-                v_cor_idx = vel_idx
-                flame_3d = filter_obj.read_filter()
+            if seg_idx != v_cor_idx:
+                v_cor_idx = seg_idx
+                flame_3d = pos_filter.read_filter()
+                avg_temp = temp_filter.read_filter()
                 if flame_3d[0]!=0:
-                    flame_3d = R.T @ flame_3d
-                    new_x, new_z = rotate(
-                        point_of_rotation, (flame_3d[0], flame_3d[2]), to_flat_live
-                    )
-                    error = new_z - base_thickness
+                    dh_prev = flame_3d[2]-heights_prev[v_cor_idx-1]
                     # print(error)
-                    e_all.append(error[0])
-                    v_corr = V_GAIN*error[0]
+                    dh_prev_all.append(dh_prev)
 
-            # if ir_updated_flag:
-            #     ir_updated_flag=False
-            #     # transform to neutral
-            #     # TODO: See if this brings in more than one image reading
-            #     flame_3d = R.T @ ir_process_packet.flame_position
-            #     # print(flame_3d)
-            #     # rotate to flat
-            #     new_x, new_z = rotate(
-            #         point_of_rotation, (flame_3d[0], flame_3d[2]), to_flat_live
-            #     )
-            #     error = new_z - base_thickness
-            #     e_all.append(error)
-            # update with P control
-            # v_cmd = v_plan+V_GAIN*error
+                # calculate linearization
+                dh_prev = (dh_prev-mean[3])/std[3]
+                T_prev = (avg_temp-mean[2])/std[2]
+                u_prev = (v_cmd-mean[0])/std[0]
+                h_0 = torch.squeeze(state[0])
+                c_0 = torch.squeeze(state[1])
+                u_0 = torch.tensor([u_prev, T_prev, dh_prev])
 
-            # threshold to stop value from being outside
-            v_cmd = v_plan+v_corr
-            v_cmd = max(min(v_cmd, V_UPPER),V_LOWER)
+                y_0, _ = model(torch.unsqueeze(u_0, dim=0), 
+                                    hidden_state=state)
+                y_0 = torch.squeeze(y_0)
+
+                A,B,C = lstm_linearization(model, h_0, c_0, u_0)
+
+                # isolate the effect of the velocity on the height input
+                B = B[:,0]
+                C = C[1,:]
+
+                # generate velocity profile according to optimization
+                y_d = torch.unsqueeze(dh_d[v_cor_idx], dim=0)
+
+                u_cmd = (y_d-y_0[1])/(C@B)+u_0[0]
+                # convert back from regularization
+                v_cmd = u_cmd*std[0]+mean[0]
+
+                # project into valid region
+                v_cmd = min(max(v_cmd, V_LOWER) , V_UPPER)
+
+                # propagate the network
+                x = torch.unsqueeze(torch.tensor([u_cmd, T_prev, dh_prev]),dim=0)
+                y_out, state = model(x, hidden_state=state)
+
+                lstm_pred.append(y_out)
+
             v_cmds.append(v_cmd)
             lam_cur += v_cmd/STREAMING_RATE
             # get closest lambda that is greater than current lambda
@@ -465,7 +497,7 @@ def main():
 
             # log q_cmd
             q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
-            job_no.append(vel_idx)
+            job_no.append(seg_idx)
 
             # this function has a delay when loop_start is passed in. 
             # Ensures the update frequency is consistent
@@ -506,12 +538,9 @@ def main():
             np.savetxt(save_path+'weld_js_exe.csv',exe_out,delimiter=',')
             np.savetxt(save_path + "start_dir.csv", [start_dir], delimiter=",")
             np.savetxt(save_path + "rr_ir_data.csv", np.array(ir_process_output), delimiter=",")
-            np.savetxt(save_path + "vel_profile.csv", vel_profile, delimiter=",")
-            np.savetxt(save_path + "error.csv", np.array(e_all), delimiter=",")
+            np.savetxt(save_path + "dh_prev_all.csv", np.array(dh_prev_all), delimiter=",")
             np.savetxt(save_path + "v_cmd.csv", np.array(v_cmds), delimiter=",")
-            np.savetxt(save_path + "v_plan.csv", np.array(v_plans), delimiter=",")
-            np.savetxt(save_path + "coeff_mat.csv", model.coeff_mat, delimiter=",")
-            np.savetxt(save_path + "model_p.csv", model.p, delimiter=",")
+            np.savetxt(save_path + "lstm_pred.csv", np.array(lstm_pred), delimiter=",")
 
             ir_process_output = []
 

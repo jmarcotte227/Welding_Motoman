@@ -451,7 +451,7 @@ class LiveFilter():
         y[2], self.zi_3 = sosfilt(self.sos, [x[2]], zi=self.zi_3)
         return y
         
-class LiveAverageFilter():
+class LiveAverageFilterPos():
     '''
     Filters live data using averaging on a motion segment
     Counts number of samples, and keeps a cumulative sum
@@ -474,4 +474,27 @@ class LiveAverageFilter():
             self.samp_count = 0
         else:
             output = np.zeros((3,1))
+        return output
+
+class LiveAverageFilterScalar():
+    '''
+    Filters live data using averaging on a motion segment
+    Counts number of samples, and keeps a cumulative sum
+    averages when the output is called and clears the sum 
+    '''
+    def __init__(self):
+        # initialize cumulative sum to zero
+        self.cum_sum = 0
+        # initialize sample count to zero
+        self.samp_count = 0
+    def log_reading(self, x):
+        self.cum_sum+= x
+        self.samp_count +=1
+    def read_filter(self):
+        if self.samp_count != 0:
+            output = self.cum_sum/self.samp_count
+            self.cum_sum = 0
+            self.samp_count = 0
+        else:
+            output = 0
         return output
