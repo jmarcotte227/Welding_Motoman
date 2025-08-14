@@ -110,10 +110,13 @@ class FLIR_RR_TRACKING(object):
             try:
                 ir_image = np.array(display_mat)
                 centroid, temp = flame_detection_aluminum(ir_image, percentage_threshold=0.8)
-            except: 
+            except Exception as e: 
+                print(e)
                 traceback.print_exc()
-            # print("centroid: ", centroid)
+
             if centroid is not None:
+                print(centroid)
+                # TODO: error is south of this line
                 # check temperature
                 ir_crop = ir_image[bbox[1]:bbox[1]+bbox[3],bbox[0]:bbox[0]+bbox[2]]
                 avg_temp = np.average(ir_crop)
@@ -137,7 +140,8 @@ class FLIR_RR_TRACKING(object):
                     v1 = robot1_pose.R[:, 2]
                     # print("v1: ", v1)
                     positioner_pose = self.positioner.fwd(q_cur[12:14], world=True)
-                except:
+                except Exception as e:
+                    print(e)
                     traceback.print_exc()
 
                 # find intersection point
@@ -152,7 +156,8 @@ class FLIR_RR_TRACKING(object):
                     self.ir_process_struct.flame_position=intersection
                     self.ir_process_struct.avg_flame_temp=avg_temp
                     self.ir_process_result.OutValue=self.ir_process_struct
-                except:
+                except Exception as e:
+                    print(e)
                     traceback.print_exc()
                 
 if __name__ == '__main__':
