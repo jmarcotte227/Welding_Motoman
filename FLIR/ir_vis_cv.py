@@ -7,10 +7,10 @@ from angled_layers import *
 
 
 # Load the IR recording data from the pickle file
-with open('../../recorded_data/ER4043_bent_tube_2024_09_04_12_23_40/layer_39/ir_recording.pickle', 'rb') as file:
+with open('../../recorded_data/copper_leaktests_2025_09_05_16_51_50/layer_1_seg_1/ir_recording.pickle', 'rb') as file:
     ir_recording = pickle.load(file)
 
-ir_ts=np.loadtxt('../../recorded_data/ER4043_bent_tube_2024_09_04_12_23_40/layer_39/ir_stamps.csv', delimiter=',')
+ir_ts=np.loadtxt('../../recorded_data/copper_leaktests_2025_09_05_16_51_50/layer_1_seg_1/ir_stamps.csv', delimiter=',')
 
 print(len(ir_recording), len(ir_ts))
 
