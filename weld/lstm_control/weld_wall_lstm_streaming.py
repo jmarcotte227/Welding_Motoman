@@ -46,7 +46,7 @@ def main():
 
     ######## Welding Parameters ########
     ARCON = True
-    BASE_LAYERS = True
+    BASE_LAYERS = False
     RECORDING = True
     ONLINE = True # Used to test without connecting to RR services
     BASE_VEL = 3
@@ -71,16 +71,16 @@ def main():
     V_MAX = torch.tensor(17.0) # mm/s
     DV_MAX = 3 # mm/s
 
-    BETA = 0.1
+    BETA = 0.2
     ALPHA = 1.0
 
     ######## Create Directories ########
     now = datetime.now()
-    recorded_dir = now.strftime(
-        "../../../recorded_data/wall_lstm_control_%Y_%m_%d_%H_%M_%S/"
-    )
-    os.makedirs(recorded_dir)
-    # recorded_dir = "../../../recorded_data/wall_lstm_control_2025_08_13_17_01_06/"
+    # recorded_dir = now.strftime(
+    #     "../../../recorded_data/wall_lstm_control_%Y_%m_%d_%H_%M_%S/"
+    # )
+    # os.makedirs(recorded_dir)
+    recorded_dir = "../../../recorded_data/wall_lstm_control_2025_10_28_16_02_17/"
 
     ######## SENSORS ########
     if ONLINE:
@@ -139,7 +139,7 @@ def main():
     if BASE_LAYERS:
         for layer in range(0,slicing_meta["baselayer_num"]):
             save_path = recorded_dir + f"baselayer_{layer}/"
-            # os.mkdir(save_path)
+            os.mkdir(save_path)
 
             ######### LOAD POINT DATA ########
             rob1_js = np.loadtxt(
@@ -278,8 +278,9 @@ def main():
         print("Average Base Height:", avg_base_height)
         print("Height Offset:", height_offset)
     except:
-        height_offset = float(input("Enter height offset: ")) 
-    height_offset = -1.5855711171951952
+        # height_offset = float(input("Enter height offset: ")) 
+        height_offset = -8.662751637798227
+
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
     input("Fix height offset, then press enter to continue")
 
@@ -289,7 +290,7 @@ def main():
     ir_process_result.WireValueChanged += ir_process_cb
 
     ######## NORMAL LAYERS ########
-    num_layer_start = int(0)
+    num_layer_start = int(14)
     num_layer_end = int(108)
 
     start_dir = True
@@ -330,10 +331,11 @@ def main():
         v_nom = model.dh2v(slicing_meta["layer_resolution"])
 
         # generate a nominal height profile for populating
-        height_profile = np.ones(slicing_meta["layer_length"])*slicing_meta["layer_resolution"]
 
         build_height = layer*slicing_meta["layer_resolution"]\
                         +slicing_meta["baselayer_num"]*slicing_meta["baselayer_resolution"]
+        height_profile = np.ones(slicing_meta["layer_length"])*build_height
+        print(build_height)
 
         if layer == 0:
             start_dir=True
@@ -364,9 +366,14 @@ def main():
                 heights_prev = averages_prev[:,2]
                 if start_dir: heights_prev = np.flip(heights_prev)
 
+                # TODO fix this error
+                print(height_profile)
+                print(heights_prev)
                 heights_prev = interpolate_heights(height_profile, heights_prev)
+                print(heights_prev)
                 # height error based on the build height of the previous layer
                 height_err = np.ones(len(heights_prev))*build_height-heights_prev
+                print(height_err)
 
         if start_dir:
             pass
@@ -375,7 +382,8 @@ def main():
             rob2_js = np.flip(rob2_js,axis=0)
 
         ### Calculate dh desired based on the target height, and the error in the previous layer.
-        dh_d = torch.tensor(height_err+slicing_meta["layer_resolution"])
+        dh_d = torch.tensor(ALPHA*height_err+slicing_meta["layer_resolution"])
+        print(dh_d)
         np.savetxt(save_path+'dh_d.csv',dh_d.detach().numpy(),delimiter=',')
 
         # jog to start position
@@ -401,7 +409,7 @@ def main():
         u_cmd = torch.tensor(v_cmd, dtype=torch.float32)
 
         ######## INIT LSTM #######
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cpu")
         cont_data = torch.load(f'{CONT_MODEL}/{CONT_MODEL}.pt')
         lstm = WeldLSTMNextStep(
             cont_data["input_dim"],
@@ -476,7 +484,7 @@ def main():
 
         # propagate the network
         x = reg.reg(torch.cat((u_cmd, dh_prev), dim=0))
-        y_out, state = lstm(x, hidden_state=state)
+        y_out, state = lstm(torch.unsqueeze(x, dim=0), hidden_state=state)
 
         v_cmd = float(u_cmd)
 
@@ -500,12 +508,14 @@ def main():
             if seg_idx != v_cor_idx:
                 v_cor_idx = seg_idx
                 flame_3d = pos_filter.read_filter()
+                print(flame_3d)
                 if flame_3d[0]!=0:
                     dh_prev = torch.tensor(flame_3d[2]-heights_prev[v_cor_idx-1], dtype=torch.float32)
                     # print(error)
                     dh_prev_all.append(dh_prev)
                 else:
                     print("flame error")
+                    print(flame_3d)
                     dh_prev = cont_data["data_mean"][1].reshape(1)
 
                 # calculate linearization
@@ -525,6 +535,8 @@ def main():
                 #### QP Control ####
                 y_d = torch.zeros((1,1))
                 y_d[0,:] = reg.reg(dh_d[v_cor_idx],1)
+                print("y")
+                print(y_d)
 
                 P= (B.T@C.T@Q@C@B+0.5*Q_delta).detach().numpy().astype("double")
                 q = ((y_0_cont-(C@B*x_0_cont[0])-y_d).T@Q@C@B-x_0_cont[0]*Q_delta).detach().numpy().astype("double")
@@ -539,10 +551,12 @@ def main():
 
                 u_cmd_cont = torch.tensor(u_cmd_cont, dtype=torch.float32)
                 u_cmd = reg.unreg(u_cmd_cont, 0)
+                print(u_cmd)
 
                 # propagate the network
                 x = reg.reg(torch.cat((u_cmd, dh_prev), dim=0))
-                y_out, state = lstm(x, hidden_state=state)
+                y_out, state = lstm(torch.unsqueeze(x, dim=0), hidden_state=state)
+
 
                 v_cmd = float(u_cmd)
 
