@@ -335,7 +335,6 @@ def main():
         build_height = layer*slicing_meta["layer_resolution"]\
                         +slicing_meta["baselayer_num"]*slicing_meta["baselayer_resolution"]
         height_profile = np.ones(slicing_meta["layer_length"])*build_height
-        print(build_height)
 
         if layer == 0:
             start_dir=True
@@ -441,10 +440,6 @@ def main():
         u_prev = cont_data["data_mean"][0].reshape(1)
         dh_prev = cont_data["data_mean"][1].reshape(1)
 
-        # run one iteration to load the model into cache
-        # first iteration takes too long
-        _, _ = lstm(torch.unsqueeze(torch.zeros(2), dim=0))
-
         # setup QP params
         Q = torch.tensor([[1.0]])
         Q_delta = torch.tensor([[BETA]])
@@ -512,12 +507,11 @@ def main():
                 if flame_3d[0]!=0:
                     dh_prev = torch.tensor(flame_3d[2]-heights_prev[v_cor_idx-1], dtype=torch.float32)
                     # print(error)
-                    dh_prev_all.append(dh_prev)
                 else:
                     print("flame error")
                     print(flame_3d)
                     dh_prev = cont_data["data_mean"][1].reshape(1)
-
+                dh_prev_all.append(dh_prev)
                 # calculate linearization
                 h_0_cont = torch.squeeze(state[0])
                 c_0_cont = torch.squeeze(state[1])
@@ -551,15 +545,13 @@ def main():
 
                 u_cmd_cont = torch.tensor(u_cmd_cont, dtype=torch.float32)
                 u_cmd = reg.unreg(u_cmd_cont, 0)
-                print(u_cmd)
+                u_prev = u_cmd
 
                 # propagate the network
                 x = reg.reg(torch.cat((u_cmd, dh_prev), dim=0))
                 y_out, state = lstm(torch.unsqueeze(x, dim=0), hidden_state=state)
 
-
                 v_cmd = float(u_cmd)
-
 
                 lstm_pred.append(torch.squeeze(y_out.detach()))
 
