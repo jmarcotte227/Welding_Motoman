@@ -399,10 +399,11 @@ def main():
         dh_prev_all = []
         T_prev_all = []
         v_cmds = []
+        v_cor_idxs = []
         lstm_pred = []
+        filt_ir_height = []
         # current correction Index
         v_cor_idx = 0
-        v_corr = 0
 
         ######## SET INITIAL V #######
         v_cmd=v_nom
@@ -508,6 +509,7 @@ def main():
             if seg_idx != v_cor_idx:
                 v_cor_idx = seg_idx
                 flame_3d = pos_filter.read_filter()
+                filt_ir_height.append(flame_3d)
                 print(flame_3d)
                 if flame_3d[0]!=0:
                     dh_prev = torch.tensor(flame_3d[2]-heights_prev[v_cor_idx-1], dtype=torch.float32)
@@ -554,16 +556,17 @@ def main():
                 print(u_cmd)
 
                 # propagate the network
-                x = reg.reg(torch.cat((u_cmd, dh_prev), dim=0))
-                y_out, state = lstm(torch.unsqueeze(x, dim=0), hidden_state=state)
+                x_cont = reg.reg(torch.cat((u_cmd, dh_prev), dim=0))
+                y_out_cont, state = lstm(torch.unsqueeze(x_cont, dim=0), hidden_state=state)
 
 
                 v_cmd = float(u_cmd)
 
 
-                lstm_pred.append(torch.squeeze(y_out.detach()))
+                lstm_pred.append(torch.squeeze(reg.unreg(y_out_cont.detach(),1)))
 
             v_cmds.append(v_cmd)
+            v_cor_idxs.append(v_cor_idx)
             lam_cur += v_cmd/STREAMING_RATE
             # get closest lambda that is greater than current lambda
             lam_idx = np.where(lam_relative>=lam_cur)[0][0]
@@ -626,6 +629,8 @@ def main():
             np.savetxt(save_path + "T_prev_all.csv", np.array(T_prev_all), delimiter=",")
             np.savetxt(save_path + "lstm_pred.csv", np.array(lstm_pred), delimiter=",")
             np.savetxt(save_path + "v_cmd.csv", np.array(v_cmds), delimiter=",")
+            np.savetxt(save_path + "v_cor_idx.csv", np.array(v_cor_idxs), delimiter=",")
+            np.savetxt(save_path + "filt_ir_height.csv", np.array(filt_ir_height), delimiter=",")
 
             ir_process_output = []
 
