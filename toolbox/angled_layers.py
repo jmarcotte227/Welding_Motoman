@@ -462,6 +462,7 @@ class LiveAverageFilterPos():
         self.cum_sum = np.zeros((3,1))
         # initialize sample count to zero
         self.samp_count = 0
+        self.prev_out = np.zeros((3,1))
     def log_reading(self, x):
         self.cum_sum[0]+= x[0]
         self.cum_sum[1]+= x[1]
@@ -470,10 +471,11 @@ class LiveAverageFilterPos():
     def read_filter(self):
         if self.samp_count != 0:
             output = self.cum_sum/self.samp_count
+            self.prev_out = output
             self.cum_sum = np.zeros((3,1))
             self.samp_count = 0
         else:
-            output = np.zeros((3,1))
+            output = self.prev_out
         return output
 
 class LiveAverageFilterScalar():
