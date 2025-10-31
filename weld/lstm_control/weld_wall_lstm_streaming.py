@@ -71,8 +71,8 @@ def main():
     V_MAX = torch.tensor(17.0) # mm/s
     DV_MAX = 3 # mm/s
 
-    BETA = 0.2
-    ALPHA = 1.0
+    BETA = 0.1
+    ALPHA = 1.4
 
     ######## Create Directories ########
     # now = datetime.now()
@@ -80,7 +80,7 @@ def main():
     #     "../../../recorded_data/wall_lstm_control_%Y_%m_%d_%H_%M_%S/"
     # )
     # os.makedirs(recorded_dir)
-    recorded_dir = "../../../recorded_data/wall_lstm_control_2025_10_31_13_34_50/"
+    recorded_dir = "../../../recorded_data/wall_lstm_control_2025_10_31_14_30_40/"
 
     ######## SENSORS ########
     if ONLINE:
@@ -289,6 +289,14 @@ def main():
     ir_process_result=sub.SubscribeWire("ir_process_result")
 
     ir_process_result.WireValueChanged += ir_process_cb
+
+    ######## RR STREAMING ########
+    # refresh for e-stop
+    if ONLINE:
+        RR_robot_sub = RRN.SubscribeService('rr+tcp://localhost:59945?service=robot')
+        SS=StreamingSend(RR_robot_sub, streaming_rate=STREAMING_RATE)
+        # initialize client to read joint angles
+        client = MotionProgramExecClient()
 
     ######## NORMAL LAYERS ########
     num_layer_start = int(0)
