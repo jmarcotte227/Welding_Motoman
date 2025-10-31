@@ -75,12 +75,12 @@ def main():
     ALPHA = 1.0
 
     ######## Create Directories ########
-    now = datetime.now()
+    # now = datetime.now()
     # recorded_dir = now.strftime(
     #     "../../../recorded_data/wall_lstm_control_%Y_%m_%d_%H_%M_%S/"
     # )
     # os.makedirs(recorded_dir)
-    recorded_dir = "../../../recorded_data/wall_lstm_control_2025_10_28_16_02_17/"
+    recorded_dir = "../../../recorded_data/wall_lstm_control_2025_10_31_13_34_50/"
 
     ######## SENSORS ########
     if ONLINE:
@@ -279,7 +279,8 @@ def main():
         print("Height Offset:", height_offset)
     except:
         # height_offset = float(input("Enter height offset: ")) 
-        height_offset = -8.662751637798227
+        height_offset = -7.92870911432761
+        print("height offset set manually")
 
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
     input("Fix height offset, then press enter to continue")
@@ -290,8 +291,8 @@ def main():
     ir_process_result.WireValueChanged += ir_process_cb
 
     ######## NORMAL LAYERS ########
-    num_layer_start = int(14)
-    num_layer_end = int(108)
+    num_layer_start = int(0)
+    num_layer_end = int(50)
 
     start_dir = True
     for layer in range(num_layer_start, num_layer_end):
@@ -339,6 +340,33 @@ def main():
         if layer == 0:
             start_dir=True
             height_err= np.zeros(slicing_meta["layer_length"])
+            try:
+                flame_3d_prev, _, job_no_prev = flame_tracking_stream(
+                        f"{recorded_dir}baselayer_1/",
+                        robot,
+                        robot2,
+                        positioner,
+                        flir_intrinsic,
+                        height_offset
+                        )
+                if flame_3d_prev.shape[0] == 0:
+                    raise ValueError("No flame detected")
+            except ValueError as e:
+                print(e)
+                flame_3d_prev = None
+                ir_error_flag = True
+                height_err = np.zeros(slicing_meta["layer_length"])
+            else:
+                averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-1,len(rob1_js)))
+                heights_prev = averages_prev[:,2]
+                if start_dir: heights_prev = np.flip(heights_prev)
+
+                # TODO fix this error
+                print(height_profile)
+                print(heights_prev)
+                heights_prev = interpolate_heights(height_profile, heights_prev)
+                print(heights_prev)
+                # height error based on the build height of the previous layer
         else:
             start_dir = not np.loadtxt(f"{recorded_dir}layer_{layer-1}/start_dir.csv", delimiter=",")
 
@@ -504,8 +532,8 @@ def main():
             if seg_idx != v_cor_idx:
                 v_cor_idx = seg_idx
                 flame_3d = pos_filter.read_filter()
-                filt_ir_height.append(flame_3d)
-                print(flame_3d)
+                filt_ir_height.append(np.squeeze(flame_3d))
+                # print(flame_3d)
                 if flame_3d[0]!=0:
                     dh_prev = torch.tensor(flame_3d[2]-heights_prev[v_cor_idx-1], dtype=torch.float32)
                     # print(error)
@@ -531,8 +559,8 @@ def main():
                 #### QP Control ####
                 y_d = torch.zeros((1,1))
                 y_d[0,:] = reg.reg(dh_d[v_cor_idx],1)
-                print("y")
-                print(y_d)
+                # print("y")
+                # print(y_d)
 
                 P= (B.T@C.T@Q@C@B+0.5*Q_delta).detach().numpy().astype("double")
                 q = ((y_0_cont-(C@B*x_0_cont[0])-y_d).T@Q@C@B-x_0_cont[0]*Q_delta).detach().numpy().astype("double")
