@@ -1,5 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 max = 0
+
+fig, ax = plt.subplots(1,1)
 for layer in range(13):
     REC_DATA = '../../../recorded_data/wall_lstm_control_2025_10_28_16_02_17/'
 
@@ -14,5 +17,8 @@ for layer in range(13):
         idx = np.where(js_exe[:,1]==num)[0][0]
         v_cmds.append(v_cmd[idx+1])
 
-    print(np.max(v_cmd))
-        
+    ax.plot(v_cmds)
+ax.set_xlabel("Segment Index")
+ax.set_ylabel("V_cmd (mm/s)")
+plt.show()
+

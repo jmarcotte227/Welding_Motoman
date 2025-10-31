@@ -81,7 +81,7 @@ with open(DATA_DIR+'sliced_meta.yml', 'r') as file:
 fig,ax = plt.subplots(2,1)
 
 height_offset = -8.662751637798227
-for layer in tqdm(range(10,NUM_LAYERS)):
+for layer in tqdm(range(NUM_LAYERS)):
     ######## INITIALIZE SAVE DIR #######
     save_path = REC_DATA + f"layer_{layer}/"
     ######## LOAD POINT DATA ########
@@ -299,13 +299,7 @@ for layer in tqdm(range(10,NUM_LAYERS)):
 
 
     lstm_pred.append(torch.squeeze(y_out.detach()))
-
-    print(v_cmd)
-
-    print(v_max)
     # v_max = v_max.detach().numpy().astype("double")
-    print(reg.unreg(v_max,0))
-    exit()
 
     # Looping through the entire path of the sliced part
     for seg_idx in range(len(rob1_js)-2):
@@ -358,15 +352,8 @@ for layer in tqdm(range(10,NUM_LAYERS)):
 
         v_cmds.append(v_cmd)
 
-    print(v_cmds)
-    # print(np.array(lstm_pred))
-    exit()
 
-
-
-
-
-    # ax[0].plot(averages[:,-1], 'b')
-    # ax[0].plot(height_profile, 'r')
-    # ax[1].plot(vels)
+    ax[0].plot(averages[:,-1], 'b')
+    ax[0].plot(height_profile, 'r')
+    ax[1].plot(v_cmds)
 plt.show()
