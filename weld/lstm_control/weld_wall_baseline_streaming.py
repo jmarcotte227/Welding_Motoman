@@ -12,13 +12,14 @@ from StreamingSend import StreamingSend
 from robotics_utils import H_inv, VectorPlaneProjection
 from dx200_motion_program_exec_client import *
 from scipy.interpolate import interp1d
+from scipy.optimize import minimize, Bounds
 import torch
 
 from qpsolvers import solve_qp
 sys.path.append("../../toolbox")
 from angled_layers import SpeedHeightModel, flame_tracking_stream,  \
     avg_by_line, interpolate_heights, LiveAverageFilterPos,         \
-    LiveAverageFilterScalar
+    LiveAverageFilterScalar, delta_v
 from lstm_model_next_step_fast import WeldLSTM
 from linearization import lstm_linearization
 from model_utils import DataReg
@@ -74,9 +75,9 @@ def main():
     BETA = 0.1
     ALPHA = 1.4
 
-    def v_opt(v_next, h_err, h_targ, model, beta=0.1):
+    def v_opt(v_next, dh_d, model, beta=0.1):
         return (
-            norm(h_targ + h_err - model.v2dh(v_next), 2) ** 2
+            norm(dh_d - model.v2dh(v_next), 2) ** 2
             + beta * norm(delta_v(v_next), 2) ** 2
         )
 
@@ -85,10 +86,10 @@ def main():
     ######## Create Directories ########
     # now = datetime.now()
     # recorded_dir = now.strftime(
-    #     "../../../recorded_data/wall_lstm_control_%Y_%m_%d_%H_%M_%S/"
+    #     "../../../recorded_data/wall_lstm_baseline_control_%Y_%m_%d_%H_%M_%S/"
     # )
     # os.makedirs(recorded_dir)
-    recorded_dir = "../../../recorded_data/wall_lstm_control_2025_10_31_14_30_40/"
+    recorded_dir = "../../../recorded_data/wall_lstm_baseline_control_2025_11_05_12_38_13/"
 
     ######## SENSORS ########
     if ONLINE:
@@ -282,13 +283,13 @@ def main():
             avg_base_height = np.mean(flame_3d[:, 2])
             height_offset = base_thickness - avg_base_height
 
-    try:
-        print("Average Base Height:", avg_base_height)
-        print("Height Offset:", height_offset)
-    except:
-        # height_offset = float(input("Enter height offset: ")) 
-        height_offset = -7.92870911432761
-        print("height offset set manually")
+    # try:
+    #     print("Average Base Height:", avg_base_height)
+    #     print("Height Offset:", height_offset)
+    # except:
+    #     # height_offset = float(input("Enter height offset: ")) 
+    height_offset = -7.92870911432761
+    print("height offset set manually")
 
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
     input("Fix height offset, then press enter to continue")
@@ -307,7 +308,7 @@ def main():
         client = MotionProgramExecClient()
 
     ######## NORMAL LAYERS ########
-    num_layer_start = int(0)
+    num_layer_start = int(20)
     num_layer_end = int(50)
 
     start_dir = True
@@ -407,16 +408,11 @@ def main():
             else:
                 averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-1,len(rob1_js)))
                 heights_prev = averages_prev[:,2]
-                if start_dir: heights_prev = np.flip(heights_prev)
+                heights_prev = np.flip(heights_prev)
 
-                # TODO fix this error
-                print(height_profile)
-                print(heights_prev)
                 heights_prev = interpolate_heights(height_profile, heights_prev)
-                print(heights_prev)
                 # height error based on the build height of the previous layer
                 height_err = np.ones(len(heights_prev))*build_height-heights_prev
-                print(height_err)
 
         if start_dir:
             pass
@@ -426,19 +422,16 @@ def main():
 
         ### Calculate dh desired based on the target height, and the error in the previous layer.
         dh_d = torch.tensor(ALPHA*height_err+slicing_meta["layer_resolution"])
-        print(dh_d)
+        print(f"DH_d: {dh_d}")
         np.savetxt(save_path+'dh_d.csv',dh_d.detach().numpy(),delimiter=',')
 
         # generate velocity profile
         
-        nan_vel_idx = np.argwhere(np.isnan(vel_avg))
-        vel_avg[nan_vel_idx] = vel_nom
         opt_result = minimize(
             v_opt,
-            vel_nom*np.ones(len(vel_avg)),
+            v_nom*np.ones_like(height_err),
             (
-                height_err, 
-                np.ones_like(height_err)*slicing_meta["layer_resolution"],
+                dh_d,
                 model
             ),
             bounds=bounds,
@@ -454,6 +447,8 @@ def main():
         except ValueError as e:
             
             velocity_profile = vel_nom
+        print(f"Vcmd: {velocity_profile}")
+        print(f"Error: {height_err}")
 
         # jog to start position
         input("Press Enter to jog to start position")
