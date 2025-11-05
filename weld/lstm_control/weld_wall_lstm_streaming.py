@@ -72,7 +72,7 @@ def main():
     DV_MAX = 3 # mm/s
 
     BETA = 0.1
-    ALPHA = 1.4
+    ALPHA = 1.0
 
     ######## Create Directories ########
     # now = datetime.now()
@@ -80,7 +80,7 @@ def main():
     #     "../../../recorded_data/wall_lstm_control_%Y_%m_%d_%H_%M_%S/"
     # )
     # os.makedirs(recorded_dir)
-    recorded_dir = "../../../recorded_data/wall_lstm_control_2025_10_31_14_30_40/"
+    recorded_dir = "../../../recorded_data/wall_lstm_control_2025_11_05_13_17_59/"
 
     ######## SENSORS ########
     if ONLINE:
@@ -274,13 +274,13 @@ def main():
             avg_base_height = np.mean(flame_3d[:, 2])
             height_offset = base_thickness - avg_base_height
 
-    try:
-        print("Average Base Height:", avg_base_height)
-        print("Height Offset:", height_offset)
-    except:
-        # height_offset = float(input("Enter height offset: ")) 
-        height_offset = -7.92870911432761
-        print("height offset set manually")
+    # try:
+    #     print("Average Base Height:", avg_base_height)
+    #     print("Height Offset:", height_offset)
+    # except:
+    #     # height_offset = float(input("Enter height offset: ")) 
+    height_offset = -7.92870911432761
+    print("height offset set manually")
 
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
     input("Fix height offset, then press enter to continue")
@@ -367,7 +367,7 @@ def main():
             else:
                 averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-1,len(rob1_js)))
                 heights_prev = averages_prev[:,2]
-                if start_dir: heights_prev = np.flip(heights_prev)
+                heights_prev = np.flip(heights_prev)
 
                 # TODO fix this error
                 print(height_profile)
@@ -399,7 +399,7 @@ def main():
             else:
                 averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-1,len(rob1_js)))
                 heights_prev = averages_prev[:,2]
-                if start_dir: heights_prev = np.flip(heights_prev)
+                heights_prev = np.flip(heights_prev)
 
                 # TODO fix this error
                 print(height_profile)
