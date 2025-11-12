@@ -16,8 +16,8 @@ counts_all_frames = []
 temp_all_frames = []
 all_frames = []
 data_mode = 0
-layer=30
-main_folder_path = '../../recorded_data/ER4043_bent_tube_2024_08_22_11_12_27/'
+layer=3
+main_folder_path = '../../recorded_data/xiris_initial_tests/'
 for folder_name in os.listdir(main_folder_path):
     if folder_name.startswith(f'layer_{layer}'):
         folder_path = os.path.join(main_folder_path, folder_name)
