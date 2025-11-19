@@ -1,0 +1,648 @@
+import sys, traceback, time, copy
+import numpy as np
+import matplotlib.pyplot as plt
+from robotics_utils import H_inv,VectorPlaneProjection
+from general_robotics_toolbox import rot
+from qpsolvers import solve_qp
+from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
+
+from motoman_def import *
+from lambda_calc import *
+
+def rob2_flir_xiris_resolution(robot,rob1_curve_js,robot_xiris,R_xiris2flir,positioner,positioner_js=None,curve=None,measure_distance=500,rotate_angle_xiris=np.radians(15),rotate_angle_flir=np.radians(15),portion_flir=0.5,y_direction=np.array([-1,0,0])):
+    ### planning idea
+    # First find the xiris pose (p_xiris, R_xiris) based on rob1_curve_js
+    # Then find the rotation of the Xiris if we are planning the rotation for FLIR (R_xiris_2) 
+    # Now the back calculate the Xiris at R_xiris_2
+    # User the percentage between R_xiris and R_xiris_2
+
+    H2010_1440=H_inv(robot_xiris.base_H)		###2010's base frame in 1440's base frame
+    H1440_D500=H2010_1440@positioner.base_H	###D500's base frame in 1440's base frame
+    R_flir2xiris = np.linalg.inv(R_xiris2flir)
+    portion_flir = np.clip(portion_flir,0,1)
+    rob2_curve_js=[]
+    q_prev=np.zeros(6)
+    for i in range(len(rob1_curve_js)):
+        rob2_js_ith_layer=[]
+        for x in range(len(rob1_curve_js[i])):
+            rob2_js_ith_layer_xth_section=[]
+            for j in range(len(rob1_curve_js[i][x])):
+                if positioner_js is None:
+                    p=robot.fwd(rob1_curve_js[i][x][j]).p
+                    p_in_base_frame=np.dot(H2010_1440[:3,:3],p)+H2010_1440[:3,3]
+                    v_z_xiris=H2010_1440[:3,:3]@rot(np.array([1,0,0]),rotate_angle_xiris)@np.array([0,-1,0]) ###pointing toward positioner's X with 15deg tiltd angle looking down
+                    v_z_flir=H2010_1440[:3,:3]@rot(np.array([1,0,0]),rotate_angle_flir)@np.array([0,-1,0]) ###pointing toward positioner's X with 15deg tiltd angle looking down
+                    v_y_xiris=VectorPlaneProjection(y_direction,v_z_xiris)	###FLIR's Y pointing toward 1440's "y_direction" in 1440's base frame, projected on v_z's plane
+                    v_y_flir=VectorPlaneProjection(y_direction,v_z_flir)	###FLIR's Y pointing toward 1440's "y_direction" in 1440's base frame, projected on v_z's plane
+                else:
+                    T_torch = robot.fwd(rob1_curve_js[i][x][j])
+                    T_positioner = positioner.fwd(positioner_js[i][x][j],world=True)
+                    T_torch_positioner = T_positioner.inv()*T_torch
+                
+                v_x_xiris=np.cross(v_y_xiris,v_z_xiris)
+                v_x_flir=np.cross(v_y_flir,v_z_flir)
+
+                R_xiris_target=np.vstack((v_x_xiris,v_y_xiris,v_z_xiris)).T
+                R_flir_target=np.vstack((v_x_flir,v_y_flir,v_z_flir)).T
+                R_xiris_2_target = R_flir_target@R_flir2xiris		###back calculate the xiris target rotation
+
+                k, d_ang = R2rot(R_xiris_target.T@R_xiris_2_target)
+                R_xiris_final = R_xiris_target@rot(k, portion_flir*d_ang)
+
+                p_in_base_frame=p_in_base_frame-measure_distance*R_xiris_final[:,2]			###back project measure_distance-mm away from torch
+                rob2_js_ith_layer_xth_section.append(robot_xiris.inv(p_in_base_frame,R_xiris_final,last_joints=q_prev)[0])
+                q_prev=rob2_js_ith_layer_xth_section[-1]
+            
+            rob2_js_ith_layer.append(np.array(rob2_js_ith_layer_xth_section))
+        rob2_curve_js.append(rob2_js_ith_layer)
+    
+    return rob2_curve_js
+
+def rob2_flir_resolution(robot,rob1_curve_js,robot2,positioner,positioner_js=None,curve=None,measure_distance=500,rotate_angle=np.radians(15),y_direction=np.array([-1,0,0])):
+    ###determine second robot trajectory with FLIR
+    #rob1_curve_js: 2010 trajectory
+    #robot2: 1440 with FLIR TOOL defs
+    H2010_1440=H_inv(robot2.base_H)		###2010's base frame in 1440's base frame
+    H1440_D500=H2010_1440@positioner.base_H	###D500's base frame in 1440's base frame
+    rob2_curve_js=[]
+    q_prev=np.zeros(6)
+    for i in range(len(rob1_curve_js)):
+        rob2_js_ith_layer=[]
+        for x in range(len(rob1_curve_js[i])):
+            rob2_js_ith_layer_xth_section=[]
+            for j in range(len(rob1_curve_js[i][x])):
+                if positioner_js is None:
+                    p=robot.fwd(rob1_curve_js[i][x][j]).p
+                    p_in_base_frame=np.dot(H2010_1440[:3,:3],p)+H2010_1440[:3,3]
+                    v_z=H2010_1440[:3,:3]@rot(np.array([1,0,0]),rotate_angle)@np.array([0,-1,0]) ###pointing toward positioner's X with 15deg tiltd angle looking down
+                    # v_z=H2010_1440[:3,:3]@self.positioner.base_H[:3,0]	###pointing toward positioner's X on horizontal plane in 1440's base frame
+                    # v_z=VectorPlaneProjection(v_z,np.array([0,0,1]))	###project on gravity plane
+                    v_y=VectorPlaneProjection(y_direction,v_z)	###FLIR's Y pointing toward 1440's "y_direction" in 1440's base frame, projected on v_z's plane
+                else:
+                    T_torch = robot.fwd(rob1_curve_js[i][x][j])
+                    T_positioner = positioner.fwd(positioner_js[i][x][j],world=True)
+                    T_torch_positioner = T_positioner.inv()*T_torch
+                
+                v_x=np.cross(v_y,v_z)
+                p_in_base_frame=p_in_base_frame-measure_distance*v_z			###back project measure_distance-mm away from torch
+                R=np.vstack((v_x,v_y,v_z)).T
+                rob2_js_ith_layer_xth_section.append(robot2.inv(p_in_base_frame,R,last_joints=q_prev)[0])
+                q_prev=rob2_js_ith_layer_xth_section[-1]
+            
+            rob2_js_ith_layer.append(np.array(rob2_js_ith_layer_xth_section))
+        rob2_curve_js.append(rob2_js_ith_layer)
+    
+    return rob2_curve_js
+
+def linear_fit(data,p_constraint=[]):
+    ###no constraint
+    if len(p_constraint)==0:
+        A=np.vstack((np.ones(len(data)),np.arange(0,len(data)))).T
+        b=data
+        res=np.linalg.lstsq(A,b,rcond=None)[0]
+        start_point=res[0]
+        slope=res[1].reshape(1,-1)
+
+        data_fit=np.dot(np.arange(0,len(data)).reshape(-1,1),slope)+start_point
+    ###with constraint point
+    else:
+        start_point=p_constraint
+
+        A=np.arange(1,len(data)+1).reshape(-1,1)
+        b=data-start_point
+        res=np.linalg.lstsq(A,b,rcond=None)[0]
+        slope=res.reshape(1,-1)
+
+        data_fit=np.dot(np.arange(1,len(data)+1).reshape(-1,1),slope)+start_point
+
+    return data_fit
+
+class redundancy_resolution(object):
+    ###robot1 hold weld torch, positioner hold welded part
+    def __init__(self,robot,positioner,curve_sliced):
+        # curve_sliced: list of sliced layers, in curve frame
+        # robot: welder robot
+        # positioner: 2DOF rotational positioner
+        self.robot=robot
+        self.positioner=positioner
+        self.curve_sliced=curve_sliced
+    
+    def conditional_rolling_average(self,positioner_js):
+        ###conditional rolling average
+        tolerance=np.radians(3)
+        steps=25
+        positioner_js_new=copy.deepcopy(positioner_js)
+        for i in range(len(positioner_js)):
+            for x in range(len(positioner_js[i])):
+                for j in range(len(positioner_js[i][x])):
+                    if get_angle(self.positioner.fwd(positioner_js[i][x][j],world=True).R[:,-1],[0,0,1])<tolerance:
+                        if j-steps<0:
+                            start_point=0
+                            end_point=j+steps
+                        elif j+steps>len(positioner_js[i][x]):
+                            end_point=len(positioner_js[i][x])
+                            start_point=j-steps
+                        else:
+                            start_point=j-steps
+                            end_point=j+steps
+
+                        positioner_js_new[i][x][j]=np.average(positioner_js[i][x][start_point:end_point],axis=0)
+                ###reverse
+                positioner_js_new2=copy.deepcopy(positioner_js_new)
+                for j in reversed(range(len(positioner_js[i][x]))):
+                    if get_angle(self.positioner.fwd(positioner_js[i][x][j],world=True).R[:,-1],[0,0,1])<tolerance:
+                        if j-steps<0:
+                            start_point=0
+                            end_point=j+steps
+                        elif j+steps>len(positioner_js[i][x]):
+                            end_point=len(positioner_js[i][x])
+                            start_point=j-steps
+                        else:
+                            start_point=j-steps
+                            end_point=j+steps
+
+                        positioner_js_new2[i][x][j]=np.average(positioner_js[i][x][start_point:end_point],axis=0)
+
+        return positioner_js_new2
+
+    def rolling_average(self,positioner_js):
+        for i in range(len(positioner_js)):
+            for x in range(len(positioner_js[i])):
+                positioner_js[i][x][:,1]=moving_average(positioner_js[i][x][:,1],padding=True)
+        return positioner_js
+
+    def introducing_tolerance(self,positioner_js):
+        ### introduce tolerance to positioner inverse kinematics by linear fit
+        tolerance=np.radians(3)
+        
+        for i in range(len(positioner_js)):
+            start_idx=0
+            end_idx=0
+            for j in range(len(positioner_js[i])):
+                if get_angle(self.positioner.fwd(positioner_js[i][j],world=True).R[:,-1],[0,0,1])<tolerance:
+                    start_idx=j
+                    for k in range(j+1,len(positioner_js[i])):
+                        if get_angle(self.positioner.fwd(positioner_js[i][k],world=True).R[:,-1],[0,0,1])>tolerance:
+                            end_idx=k
+                            break
+                    break
+
+            if start_idx==0 and (end_idx>start_idx):
+                positioner_js_temp=linear_fit(np.flip(positioner_js[i][start_idx:end_idx],axis=0),p_constraint=positioner_js[i][end_idx])
+                positioner_js[i][start_idx:end_idx]=np.flip(positioner_js_temp,axis=0)
+        
+
+        return positioner_js
+
+    def introducing_tolerance2(self,positioner_js):
+        ### introduce tolerance to positioner inverse kinematics by setting a constant 
+        tolerance=np.radians(2)
+        
+        for i in range(len(positioner_js)):
+            start_idx=0
+            end_idx=0
+            for x in range(len(positioner_js[i])):
+                for j in range(len(positioner_js[i][x])):
+                    if get_angle(self.positioner.fwd(positioner_js[i][x][j],world=True).R[:,-1],[0,0,1])<tolerance:
+                        start_idx=j
+                        for k in range(j+1,len(positioner_js[i][x])):
+                            if get_angle(self.positioner.fwd(positioner_js[i][x][k],world=True).R[:,-1],[0,0,1])>tolerance:
+                                end_idx=k
+                                break
+                        break
+
+                if start_idx==0 and (end_idx>start_idx):
+                    positioner_js[i][x][start_idx:end_idx]=positioner_js[i][x][end_idx]
+                
+                # plt.plot(np.degrees(positioner_js[i][x][:,0]),'-o')
+                # plt.show()
+
+        return positioner_js
+    
+    def positioner_joint_limit_interpolation(self,positioner_js):
+        ###interpolate to the nearest joint limit
+        for i in range(len(positioner_js)):
+            for x in range(len(positioner_js[i])):
+                for j in range(len(positioner_js[i][x])):
+                    if np.any(positioner_js[i][x][j]>self.positioner.upper_limit) or np.any(positioner_js[i][x][j]<self.positioner.lower_limit):
+                        print("layer:",i,"section:",x,"joint:",j)
+                        for k in range(j+1,len(positioner_js[i][x])):
+                            if np.all(positioner_js[i][x][k]<=self.positioner.upper_limit) and np.all(positioner_js[i][x][k]>=self.positioner.lower_limit):
+                                print("interpolating from",j,"to",k)
+                                positioner_js[i][x][j-1:k+1] = np.linspace(positioner_js[i][x][j-1],positioner_js[i][x][k],k-j+2)
+                                break
+        return positioner_js
+
+
+
+    def baseline_joint(self,R_torch,curve_sliced_relative,curve_sliced_relative_support,curve_sliced_relative_base,q_init=np.zeros(6),q_positioner_seed=[0,-2],smooth_filter=True):
+        
+        print("Solve positioner js first")
+        ####baseline redundancy resolution, with fixed orientation
+        positioner_js=self.positioner_resolution(curve_sliced_relative,q_seed=q_positioner_seed,smooth_filter=smooth_filter)		#solve for positioner first
+        
+        ### if exceed joint limit, interpolate to the nearest joint limit
+        positioner_js = self.positioner_joint_limit_interpolation(positioner_js)
+        # print(positioner_js)
+
+        ###singularity js smoothing
+        positioner_js=self.introducing_tolerance2(positioner_js)
+        positioner_js=self.conditional_rolling_average(positioner_js)
+        if smooth_filter:
+            positioner_js=self.rolling_average(positioner_js)
+        positioner_js[0][0][:,1]=positioner_js[1][0][0,1]
+
+        print("Solve robot js at baselayers")
+        ###append base layers positioner
+        positioner_js_base_value=positioner_js[0][0][0]
+        positioner_js_base=[]
+        curve_sliced_js_base=[]
+        for i in range(len(curve_sliced_relative_base)):			#solve for robot invkin
+            curve_sliced_js_base_ith_layer=[]
+            positioner_js_base_ith_layer=[]
+            for x in range(len(curve_sliced_relative_base[i])):
+                curve_sliced_js_base_ith_xth_section=[]
+                positioner_js_base_ith_xth_section=[]
+                for j in range(len(curve_sliced_relative_base[i][x])): 
+                    ###get positioner TCP world pose
+                    positioner_pose=self.positioner.fwd(positioner_js_base_value,world=True)
+                    p=positioner_pose.R@curve_sliced_relative_base[i][x][j,:3]+positioner_pose.p
+                    ###solve for invkin
+                    q=self.robot.inv(p,R_torch,last_joints=q_init)[0]
+
+                    curve_sliced_js_base_ith_xth_section.append(q)
+                    positioner_js_base_ith_xth_section.append(positioner_js_base_value)
+                curve_sliced_js_base_ith_layer.append(np.array(curve_sliced_js_base_ith_xth_section))
+                positioner_js_base_ith_layer.append(np.array(positioner_js_base_ith_xth_section))
+            curve_sliced_js_base.append(curve_sliced_js_base_ith_layer)
+            positioner_js_base.append(positioner_js_base_ith_layer)
+
+        print("Solve robot js at support layers")
+        positioner_js_support=None
+        curve_sliced_js_support=None
+        if len(curve_sliced_relative_support)>0:
+            ###append support layers positioner
+            positioner_js_support_value=positioner_js[0][0][0]
+            curve_sliced_js_support=[]
+            positioner_js_support=[]
+            for i in range(len(curve_sliced_relative_support)):			#solve for robot invkin
+                curve_sliced_js_support_ith_layer=[]
+                positioner_js_support_ith_layer=[]
+                for x in range(len(curve_sliced_relative_support[i])):
+                    curve_sliced_js_support_ith_xth_section=[]
+                    positioner_js_support_ith_xth_section=[]
+                    for j in range(len(curve_sliced_relative_support[i][x])): 
+                        ###get positioner TCP world pose
+                        positioner_pose=self.positioner.fwd(positioner_js_support_value,world=True)
+                        p=positioner_pose.R@curve_sliced_relative_support[i][x][j,:3]+positioner_pose.p
+                        ###solve for invkin
+                        q=self.robot.inv(p,R_torch,last_joints=q_init)[0]
+
+                        curve_sliced_js_support_ith_xth_section.append(q)
+                        positioner_js_support_ith_xth_section.append(positioner_js_support_value)
+                    curve_sliced_js_support_ith_layer.append(np.array(curve_sliced_js_support_ith_xth_section))
+                    positioner_js_support_ith_layer.append(np.array(positioner_js_support_ith_xth_section))
+                curve_sliced_js_support.append(curve_sliced_js_support_ith_layer)
+                positioner_js_support.append(positioner_js_support_ith_layer)
+
+        print("Solve robot js at curve layers")
+        curve_sliced_js=[]
+        for i in range(len(curve_sliced_relative)):			#solve for robot invkin
+            curve_sliced_js_ith_layer=[]
+            for x in range(len(curve_sliced_relative[i])):
+                curve_sliced_js_ith_layer_xth_section=[]
+                for j in range(len(curve_sliced_relative[i][x])): 
+                    ###get positioner TCP world pose
+                    positioner_pose=self.positioner.fwd(positioner_js[i][x][j],world=True)
+                    p=positioner_pose.R@curve_sliced_relative[i][x][j,:3]+positioner_pose.p
+                    ###solve for invkin
+                    if i==0 and x==0 and j==0:
+                        q=self.robot.inv(p,R_torch,last_joints=q_init)[0]
+                        q_prev=q
+                    else:
+                        q=self.robot.inv(p,R_torch,last_joints=q_prev)[0]
+                        q_prev=q
+
+                    curve_sliced_js_ith_layer_xth_section.append(q)
+                curve_sliced_js_ith_layer.append(np.array(curve_sliced_js_ith_layer_xth_section))
+            curve_sliced_js.append(curve_sliced_js_ith_layer)
+
+
+        return positioner_js,curve_sliced_js,positioner_js_support,curve_sliced_js_support,positioner_js_base,curve_sliced_js_base
+    
+    def followy_joint(self,R_torch,curve_sliced_relative,curve_sliced_relative_support,curve_sliced_relative_base,q_init=np.zeros(6),q_positioner_seed=[0,-2],smooth_filter=True):
+        #### redundancy resolution while torch traveling direction follows TCP Y, ignore base/support layers, with fixed orientation
+        positioner_js=self.positioner_resolution(curve_sliced_relative,q_seed=q_positioner_seed,smooth_filter=smooth_filter)		#solve for positioner first
+        
+        ###singularity js smoothing
+        positioner_js=self.introducing_tolerance2(positioner_js)
+        positioner_js=self.conditional_rolling_average(positioner_js)
+        if smooth_filter:
+            positioner_js=self.rolling_average(positioner_js)
+        positioner_js[0][0][:,1]=positioner_js[1][0][0,1]
+
+        
+        ###append base layers positioner
+        positioner_js_base_value=positioner_js[0][0][0]
+        positioner_js_base=[]
+        curve_sliced_js_base=[]
+        for i in range(len(curve_sliced_relative_base)):			#solve for robot invkin
+            curve_sliced_js_base_ith_layer=[]
+            positioner_js_base_ith_layer=[]
+            for x in range(len(curve_sliced_relative_base[i])):
+                curve_sliced_js_base_ith_xth_section=[]
+                positioner_js_base_ith_xth_section=[]
+                for j in range(len(curve_sliced_relative_base[i][x])): 
+                    ###get positioner TCP world pose
+                    positioner_pose=self.positioner.fwd(positioner_js_base_value,world=True)
+                    p=positioner_pose.R@curve_sliced_relative_base[i][x][j,:3]+positioner_pose.p
+                    ###solve for invkin
+                    q=self.robot.inv(p,R_torch,last_joints=q_init)[0]
+
+                    curve_sliced_js_base_ith_xth_section.append(q)
+                    positioner_js_base_ith_xth_section.append(positioner_js_base_value)
+                curve_sliced_js_base_ith_layer.append(np.array(curve_sliced_js_base_ith_xth_section))
+                positioner_js_base_ith_layer.append(np.array(positioner_js_base_ith_xth_section))
+            curve_sliced_js_base.append(curve_sliced_js_base_ith_layer)
+            positioner_js_base.append(positioner_js_base_ith_layer)
+
+        positioner_js_support=None
+        curve_sliced_js_support=None
+        if len(curve_sliced_relative_support)>0:
+            ###append support layers positioner
+            positioner_js_support_value=positioner_js[0][0][0]
+            curve_sliced_js_support=[]
+            positioner_js_support=[]
+            for i in range(len(curve_sliced_relative_support)):			#solve for robot invkin
+                curve_sliced_js_support_ith_layer=[]
+                positioner_js_support_ith_layer=[]
+                for x in range(len(curve_sliced_relative_support[i])):
+                    curve_sliced_js_support_ith_xth_section=[]
+                    positioner_js_support_ith_xth_section=[]
+                    for j in range(len(curve_sliced_relative_support[i][x])): 
+                        ###get positioner TCP world pose
+                        positioner_pose=self.positioner.fwd(positioner_js_support_value,world=True)
+                        p=positioner_pose.R@curve_sliced_relative_support[i][x][j,:3]+positioner_pose.p
+                        ###solve for invkin
+                        q=self.robot.inv(p,R_torch,last_joints=q_init)[0]
+
+                        curve_sliced_js_support_ith_xth_section.append(q)
+                        positioner_js_support_ith_xth_section.append(positioner_js_support_value)
+                    curve_sliced_js_support_ith_layer.append(np.array(curve_sliced_js_support_ith_xth_section))
+                    positioner_js_support_ith_layer.append(np.array(positioner_js_support_ith_xth_section))
+                curve_sliced_js_support.append(curve_sliced_js_support_ith_layer)
+                positioner_js_support.append(positioner_js_support_ith_layer)
+
+        curve_sliced_js=[]
+        for i in range(len(curve_sliced_relative)):			#solve for robot invkin
+            curve_sliced_js_ith_layer=[]
+            for x in range(len(curve_sliced_relative[i])):
+                curve_sliced_js_ith_layer_xth_section=[]
+                for j in range(len(curve_sliced_relative[i][x])): 
+                    ###get positioner TCP world pose
+                    positioner_pose=self.positioner.fwd(positioner_js[i][x][j],world=True)
+                    p=positioner_pose.R@curve_sliced_relative[i][x][j,:3]+positioner_pose.p
+                    ###solve for invkin with moving direction along TCP Y
+                    rz=np.array([0,0,-1])
+                    if j==0:
+                        direction_relative=curve_sliced_relative[i][x][j+1,:3]-curve_sliced_relative[i][x][j,:3]
+                    else:
+                        direction_relative=curve_sliced_relative[i][x][j,:3]-curve_sliced_relative[i][x][j-1,:3]
+                    direction_relative=direction_relative/np.linalg.norm(direction_relative)
+                    ry=positioner_pose.R@direction_relative
+                    Rx=np.cross(ry,rz)
+                    R_torch_followy=np.vstack((Rx,ry,rz)).T
+                    # print(direction_relative)
+                    # print(ry)
+                    # print(R_torch_followy)
+                    if i==0: 	#first layer is different because positioner static due to up normal 
+                        if x==0 and j==0:
+                            q=self.robot.inv(p,R_torch,last_joints=q_init)[0]
+                        else:
+                            q=self.robot.inv(p,R_torch,last_joints=q_prev)[0]
+                        q_prev=q
+                    else:		#Torch follow Y
+                        q=self.robot.inv(p,R_torch_followy,last_joints=q_prev)[0]
+                        q_prev=q
+
+                    curve_sliced_js_ith_layer_xth_section.append(q)
+                curve_sliced_js_ith_layer.append(np.array(curve_sliced_js_ith_layer_xth_section))
+            curve_sliced_js.append(curve_sliced_js_ith_layer)
+
+
+        return positioner_js,curve_sliced_js,positioner_js_support,curve_sliced_js_support,positioner_js_base,curve_sliced_js_base
+
+    def baseline_pose(self,vec=np.array([1,0])):
+        ###where to place the welded part on positioner
+        ###assume first layer normal z always vertical
+        ###baseline, only look at first layer
+        ###place largest variance along unit vector (x,y)
+
+        first_layer=np.concatenate(self.curve_sliced[0],axis=0)
+        COM=np.average(first_layer[:,:3],axis=0)
+
+        ###determine Vx by eig(cov)
+        curve_cov=np.cov(first_layer[:,:3].T)
+        eigenValues, eigenVectors = np.linalg.eig(curve_cov)
+        idx = eigenValues.argsort()[::-1]   
+        eigenValues = eigenValues[idx]
+        eigenVectors = eigenVectors[:,idx]
+        V=eigenVectors[0]
+
+        ###put normal along G direction
+        N=-np.sum(first_layer[:,3:],axis=0)
+        N=N/np.linalg.norm(N)
+
+        V=VectorPlaneProjection(V,N)
+
+        ###find the angle btw given vector to its local x
+        angle2x= np.arctan2(np.cross(vec, np.array([1,0])), np.dot(vec, np.array([1,0])))
+        ###rotate the same angle from v to X to identify first column in rotation matrix
+        Vx=Rz(-angle2x)@V
+
+
+        ###form transformation
+        R=np.vstack((Vx,np.cross(N,Vx),N))
+        T=-R@COM
+
+        return H_from_RT(R,T)
+
+        
+    def positioner_resolution(self,curve_sliced_relative,q_seed=[0,-1.],smooth_filter=True):
+        ###resolve 2DOF positioner joint angle 
+        positioner_js=[]
+        q_prev=q_seed
+
+        for i in range(1,len(curve_sliced_relative)):
+            positioner_js_ith_layer=[]
+            for x in range(len(curve_sliced_relative[i])):
+                
+                positioner_js_ith_layer_xth_section=self.positioner.find_curve_js(-curve_sliced_relative[i][x][:,3:],q_prev)
+
+                q_prev=positioner_js_ith_layer_xth_section[-1]
+                ###filter noise
+                if smooth_filter:
+                    positioner_js_ith_layer_xth_section[:,0]=moving_average(positioner_js_ith_layer_xth_section[:,0],padding=True)
+                    positioner_js_ith_layer_xth_section[:,1]=moving_average(positioner_js_ith_layer_xth_section[:,1],n=15,padding=True)
+
+                positioner_js_ith_layer.append(np.array(positioner_js_ith_layer_xth_section))
+
+            positioner_js.append(positioner_js_ith_layer)
+
+
+        ###first layer resolution
+        q_base=self.positioner.inv([0,0,1],positioner_js[0][0][0])
+        positioner_js_0th_layer=[]
+        for x in range(len(curve_sliced_relative[0])):
+            positioner_js_0th_layer.append(np.array([q_base]*len(curve_sliced_relative[0][x])))
+        
+        
+        positioner_js.insert(0,positioner_js_0th_layer)
+        return positioner_js
+
+    def positioner_error_calc(self,alpha,q,qdot,n_d):
+        q_next=q+alpha*qdot
+        n_next=self.positioner.base_H[:3,:3]@self.positioner.fwd_rotation(q_next)@n_d ###get current pointing direction
+        return get_angle(n_next,[0,0,1])
+
+    def rob2_flir_resolution(self,rob1_curve_js,robot2,measure_distance=500,rotate_angle=np.radians(15),y_direction=np.array([0,0,-1])):
+        ###determine second robot trajectory with FLIR
+        #rob1_curve_js: 2010 trajectory
+        #robot2: 1440 with FLIR TOOL defs
+        H2010_1440=H_inv(robot2.base_H)		###2010's base frame in 1440's base frame
+        rob2_curve_js=[]
+        q_prev=np.zeros(6)
+        for i in range(len(rob1_curve_js)):
+            rob2_js_ith_layer=[]
+            for x in range(len(rob1_curve_js[i])):
+                rob2_js_ith_layer_xth_section=[]
+                for j in range(len(rob1_curve_js[i][x])):
+                    p=self.robot.fwd(rob1_curve_js[i][x][j]).p
+                    p_in_base_frame=np.dot(H2010_1440[:3,:3],p)+H2010_1440[:3,3]
+                    v_z=H2010_1440[:3,:3]@rot(np.array([1,0,0]),rotate_angle)@np.array([0,-1,0]) ###pointing toward positioner's X with 15deg tiltd angle looking down
+                    # v_z=H2010_1440[:3,:3]@self.positioner.base_H[:3,0]	###pointing toward positioner's X on horizontal plane in 1440's base frame
+                    # v_z=VectorPlaneProjection(v_z,np.array([0,0,1]))	###project on gravity plane
+                    v_y=VectorPlaneProjection(y_direction,v_z)	###FLIR's Y pointing toward 1440's "y_direction" in 1440's base frame, projected on v_z's plane
+                    v_x=np.cross(v_y,v_z)
+                    p_in_base_frame=p_in_base_frame-measure_distance*v_z			###back project measure_distance-mm away from torch
+                    R=np.vstack((v_x,v_y,v_z)).T
+                    rob2_js_ith_layer_xth_section.append(robot2.inv(p_in_base_frame,R,last_joints=q_prev)[0])
+                    q_prev=rob2_js_ith_layer_xth_section[-1]
+                
+                rob2_js_ith_layer.append(np.array(rob2_js_ith_layer_xth_section))
+            rob2_curve_js.append(rob2_js_ith_layer)
+        
+        return rob2_curve_js
+
+    def positioner_resolution_qp(self,curve_sliced_relative,q_seed=[0,-1.],tolerance=np.radians(3)):
+        ###NOT WORKING YET
+        positioner_js=[]
+        q_prev=q_seed
+        for i in range(1,len(curve_sliced_relative)):
+            positioner_js_ith_layer=[]
+            for x in range(len(curve_sliced_relative[i])):
+                positioner_js_ith_layer_xth_section=[]
+                ###first point uses invkin 
+                q_prev=self.positioner.inv(-curve_sliced_relative[i][x][0,3:],q_prev)
+                for j in range(1,len(curve_sliced_relative[i][x])):
+                    q_now=copy.deepcopy(q_prev)
+                    n_now=self.positioner.base_H[:3,:3]@self.positioner.fwd_rotation(q_now)@(-curve_sliced_relative[i][x][j,3:]) ###get current pointing direction
+                    error_angle=get_angle(n_now,[0,0,1])
+                    qp_iter=0
+                    while error_angle>tolerance or qp_iter==0:		###iterate until tolerance satisfied
+                        J=self.positioner.jacobian(q_now)
+                        JR_mod=-hat(-curve_sliced_relative[i][x][j,3:])@J[:3,:]
+                        JR_mod=self.positioner.base_H[:3,:3]@JR_mod
+
+                        H=np.dot(np.transpose(JR_mod),JR_mod)
+                        H=(H+np.transpose(H))/2
+
+                        ndotd=(np.array([0,0,1])-n_now)	###desired normal moving direction
+
+                        f=-np.transpose(JR_mod)@ndotd
+                        qdot=solve_qp(H,f,lb=-0.01*np.ones(2),ub=0.01*np.ones(2))
+                        
+                        print(i,x,j,error_angle,n_now)
+                        ###line search of best step size
+                        # alpha=fminbound(self.positioner_error_calc,0,2,args=(q_now,qdot,-curve_sliced_relative[i][x][j,3:],))
+                        alpha=1
+                        # if alpha<0.01:
+                        # 	print(alpha)
+                        # 	break
+                            
+                        ###update and check error angle again
+                        q_now+=alpha*qdot
+                        n_now=self.positioner.base_H[:3,:3]@self.positioner.fwd_rotation(q_now)@(-curve_sliced_relative[i][x][j,3:]) ###get current pointing direction
+                        error_angle=get_angle(n_now,[0,0,1])
+                        qp_iter+=1
+                    
+                    ###append solved points
+                    positioner_js_ith_layer_xth_section.append(q_now)
+                    q_prev=copy.deepcopy(q_now)
+                
+                positioner_js_ith_layer.append(positioner_js_ith_layer_xth_section)
+            
+            positioner_js.append(positioner_js_ith_layer)
+        
+        return positioner_js
+            
+    def positioner_qp_smooth(self,positioner_js, curve_sliced_relative):
+        ###NOT WORKING YET
+        ### positioner trajectory smoothing with QP
+        positioner_js_out=[]
+        tolerance=np.radians(3)
+
+        for i in range(len(curve_sliced_relative)):
+            positioner_js_ith_out=[positioner_js[i][0]]
+            q_all=[positioner_js[i][0]]
+            Kw=1
+            for i in range(len(curve)):
+                # print(i)
+                try:
+                    now=time.time()
+                    error_angle=999
+
+                    while error_angle>tolerance:
+
+                        R_now=self.positioner.fwd(q_all[-1],world=True).R
+                        n_now=R_now[:,-1]
+                        error_angle=get_angle(n_now,[0,0,1])
+                        
+                        J=self.positioner.jacobian(q_all[-1])        #calculate current Jacobian
+                        JR=J[:3,:]
+                        JR_mod=-np.dot(hat(R_now),JR)
+
+                        H=np.dot(np.transpose(JR_mod),JR_mod)
+                        H=(H+np.transpose(H))/2
+
+                        vd=curve[i]-pose_now.p
+                        ezdotd=(curve_normal[i]-pose_now.R[:,-1])
+
+                        f=-np.transpose(JR_mod)@ezdotd
+                        qdot=solve_qp(H,f)
+
+                        ###line search
+                        alpha=fminbound(self.error_calc,0,0.999999999999999999999,args=(q_all[-1],qdot,curve_sliced_relative[i],))
+                        if alpha<0.01:
+                            break
+                        q_all.append(q_all[-1]+alpha*qdot)
+                        # print(q_all[-1])
+                except:
+                    q_out.append(q_all[-1])
+                    traceback.print_exc()
+                    raise AssertionError
+                    break
+
+                positioner_js_ith_out.append(q_all[-1])
+
+            positioner_js_out.append(np.array(positioner_js_ith_out))
+        
+
+        return positioner_js_out
+
+
+def main():
+    return
+
+if __name__ == '__main__':
+    main()

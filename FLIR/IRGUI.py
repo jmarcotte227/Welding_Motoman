@@ -17,19 +17,20 @@ temp_all_frames = []
 all_frames = []
 data_mode = 0
 layer=3
-main_folder_path = '../../recorded_data/xiris_initial_tests/'
+main_folder_path = '../../convergent_manufacturing_utils/examples/sensor_logging/recorded_data/'
 for folder_name in os.listdir(main_folder_path):
-    if folder_name.startswith(f'layer_{layer}'):
+    if folder_name.startswith(f'0'):
         folder_path = os.path.join(main_folder_path, folder_name)
-        file_path = os.path.join(folder_path, 'ir_recording.pickle')
+        file_path = os.path.join(folder_path, 'ir_recording_2.pickle')
         
         file_size_kb = os.path.getsize(file_path) / 1024
         if file_size_kb > 1000:
             if os.path.isfile(file_path):
                 with open(file_path, 'rb') as file:
                     ir_recording = pickle.load(file)
+                    print(ir_recording[0].shape)
                     for i in range(len(ir_recording)):
-                        temp = counts2temp(ir_recording[i].flatten(),6.39661118e+03, 1.40469989e+03, 1.00000008e+00, 8.69393436e+00, 8.40029488e+03,Emiss=0.13).reshape((240,320))
+                        temp = counts2temp(ir_recording[i].flatten(),6.39661118e+03, 1.40469989e+03, 1.00000008e+00, 8.69393436e+00, 8.40029488e+03,Emiss=0.13).reshape((512,640))
                         temp[temp > 1300] = 1300
                         temp_all_frames.append(temp)
                         # print(np.max(temp))

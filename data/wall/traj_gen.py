@@ -4,17 +4,18 @@ from matplotlib import cm
 import yaml
 
 total_height=75
-wall_length=50*np.pi
-base_length=wall_length+4*np.pi
+seg_len = 3.0
+wall_length=50*seg_len
+base_length=wall_length+4*seg_len
 line_resolution=1.5
 base_resolution=4
-points_distance=np.pi
 y_position = 45
 num_layers=int(total_height/line_resolution)
 num_base = 2
 
 # generate layers
-points_per_layer=int(wall_length/points_distance)
+points_per_layer=int(wall_length/seg_len+1)
+print("Points Per Layer: ", points_per_layer)
 curve_dense=np.zeros((num_layers*points_per_layer,6))
 
 for layer in range(num_layers):
@@ -30,7 +31,7 @@ for layer in range(num_layers):
             delimiter=',')
 
 # generate base
-points_per_base=int(base_length/points_distance)
+points_per_base=int(base_length/seg_len)
 curve_base=np.zeros((num_base*points_per_base,6))
 
 for layer in range(num_base):
@@ -61,8 +62,6 @@ with open('1_5mm_slice/sliced_meta.yml', 'w') as file:
         'layer_length': points_per_layer,
         'layer_num': num_layers,
         'layer_resolution': line_resolution,
-        'path_dl': points_distance
+        'path_dl': seg_len
     }
     yaml.dump(meta,file)
-
-

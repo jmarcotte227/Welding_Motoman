@@ -22,6 +22,7 @@ from matplotlib import pyplot as plt
 from angled_layers import *
 
 
+
 # Setup Optimization Problem
 def v_opt(v_next, v_prev, h_err, h_targ, model, beta=0.11):
     return (

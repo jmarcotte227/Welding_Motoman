@@ -1,10 +1,10 @@
 baselayer_length: 54
 baselayer_num: 2
 baselayer_resolution: 4
-layer_length: 50
+layer_length: 51
 layer_num: 50
 layer_resolution: 1.5
-path_dl: 3.141592653589793
+path_dl: 3.0
 q_positioner_seed: 
   - -2.716233516185387886e-01
   - -1.57079632679 
