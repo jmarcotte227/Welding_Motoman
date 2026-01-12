@@ -413,3 +413,4 @@ scan/angled_layer/scan_compare/hot_OL.stl
 scan/angled_layer/scan_compare/hot_OL_trimmed.stl
 scan/angled_layer/scan_compare/scan_compare.py
 scan/angled_layer/scan_compare/scan_compare_highlight.py
+FLIR/output.mp4
