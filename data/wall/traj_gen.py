@@ -3,15 +3,15 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import yaml
 
-total_height=75
-seg_len = 3.0
-wall_length=50*seg_len
+seg_len = np.pi
+wall_length=46*seg_len
 base_length=wall_length+4*seg_len
-line_resolution=1.5
+line_resolution=1.55
 base_resolution=4
 y_position = 45
-num_layers=int(total_height/line_resolution)
+num_layers=100
 num_base = 2
+total_height = num_layers*line_resolution
 
 # generate layers
 points_per_layer=int(wall_length/seg_len+1)
@@ -26,7 +26,7 @@ for layer in range(num_layers):
 curve_dense[:,-1]=-np.ones(len(curve_dense))
 
 for layer in range(num_layers):
-	np.savetxt('1_5mm_slice/curve_sliced_relative/slice'+str(layer)+'_0.csv',
+	np.savetxt('1_55mm_slice/curve_sliced_relative/slice'+str(layer)+'_0.csv',
             curve_dense[layer*points_per_layer:(layer+1)*points_per_layer],
             delimiter=',')
 
@@ -42,7 +42,7 @@ for layer in range(num_base):
 curve_base[:,-1]=-np.ones(len(curve_base))
 
 for layer in range(num_base):
-	np.savetxt('1_5mm_slice/curve_sliced_relative/baselayer'+str(layer)+'_0.csv',
+	np.savetxt('1_55mm_slice/curve_sliced_relative/baselayer'+str(layer)+'_0.csv',
             curve_base[layer*points_per_base:(layer+1)*points_per_base],
             delimiter=',')
 
@@ -54,7 +54,7 @@ ax.plot3D(curve_base[::vis_step,0],curve_base[::vis_step,1],curve_base[::vis_ste
 plt.show()
 
 
-with open('1_5mm_slice/sliced_meta.yml', 'w') as file:
+with open('1_55mm_slice/sliced_meta.yml', 'w') as file:
     meta = {
         'baselayer_length': points_per_base,
         'baselayer_num': num_base,

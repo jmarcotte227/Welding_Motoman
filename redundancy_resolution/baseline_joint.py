@@ -13,7 +13,7 @@ def main():
 		pulse2deg_file_path='../config/D500B_pulse2deg_real.csv',base_transformation_file='../config/D500B_pose.csv')
 	
 	dataset='wall/'
-	sliced_alg='1_5mm_slice/'
+	sliced_alg='1_55mm_slice/'
 	data_dir='../data/'+dataset+sliced_alg
 	with open(data_dir+'sliced_meta.yml', 'r') as file:
 		slicing_meta = yaml.safe_load(file)
