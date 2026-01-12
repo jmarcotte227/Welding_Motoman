@@ -20,7 +20,7 @@ from angled_layers import SpeedHeightModel, flame_tracking_stream,  \
     avg_by_line, interpolate_heights, LiveAverageFilterPos,         \
     LiveAverageFilterScalar
 from lstm_model_next_step_fast import WeldLSTM
-from linearization import lstm_linearization
+from linearization import lstm_linearization_inc
 from model_utils import DataReg
 from weld_lstm_ns import WeldLSTMNextStep
 
@@ -60,7 +60,7 @@ def main():
     DATASET = 'wall/'
     SLICED_ALG = '1_5mm_slice/'
     DATA_DIR='../../data/'+DATASET+SLICED_ALG
-    CONT_MODEL='model_h-8_part-1_loss-0.0411'
+    CONT_MODEL = "model_h-8_part-1_loss-0.0684"
 
     with open(DATA_DIR+'sliced_meta.yml', 'r') as file:
         slicing_meta = yaml.safe_load(file)
@@ -71,8 +71,8 @@ def main():
     V_MAX = torch.tensor(17.0) # mm/s
     DV_MAX = 3 # mm/s
 
-    BETA = 0.1
-    ALPHA = 1.0
+    BETA = 0.5
+    ALPHA = 1.25
 
     ######## Create Directories ########
     # now = datetime.now()
@@ -184,8 +184,10 @@ def main():
             if ARCON:
                 fronius_client.job_number = int(BASE_FEEDRATE/10+JOB_OFFSET)
                 fronius_client.start_weld()
+            if ONLINE:
+                SS.init_motion()
             while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
-                loop_start = time.perf_counter()
+                loop_start = time.time()
 
                 # calculate nominal vel of segment
                 seg_idx = np.where(lam_relative<=lam_cur)[0][-1]
@@ -205,12 +207,12 @@ def main():
                 q_cmd = np.hstack((q1, q2, q_positioner))
 
                 # log q_cmd
-                q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
+                q_cmd_all.append(np.hstack((time.time(),q_cmd)))
                 job_no.append(seg_idx)
 
                 # this function has a delay when loop_start is passed in.
                 # Ensures the update frequency is consistent
-                if (loop_start-time.perf_counter())>1/STREAMING_RATE:
+                if (loop_start-time.time())>1/STREAMING_RATE:
                     print("Stopping: Loop Time exceeded streaming period")
                     break
 
@@ -219,6 +221,8 @@ def main():
                     SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) 
             if ARCON:
                 fronius_client.stop_weld()
+            if ONLINE:
+                SS.rate_obj=None
             print(f"-----End of Base Layer {layer}-----")
             if RECORDING:
                 js_recording = SS.stop_recording()
@@ -336,7 +340,8 @@ def main():
         feedrate=160
 
         # intialize velocity using speed height model
-        model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+        # model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+        model = SpeedHeightModel(a=-0.4733,b=1.1747)
         v_nom = model.dh2v(slicing_meta["layer_resolution"])
 
         # generate a nominal height profile for populating
@@ -491,17 +496,16 @@ def main():
                             hidden_state=state)
         y_0_cont = torch.unsqueeze(y_0_cont, dim=0)
 
-        _,B,C = lstm_linearization(lstm, h_0_cont, c_0_cont, x_0_cont)
+        B,C = lstm_linearization_inc(lstm, h_0_cont, c_0_cont, x_0_cont)
 
-        # only look at the column changed by the control input
+        ###### QP CONTROL ######
         B = torch.unsqueeze(B[:,0], dim=-1)
+        y_d_cont = torch.zeros((1,1))
+        y_d_cont[0,:] = reg.reg(dh_d[v_cor_idx],1)
 
-        #### QP Control ####
-        y_d = torch.zeros((1,1))
-        y_d[0,:] = reg.reg(dh_d[v_cor_idx],1)
-
+        # setup qp problem
         P= (B.T@C.T@Q@C@B+0.5*Q_delta).detach().numpy().astype("double")
-        q = ((y_0_cont-(C@B*x_0_cont[0])-y_d).T@Q@C@B-x_0_cont[0]*Q_delta).detach().numpy().astype("double")
+        q = ((y_0_cont-(C@B*x_0_cont[0])-y_d_cont).T@Q@C@B-x_0_cont[0]*Q_delta).detach().numpy().astype("double")
         G = np.array([[1.0],
                       [-1.0]]).astype("double")
         h = np.array([[dv_max[0]+x_0_cont[0].detach()],
@@ -509,10 +513,13 @@ def main():
         lb = v_min.detach().numpy().astype("double")
         ub = v_max.detach().numpy().astype("double")
 
+        # calculate qp
         u_cmd_cont = solve_qp(P,q,G,h,lb=lb,ub=ub, solver='quadprog', verbose=True)
+        # print(u_cmd_cont)
 
         u_cmd_cont = torch.tensor(u_cmd_cont, dtype=torch.float32)
         u_cmd = reg.unreg(u_cmd_cont, 0)
+        ###### END QP #####
 
         # propagate the network
         x = reg.reg(torch.cat((u_cmd, dh_prev), dim=0))
@@ -531,8 +538,10 @@ def main():
         if ARCON:
             fronius_client.job_number = int(feedrate/10+JOB_OFFSET)
             fronius_client.start_weld()
+        if ONLINE:
+            SS.init_motion()
         while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
-            loop_start = time.perf_counter()
+            loop_start = time.time()
 
             # calculate which index we are on
             seg_idx = np.where(lam_relative<=lam_cur)[0][-1]
@@ -559,19 +568,20 @@ def main():
                                     hidden_state=state)
                 y_0_cont = torch.unsqueeze(y_0_cont, dim=0)
 
-                _,B,C = lstm_linearization(lstm, h_0_cont, c_0_cont, x_0_cont)
+                B,C = lstm_linearization_inc(lstm, h_0_cont, c_0_cont, x_0_cont)
 
                 # only look at the column changed by the control input
                 B = torch.unsqueeze(B[:,0], dim=-1)
 
-                #### QP Control ####
-                y_d = torch.zeros((1,1))
-                y_d[0,:] = reg.reg(dh_d[v_cor_idx],1)
-                # print("y")
-                # print(y_d)
 
+                ###### QP CONTROL ######
+                B = torch.unsqueeze(B[:,0], dim=-1)
+                y_d_cont = torch.zeros((1,1))
+                y_d_cont[0,:] = reg.reg(dh_d[v_cor_idx],1)
+
+                # setup qp problem
                 P= (B.T@C.T@Q@C@B+0.5*Q_delta).detach().numpy().astype("double")
-                q = ((y_0_cont-(C@B*x_0_cont[0])-y_d).T@Q@C@B-x_0_cont[0]*Q_delta).detach().numpy().astype("double")
+                q = ((y_0_cont-(C@B*x_0_cont[0])-y_d_cont).T@Q@C@B-x_0_cont[0]*Q_delta).detach().numpy().astype("double")
                 G = np.array([[1.0],
                               [-1.0]]).astype("double")
                 h = np.array([[dv_max[0]+x_0_cont[0].detach()],
@@ -579,10 +589,14 @@ def main():
                 lb = v_min.detach().numpy().astype("double")
                 ub = v_max.detach().numpy().astype("double")
 
+                # calculate qp
                 u_cmd_cont = solve_qp(P,q,G,h,lb=lb,ub=ub, solver='quadprog', verbose=True)
+                # print(u_cmd_cont)
 
                 u_cmd_cont = torch.tensor(u_cmd_cont, dtype=torch.float32)
                 u_cmd = reg.unreg(u_cmd_cont, 0)
+                ###### END QP #####
+
                 u_prev = u_cmd
 
                 # propagate the network
@@ -610,12 +624,12 @@ def main():
             q_cmd = np.hstack((q1, q2, q_positioner))
 
             # log q_cmd
-            q_cmd_all.append(np.hstack((time.perf_counter(),q_cmd)))
+            q_cmd_all.append(np.hstack((time.time(),q_cmd)))
             job_no.append(seg_idx)
 
             # this function has a delay when loop_start is passed in. 
             # Ensures the update frequency is consistent
-            if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
+            if (loop_start-time.time())>1/STREAMING_RATE: 
                 print("Stopping: Loop Time exceeded streaming period")
                 break
 
@@ -623,6 +637,8 @@ def main():
             if ONLINE: SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) 
         if ARCON:
             fronius_client.stop_weld()
+        if ONLINE:
+            SS.rate_obj=None
         print(f"-----End of Layer {layer}-----")
         if RECORDING:
             js_recording = SS.stop_recording()

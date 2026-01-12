@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 
 def main():
     dataset='wall/'
-    sliced_alg='1_5mm_slice/'
+    sliced_alg='1_55mm_slice/'
     data_dir='../data/'+dataset+sliced_alg
-    num_layers=29
-    num_baselayers=0
+    num_layers=100
+    num_baselayers=2
     num_sections = 1
     curve_sliced_js=[]
     positioner_js=[]
