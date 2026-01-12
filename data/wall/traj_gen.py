@@ -56,10 +56,10 @@ plt.show()
 
 with open('1_55mm_slice/sliced_meta.yml', 'w') as file:
     meta = {
-        'baselayer_length': points_per_base,
+        'baselayer_length': points_per_base-1,
         'baselayer_num': num_base,
         'baselayer_resolution': base_resolution,
-        'layer_length': points_per_layer,
+        'layer_length': points_per_layer-1,
         'layer_num': num_layers,
         'layer_resolution': line_resolution,
         'path_dl': seg_len

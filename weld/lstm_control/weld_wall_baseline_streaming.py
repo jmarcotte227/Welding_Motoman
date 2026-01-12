@@ -47,7 +47,7 @@ def main():
 
     ######## Welding Parameters ########
     ARCON = True
-    BASE_LAYERS = False
+    BASE_LAYERS = True
     RECORDING = True
     ONLINE = True # Used to test without connecting to RR services
     BASE_VEL = 3
@@ -56,10 +56,8 @@ def main():
     JOB_OFFSET = 200
     STREAMING_RATE = 125.
 
-    DELAY_CORRECTION = 0.0007
-
     DATASET = 'wall/'
-    SLICED_ALG = '1_5mm_slice/'
+    SLICED_ALG = '1_55mm_slice/'
     DATA_DIR='../../data/'+DATASET+SLICED_ALG
 
     with open(DATA_DIR+'sliced_meta.yml', 'r') as file:
@@ -85,7 +83,7 @@ def main():
     ######## Create Directories ########
     now = datetime.now()
     recorded_dir = now.strftime(
-        "../../../recorded_data/wall_lstm_baseline_control_%Y_%m_%d_%H_%M_%S/"
+        "../../../recorded_data/%Y_%m_%d_%H_%M_%S_wall_lstm_baseline_control/"
     )
     os.makedirs(recorded_dir)
 
@@ -226,7 +224,7 @@ def main():
 
                 # adding delay to counteract delay in streaming send
                 if ONLINE: 
-                    SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) 
+                    SS.position_cmd(q_cmd, loop_start) 
             if ARCON:
                 fronius_client.stop_weld()
             if ONLINE:
@@ -291,7 +289,7 @@ def main():
     #     print("Height Offset:", height_offset)
     # except:
     #     # height_offset = float(input("Enter height offset: ")) 
-    height_offset = -7.92870911432761
+    height_offset = -6.318382754974749
     print("height offset set manually")
 
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
@@ -311,8 +309,8 @@ def main():
         client = MotionProgramExecClient()
 
     ######## NORMAL LAYERS ########
-    num_layer_start = int(20)
-    num_layer_end = int(50)
+    num_layer_start = int(0)
+    num_layer_end = int(105)
 
     start_dir = True
     for layer in range(num_layer_start, num_layer_end):
@@ -378,7 +376,7 @@ def main():
                 ir_error_flag = True
                 height_err = np.zeros(slicing_meta["layer_length"])
             else:
-                averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-1,len(rob1_js)))
+                averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-2,len(rob1_js)-1))
                 heights_prev = averages_prev[:,2]
                 if start_dir: heights_prev = np.flip(heights_prev)
 
@@ -410,7 +408,7 @@ def main():
                 ir_error_flag = True
                 height_err = np.zeros(slicing_meta["layer_length"])
             else:
-                averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-1,len(rob1_js)))
+                averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-2,len(rob1_js)-1))
                 heights_prev = averages_prev[:,2]
                 heights_prev = np.flip(heights_prev)
 
@@ -524,7 +522,7 @@ def main():
                 break
 
             # adding delay to counteract delay in streaming send
-            if ONLINE: SS.position_cmd(q_cmd, loop_start+DELAY_CORRECTION) 
+            if ONLINE: SS.position_cmd(q_cmd, loop_start) 
         if ARCON:
             fronius_client.stop_weld()
         if ONLINE:

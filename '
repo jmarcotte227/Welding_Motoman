@@ -12,15 +12,16 @@ from StreamingSend import StreamingSend
 from robotics_utils import H_inv, VectorPlaneProjection
 from dx200_motion_program_exec_client import *
 from scipy.interpolate import interp1d
+from scipy.optimize import minimize, Bounds
 import torch
 
 from qpsolvers import solve_qp
 sys.path.append("../../toolbox")
 from angled_layers import SpeedHeightModel, flame_tracking_stream,  \
     avg_by_line, interpolate_heights, LiveAverageFilterPos,         \
-    LiveAverageFilterScalar
+    LiveAverageFilterScalar, delta_v
 from lstm_model_next_step_fast import WeldLSTM
-from linearization import lstm_linearization_inc
+from linearization import lstm_linearization
 from model_utils import DataReg
 from weld_lstm_ns import WeldLSTMNextStep
 
@@ -45,8 +46,8 @@ def main():
     global ir_updated_flag, ir_process_packet, ir_process_output, pos_filter
 
     ######## Welding Parameters ########
-    ARCON = True
-    BASE_LAYERS = False
+    ARCON = False
+    BASE_LAYERS = True
     RECORDING = True
     ONLINE = True # Used to test without connecting to RR services
     BASE_VEL = 3
@@ -58,12 +59,12 @@ def main():
     DATASET = 'wall/'
     SLICED_ALG = '1_55mm_slice/'
     DATA_DIR='../../data/'+DATASET+SLICED_ALG
-    CONT_MODEL = "model_h-8_part-1_loss-0.0684"
 
     with open(DATA_DIR+'sliced_meta.yml', 'r') as file:
         slicing_meta = yaml.safe_load(file)
 
     ####### CONTROLLER PARAMETERS #######
+    # V_GAIN = 3.612# changed from this at layer 72 700.39922 # gradient of model at 3mm/s lower bound
     V_MIN = torch.tensor(3.0) # mm/s
     V_MAX = torch.tensor(17.0) # mm/s
     DV_MAX = 3 # mm/s
@@ -71,13 +72,20 @@ def main():
     BETA = 0.5
     ALPHA = 1.25
 
+    def v_opt(v_next, dh_d, model, beta=0.1):
+        return (
+            norm(dh_d - model.v2dh(v_next), 2) ** 2
+            + beta * norm(delta_v(v_next), 2) ** 2
+        )
+
+    bounds = Bounds(3, 17)
+
     ######## Create Directories ########
-    # now = datetime.now()
-    # recorded_dir = now.strftime(
-    #     "../../../recorded_data/%Y_%m_%d_%H_%M_%S_wall_lstm_control/"
-    # )
-    # os.makedirs(recorded_dir)
-    recorded_dir = "../../../recorded_data/2026_01_12_10_21_38_wall_lstm_control/"
+    now = datetime.now()
+    recorded_dir = now.strftime(
+        "../../../recorded_data/TESTING_%Y_%m_%d_%H_%M_%S_wall_lstm_baseline_control/"
+    )
+    os.makedirs(recorded_dir)
 
     ######## SENSORS ########
     if ONLINE:
@@ -181,6 +189,7 @@ def main():
             if ARCON:
                 fronius_client.job_number = int(BASE_FEEDRATE/10+JOB_OFFSET)
                 fronius_client.start_weld()
+
             if ONLINE:
                 SS.init_motion()
             while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
@@ -271,7 +280,6 @@ def main():
         base_thickness = float(input("Enter base thickness: "))
         if flame_3d.shape[0] == 0:
             height_offset = 3.6  # this is arbitrary
-            print("No flame detected")
         else:
             avg_base_height = np.mean(flame_3d[:, 2])
             height_offset = base_thickness - avg_base_height
@@ -280,7 +288,7 @@ def main():
     #     print("Average Base Height:", avg_base_height)
     #     print("Height Offset:", height_offset)
     # except:
-    #     height_offset = float(input("Enter height offset: ")) 
+    #     # height_offset = float(input("Enter height offset: ")) 
     height_offset = -6.318382754974749
     print("height offset set manually")
 
@@ -338,7 +346,7 @@ def main():
         feedrate=160
 
         # intialize velocity using speed height model
-        # model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
+        # model = SpeedHeightModel(a=-0.4733,b=1.1747)
         model = SpeedHeightModel(a=-0.4733,b=1.1747)
         v_nom = model.dh2v(slicing_meta["layer_resolution"])
 
@@ -370,7 +378,7 @@ def main():
             else:
                 averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-2,len(rob1_js)-1))
                 heights_prev = averages_prev[:,2]
-                heights_prev = np.flip(heights_prev)
+                if start_dir: heights_prev = np.flip(heights_prev)
 
                 # TODO fix this error
                 print(height_profile)
@@ -404,14 +412,9 @@ def main():
                 heights_prev = averages_prev[:,2]
                 heights_prev = np.flip(heights_prev)
 
-                # TODO fix this error
-                print(height_profile)
-                print(heights_prev)
                 heights_prev = interpolate_heights(height_profile, heights_prev)
-                print(heights_prev)
                 # height error based on the build height of the previous layer
                 height_err = np.ones(len(heights_prev))*build_height-heights_prev
-                print(height_err)
 
         if start_dir:
             pass
@@ -421,8 +424,33 @@ def main():
 
         ### Calculate dh desired based on the target height, and the error in the previous layer.
         dh_d = torch.tensor(ALPHA*height_err+slicing_meta["layer_resolution"])
-        print(dh_d)
+        print(f"DH_d: {dh_d}")
         np.savetxt(save_path+'dh_d.csv',dh_d.detach().numpy(),delimiter=',')
+
+        # generate velocity profile
+        
+        opt_result = minimize(
+            v_opt,
+            v_nom*np.ones_like(height_err),
+            (
+                dh_d,
+                model
+            ),
+            bounds=bounds,
+            options={"maxfun": 100000},
+        )
+        try:
+            if not opt_result.success:
+                print(opt_result)
+                raise ValueError(opt_result.message)
+
+            velocity_profile = opt_result.x
+
+        except ValueError as e:
+            
+            velocity_profile = vel_nom
+        print(f"Vcmd: {velocity_profile}")
+        print(f"Error: {height_err}")
 
         # jog to start position
         input("Press Enter to jog to start position")
@@ -444,89 +472,7 @@ def main():
         v_cor_idx = 0
 
         ######## SET INITIAL V #######
-        v_cmd=v_nom
-        u_cmd = torch.tensor(v_cmd, dtype=torch.float32)
-
-        ######## INIT LSTM #######
-        device = torch.device("cpu")
-        cont_data = torch.load(f'{CONT_MODEL}/{CONT_MODEL}.pt')
-        lstm = WeldLSTMNextStep(
-            cont_data["input_dim"],
-            cont_data["hidden_dim"],
-            cont_data["output_dim"],
-            cont_data["num_layers"],
-            cont_data["dropout"],
-        )
-        lstm.load_state_dict(cont_data["model_state_dict"])
-        lstm.to(device)
-        lstm.eval()
-
-
-        # initialize regularizer
-        reg = DataReg(cont_data["data_mean"], cont_data["data_std"])
-
-        # convert the limits
-        v_min = torch.tensor([reg.reg(V_MIN,0)], dtype=torch.float32)
-        v_max = torch.tensor([reg.reg(V_MAX,0)], dtype=torch.float32)
-        dv_max = torch.tensor([reg.scale(DV_MAX,0)], dtype=torch.float32)
-
-        
-        # initialize the hidden state
-        h = torch.zeros(1,cont_data["hidden_dim"])
-        c = torch.zeros(1,cont_data["hidden_dim"])
-        state = (h,c)
-
-        # initialize previous inputs to the mean
-        u_prev = cont_data["data_mean"][0].reshape(1)
-        dh_prev = cont_data["data_mean"][1].reshape(1)
-
-        # setup QP params
-        Q = torch.tensor([[1.0]])
-        Q_delta = torch.tensor([[BETA]])
-
-        # generate first velocity command
-        # TODO: run the linearization once
-        h_0_cont = torch.squeeze(state[0])
-        c_0_cont = torch.squeeze(state[1])
-        x_0_cont = reg.reg(torch.cat((u_prev, dh_prev), dim=0))
-
-        y_0_cont, _ = lstm(torch.unsqueeze(x_0_cont, dim=0), 
-                            hidden_state=state)
-        y_0_cont = torch.unsqueeze(y_0_cont, dim=0)
-
-        B,C = lstm_linearization_inc(lstm, h_0_cont, c_0_cont, x_0_cont)
-
-        ###### QP CONTROL ######
-        B = torch.unsqueeze(B[:,0], dim=-1)
-        y_d_cont = torch.zeros((1,1))
-        y_d_cont[0,:] = reg.reg(dh_d[v_cor_idx],1)
-
-        # setup qp problem
-        P= (B.T@C.T@Q@C@B+0.5*Q_delta).detach().numpy().astype("double")
-        q = ((y_0_cont-(C@B*x_0_cont[0])-y_d_cont).T@Q@C@B-x_0_cont[0]*Q_delta).detach().numpy().astype("double")
-        G = np.array([[1.0],
-                      [-1.0]]).astype("double")
-        h = np.array([[dv_max[0]+x_0_cont[0].detach()],
-                      [dv_max[0]-x_0_cont[0].detach()]]).astype("double")
-        lb = v_min.detach().numpy().astype("double")
-        ub = v_max.detach().numpy().astype("double")
-
-        # calculate qp
-        u_cmd_cont = solve_qp(P,q,G,h,lb=lb,ub=ub, solver='quadprog', verbose=True)
-        # print(u_cmd_cont)
-
-        u_cmd_cont = torch.tensor(u_cmd_cont, dtype=torch.float32)
-        u_cmd = reg.unreg(u_cmd_cont, 0)
-        ###### END QP #####
-
-        # propagate the network
-        x = reg.reg(torch.cat((u_cmd, dh_prev), dim=0))
-        y_out, state = lstm(torch.unsqueeze(x, dim=0), hidden_state=state)
-
-        v_cmd = float(u_cmd)
-
-
-        lstm_pred.append(torch.squeeze(y_out.detach()))
+        v_cmd = velocity_profile[v_cor_idx]
 
         # Looping through the entire path of the sliced part
         input("press enter to start layer")
@@ -546,64 +492,8 @@ def main():
             # checks if we have moved onto the next motion segment
             if seg_idx != v_cor_idx:
                 v_cor_idx = seg_idx
-                flame_3d = pos_filter.read_filter()
-                filt_ir_height.append(np.squeeze(flame_3d))
-                # print(flame_3d)
-                if flame_3d[0]!=0:
-                    dh_prev = torch.tensor(flame_3d[2]-heights_prev[v_cor_idx-1], dtype=torch.float32)
-                    # print(error)
-                else:
-                    print("flame error")
-                    print(flame_3d)
-                    dh_prev = cont_data["data_mean"][1].reshape(1)
-                dh_prev_all.append(dh_prev)
-                # calculate linearization
-                h_0_cont = torch.squeeze(state[0])
-                c_0_cont = torch.squeeze(state[1])
-                x_0_cont = reg.reg(torch.cat((u_prev, dh_prev), dim=0))
+                v_cmd = velocity_profile[seg_idx]
 
-                y_0_cont, _ = lstm(torch.unsqueeze(x_0_cont, dim=0), 
-                                    hidden_state=state)
-                y_0_cont = torch.unsqueeze(y_0_cont, dim=0)
-
-                B,C = lstm_linearization_inc(lstm, h_0_cont, c_0_cont, x_0_cont)
-
-                # only look at the column changed by the control input
-                B = torch.unsqueeze(B[:,0], dim=-1)
-
-
-                ###### QP CONTROL ######
-                B = torch.unsqueeze(B[:,0], dim=-1)
-                y_d_cont = torch.zeros((1,1))
-                y_d_cont[0,:] = reg.reg(dh_d[v_cor_idx],1)
-
-                # setup qp problem
-                P= (B.T@C.T@Q@C@B+0.5*Q_delta).detach().numpy().astype("double")
-                q = ((y_0_cont-(C@B*x_0_cont[0])-y_d_cont).T@Q@C@B-x_0_cont[0]*Q_delta).detach().numpy().astype("double")
-                G = np.array([[1.0],
-                              [-1.0]]).astype("double")
-                h = np.array([[dv_max[0]+x_0_cont[0].detach()],
-                              [dv_max[0]-x_0_cont[0].detach()]]).astype("double")
-                lb = v_min.detach().numpy().astype("double")
-                ub = v_max.detach().numpy().astype("double")
-
-                # calculate qp
-                u_cmd_cont = solve_qp(P,q,G,h,lb=lb,ub=ub, solver='quadprog', verbose=True)
-                # print(u_cmd_cont)
-
-                u_cmd_cont = torch.tensor(u_cmd_cont, dtype=torch.float32)
-                u_cmd = reg.unreg(u_cmd_cont, 0)
-                ###### END QP #####
-
-                u_prev = u_cmd
-
-                # propagate the network
-                x_cont = reg.reg(torch.cat((u_cmd, dh_prev), dim=0))
-                y_out_cont, state = lstm(torch.unsqueeze(x_cont, dim=0), hidden_state=state)
-
-                v_cmd = float(u_cmd)
-
-                lstm_pred.append(torch.squeeze(reg.unreg(y_out_cont.detach(),1)))
 
             v_cmds.append(v_cmd)
             v_cor_idxs.append(v_cor_idx)
@@ -667,12 +557,8 @@ def main():
             np.savetxt(save_path+'weld_js_exe.csv',exe_out,delimiter=',')
             np.savetxt(save_path + "start_dir.csv", [start_dir], delimiter=",")
             np.savetxt(save_path + "rr_ir_data.csv", np.array(ir_process_output), delimiter=",")
-            np.savetxt(save_path + "dh_prev_all.csv", np.array(dh_prev_all), delimiter=",")
-            np.savetxt(save_path + "T_prev_all.csv", np.array(T_prev_all), delimiter=",")
-            np.savetxt(save_path + "lstm_pred.csv", np.array(lstm_pred), delimiter=",")
             np.savetxt(save_path + "v_cmd.csv", np.array(v_cmds), delimiter=",")
             np.savetxt(save_path + "v_cor_idx.csv", np.array(v_cor_idxs), delimiter=",")
-            np.savetxt(save_path + "filt_ir_height.csv", np.array(filt_ir_height), delimiter=",")
 
             ir_process_output = []
 
