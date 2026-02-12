@@ -55,6 +55,7 @@ def main():
     JOB_OFFSET = 200
     STREAMING_RATE = 125.
 
+    # obtained using the middle of the operating window (160IPM / 10 mm/s)
     VPD = 16 # IPM/(mm/s)
 
     DATASET = 'wall/'
@@ -79,15 +80,17 @@ def main():
     #     "../../../recorded_data/%Y_%m_%d_%H_%M_%S_wall_lstm_control/"
     # )
     # os.makedirs(recorded_dir)
-    recorded_dir = "../../../recorded_data/2026_01_12_10_21_38_wall_lstm_control/"
+    recorded_dir = "../../../recorded_data/2026_02_12_12_01_17_wall_lstm_control/"
 
     ######## SENSORS ########
+    t_offset = RRN.NowNodeTime().timestamp()-time.perf_counter()
     if ONLINE:
+        fronius_sub=RRN.SubscribeService('rr+tcp://192.168.55.21:60823?service=welder')
         # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
         cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
         # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
 
-        rr_sensors = WeldRRSensor(weld_service=None,
+        rr_sensors = WeldRRSensor(weld_service=fronius_sub,
                                   cam_service=cam_ser,
                                   microphone_service=None)
 
@@ -118,7 +121,6 @@ def main():
     flir_intrinsic = yaml.load(open(CONFIG_DIR + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
     ######## RR FRONIUS ########
     if ARCON:
-        fronius_sub=RRN.SubscribeService('rr+tcp://192.168.55.21:60823?service=welder')
         fronius_client = fronius_sub.GetDefaultClientWait(1)      #connect, timeout=30s
         hflags_const = RRN.GetConstants(
             "experimental.fronius", 
@@ -186,7 +188,7 @@ def main():
             if ONLINE:
                 SS.init_motion()
             while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
-                loop_start = time.time()
+                loop_start = time.perf_counter()
 
                 # calculate nominal vel of segment
                 seg_idx = np.where(lam_relative<=lam_cur)[0][-1]
@@ -206,12 +208,12 @@ def main():
                 q_cmd = np.hstack((q1, q2, q_positioner))
 
                 # log q_cmd
-                q_cmd_all.append(np.hstack((time.time(),q_cmd)))
+                q_cmd_all.append(np.hstack((time.perf_counter()+t_offset,q_cmd)))
                 job_no.append(seg_idx)
 
                 # this function has a delay when loop_start is passed in.
                 # Ensures the update frequency is consistent
-                if (loop_start-time.time())>1/STREAMING_RATE:
+                if (loop_start-time.perf_counter())>1/STREAMING_RATE:
                     print("Stopping: Loop Time exceeded streaming period")
                     break
 
@@ -221,7 +223,7 @@ def main():
             if ARCON:
                 fronius_client.stop_weld()
             if ONLINE:
-                SS.rate_obj=None
+                SS.deinit_motion()
             print(f"-----End of Base Layer {layer}-----")
             if RECORDING:
                 js_recording = SS.stop_recording()
@@ -279,11 +281,11 @@ def main():
             height_offset = base_thickness - avg_base_height
 
     # try:
-    #     print("Average Base Height:", avg_base_height)
-    #     print("Height Offset:", height_offset)
+        # print("Average Base Height:", avg_base_height)
+        # print("Height Offset:", height_offset)
     # except:
-    #     height_offset = float(input("Enter height offset: ")) 
-    height_offset = -6.318382754974749
+        # height_offset = float(input("Enter height offset: ")) 
+    height_offset = -8.058484994710991
     print("height offset set manually")
 
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
@@ -542,7 +544,7 @@ def main():
         if ONLINE:
             SS.init_motion()
         while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
-            loop_start = time.time()
+            loop_start = time.perf_counter()
 
             # calculate which index we are on
             seg_idx = np.where(lam_relative<=lam_cur)[0][-1]
@@ -629,12 +631,12 @@ def main():
             q_cmd = np.hstack((q1, q2, q_positioner))
 
             # log q_cmd
-            q_cmd_all.append(np.hstack((time.time(),q_cmd)))
+            q_cmd_all.append(np.hstack((time.perf_counter()+t_offset,q_cmd)))
             job_no.append(seg_idx)
 
             # this function has a delay when loop_start is passed in. 
             # Ensures the update frequency is consistent
-            if (loop_start-time.time())>1/STREAMING_RATE: 
+            if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
                 print("Stopping: Loop Time exceeded streaming period")
                 break
 
@@ -643,7 +645,7 @@ def main():
         if ARCON:
             fronius_client.stop_weld()
         if ONLINE:
-            SS.rate_obj=None
+            SS.deinit_motion()
         print(f"-----End of Layer {layer}-----")
         if RECORDING:
             js_recording = SS.stop_recording()
@@ -696,6 +698,12 @@ def main():
         input("enter to continue")
         # time.sleep(15)
 
+def welder_handler(exp):
+    if (exp is not None):
+        # If "err" is not None it means that an exception occurred.
+        # "err" contains the exception object
+        print ("An error occured! " + str(exp))
+        return
 
 if __name__ == '__main__':
     main()
