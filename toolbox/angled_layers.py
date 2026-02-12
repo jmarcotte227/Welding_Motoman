@@ -5,6 +5,7 @@ using non-uniform height profiles.
 
 import time
 import pickle
+import h5py
 import numpy as np
 import cv2
 from flir_toolbox import *
@@ -153,11 +154,15 @@ def flame_detection_aluminum(
 
 
 def flame_tracking_stream(save_path, robot, robot2, positioner, flir_intrinsic, height_offset=0):
-    with open(save_path + "ir_recording.pickle", "rb") as file:
-        ir_recording = pickle.load(file)
-    ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
-    if ir_ts.shape[0] == 0:
-        raise ValueError("No flame detected")
+    # with open(save_path + "ir_recording.pickle", "rb") as file:
+    #     ir_recording = pickle.load(file)
+    # ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
+    # if ir_ts.shape[0] == 0:
+    #     raise ValueError("No flame detected")
+    with h5py.File(save_path+"ir_recording.h5", 'r') as file:
+        ir_recording = file["video_frames"][:]
+        ir_ts = file["timestamps"][:]
+
     joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
     timeslot = [ir_ts[0] - ir_ts[0], ir_ts[-1] - ir_ts[0]]
     duration = np.mean(np.diff(timeslot))
@@ -221,11 +226,14 @@ def flame_tracking_stream(save_path, robot, robot2, positioner, flir_intrinsic, 
     return flame_3d, torch_path, job_no
 
 def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_offset=0):
-    with open(save_path + "ir_recording.pickle", "rb") as file:
-        ir_recording = pickle.load(file)
-    ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
-    if ir_ts.shape[0] == 0:
-        raise ValueError("No flame detected")
+    # with open(save_path + "ir_recording.pickle", "rb") as file:
+    #     ir_recording = pickle.load(file)
+    # ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
+    # if ir_ts.shape[0] == 0:
+    #     raise ValueError("No flame detected")
+    with h5py.File(save_path+"ir_recording.h5", 'r') as file:
+        ir_recording = file["video_frames"][:]
+        ir_ts = file["timestamps"][:]
     joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
     timeslot = [ir_ts[0] - ir_ts[0], ir_ts[-1] - ir_ts[0]]
     duration = np.mean(np.diff(timeslot))
@@ -290,11 +298,14 @@ def flame_tracking(save_path, robot, robot2, positioner, flir_intrinsic, height_
 
 
 def flame_temp(save_path):
-    with open(save_path + "ir_recording.pickle", "rb") as file:
-        ir_recording = pickle.load(file)
-    ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
-    if ir_ts.shape[0] == 0:
-        raise ValueError("No flame detected")
+    # with open(save_path + "ir_recording.pickle", "rb") as file:
+    #     ir_recording = pickle.load(file)
+    # ir_ts = np.loadtxt(save_path + "ir_stamps.csv", delimiter=",")
+    # if ir_ts.shape[0] == 0:
+    #     raise ValueError("No flame detected")
+    with h5py.File(save_path+"ir_recording.h5", 'r') as file:
+        ir_recording = file["video_frames"][:]
+        ir_ts = file["timestamps"][:]
     joint_angle = np.loadtxt(save_path + "weld_js_exe.csv", delimiter=",")
     timeslot = [ir_ts[0] - ir_ts[0], ir_ts[-1] - ir_ts[0]]
     duration = np.mean(np.diff(timeslot))
