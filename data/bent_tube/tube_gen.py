@@ -58,7 +58,7 @@ def main():
     num_layers = 100
     points_per_layer=47 # one for overlap at the end
     point_distance = np.pi*tube_diameter/(points_per_layer-1)
-    vertical_shift = 4 #mm
+    vertical_shift = 8 #mm
 
     slices_per_layer = 1
 
@@ -90,14 +90,14 @@ def main():
     print(len(circle_points))
     #base layer
     for i in range(len(circle_points)):
-        base_layer[i,0]=circle_points[i][0]
-        base_layer[i,1]=circle_points[i][1]
+        base_layer[i,0]=circle_points[i][1]
+        base_layer[i,1]=circle_points[i][0]
         base_layer[i,-1]=-1
 
     #first layer
     for i in range(len(circle_points)):
-        curve_curved[i,0]=circle_points[i][0]
-        curve_curved[i,1]=circle_points[i][1]
+        curve_curved[i,0]=circle_points[i][1]
+        curve_curved[i,1]=circle_points[i][0]
         curve_curved[i,-1]=-1
         curve_curved[i,2]=vertical_shift
 
@@ -116,28 +116,28 @@ def main():
             dx,dz = rotate(
                 [rot_point, vertical_shift], 
                 (
-                    curve_curved[(layer-1)*points_per_layer+point,0],
+                    curve_curved[(layer-1)*points_per_layer+point,1],
                     curve_curved[(layer-1)*points_per_layer+point,2]
                 ),
                 -layer_angle
             )
 
-            curve_curved[(layer)*points_per_layer+point,0] = dx
+            curve_curved[(layer)*points_per_layer+point,1] = dx
             curve_curved[(layer)*points_per_layer+point,2] = dz
 
             grav_dx,grav_dz = rotate(
                 (0,0),
                 (
-                    curve_curved[(layer-1)*points_per_layer+point,3],
+                    curve_curved[(layer-1)*points_per_layer+point,4],
                     curve_curved[(layer-1)*points_per_layer+point,5]
                 ),
                 -layer_angle
             )
-            curve_curved[(layer)*points_per_layer+point,3] = grav_dx
+            curve_curved[(layer)*points_per_layer+point,4] = grav_dx
             curve_curved[(layer)*points_per_layer+point,5] = grav_dz
 
             # assign previous layer's y coordinate
-            curve_curved[(layer)*points_per_layer+point,1] = curve_curved[(layer-1)*points_per_layer+point,1]
+            curve_curved[(layer)*points_per_layer+point,0] = curve_curved[(layer-1)*points_per_layer+point,0]
     vis_step=1
     #plt.rc('text', usetex=True)
     #plt.rc('font', family='serif')
@@ -164,7 +164,9 @@ def main():
                 curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=','
                 )
     
-    np.savetxt('slice_ER_4043_lstm/curve_sliced_relative/slice0_0.csv',base_layer,delimiter=',')
+    np.savetxt('slice_ER_4043_lstm/curve_sliced_relative/baselayer0_0.csv',base_layer,delimiter=',')
+    base_layer[:,2] = 4
+    np.savetxt('slice_ER_4043_lstm/curve_sliced_relative/baselayer1_0.csv',base_layer,delimiter=',')
 
 
 if __name__ == '__main__':

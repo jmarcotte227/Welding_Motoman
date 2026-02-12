@@ -18,7 +18,7 @@ from qpsolvers import solve_qp
 sys.path.append("../../toolbox")
 from angled_layers import SpeedHeightModel, flame_tracking_stream,  \
     avg_by_line, interpolate_heights, LiveAverageFilterPos,         \
-    LiveAverageFilterScalar, extract_midpoints
+    LiveAverageFilterScalar, extract_midpoints, rotate
 from lstm_model_next_step_fast import WeldLSTM
 from linearization import lstm_linearization_inc
 from model_utils import DataReg
@@ -45,10 +45,10 @@ def main():
     global ir_updated_flag, ir_process_packet, ir_process_output, pos_filter
 
     ######## Welding Parameters ########
-    ARCON = False
+    ARCON = True
     BASE_LAYERS = False
-    RECORDING = False
-    ONLINE = False # Used to test without connecting to RR services
+    RECORDING = True
+    ONLINE = True # Used to test without connecting to RR services
     BASE_VEL = 3
     BASE_FEEDRATE= 300
     FEEDRATE = 160
@@ -72,20 +72,21 @@ def main():
     ALPHA = 1.25
 
     ######## Create Directories ########
-    now = datetime.now()
-    recorded_dir = now.strftime(
-        "../../../recorded_data/%Y_%m_%d_%H_%M_%S_tube_lstm_control/"
-    )
-    os.makedirs(recorded_dir)
-    # recorded_dir = "../../../recorded_data/2026_01_12_10_21_38_wall_lstm_control/"
+    # now = datetime.now()
+    # recorded_dir = now.strftime(
+    #     "../../../recorded_data/%Y_%m_%d_%H_%M_%S_tube_lstm_control/"
+    # )
+    # os.makedirs(recorded_dir)
+    recorded_dir = "../../../recorded_data/2026_02_12_16_06_04_tube_lstm_control/"
 
     ######## SENSORS ########
+    t_offset = RRN.NowNodeTime().timestamp()-time.perf_counter()
     if ONLINE:
-        # weld_ser = RRN.SubscribeService('rr+tcp://192.168.55.10:60823?service=welder')
+        fronius_sub=RRN.SubscribeService('rr+tcp://192.168.55.21:60823?service=welder')
         cam_ser=RRN.ConnectService('rr+tcp://localhost:60827/?service=camera')
         # mic_ser = RRN.ConnectService('rr+tcp://192.168.55.20:60828?service=microphone')
 
-        rr_sensors = WeldRRSensor(weld_service=None,
+        rr_sensors = WeldRRSensor(weld_service=fronius_sub,
                                   cam_service=cam_ser,
                                   microphone_service=None)
 
@@ -116,7 +117,6 @@ def main():
     flir_intrinsic = yaml.load(open(CONFIG_DIR + "FLIR_A320.yaml"), Loader=yaml.FullLoader)
     ######## RR FRONIUS ########
     if ARCON:
-        fronius_sub=RRN.SubscribeService('rr+tcp://192.168.55.21:60823?service=welder')
         fronius_client = fronius_sub.GetDefaultClientWait(1)      #connect, timeout=30s
         hflags_const = RRN.GetConstants(
             "experimental.fronius", 
@@ -184,7 +184,7 @@ def main():
             if ONLINE:
                 SS.init_motion()
             while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
-                loop_start = time.time()
+                loop_start = time.perf_counter()
 
                 # calculate nominal vel of segment
                 seg_idx = np.where(lam_relative<=lam_cur)[0][-1]
@@ -204,12 +204,12 @@ def main():
                 q_cmd = np.hstack((q1, q2, q_positioner))
 
                 # log q_cmd
-                q_cmd_all.append(np.hstack((time.time(),q_cmd)))
+                q_cmd_all.append(np.hstack((time.perf_counter()+t_offset,q_cmd)))
                 job_no.append(seg_idx)
 
                 # this function has a delay when loop_start is passed in.
                 # Ensures the update frequency is consistent
-                if (loop_start-time.time())>1/STREAMING_RATE:
+                if (loop_start-time.perf_counter())>1/STREAMING_RATE:
                     print("Stopping: Loop Time exceeded streaming period")
                     break
 
@@ -281,7 +281,8 @@ def main():
     #     print("Height Offset:", height_offset)
     # except:
     #     height_offset = float(input("Enter height offset: ")) 
-    height_offset = -6.318382754974749
+    # height_offset = -6.318382754974749
+    height_offset = -8.058484994710991
     print("height offset set manually")
 
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
@@ -301,7 +302,7 @@ def main():
         client = MotionProgramExecClient()
 
     ######## NORMAL LAYERS ########
-    num_layer_start = int(0)
+    num_layer_start = int(31)
     num_layer_end = int(105)
     
     # construct dh_nom from initial layer
@@ -310,13 +311,13 @@ def main():
         delimiter=','
     )
     point_of_rotation = np.array(
-        (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"])
+        (slicing_meta["point_of_rotation"], slicing_meta["baselayer_resolution"]*slicing_meta["baselayer_num"])
     )
     layer_angle = slicing_meta["layer_angle"]
     midpoints = extract_midpoints(curve_sliced_relative)
     dist_to_por = []
     for i in range(len(curve_sliced_relative)-1):
-        point = np.array((midpoints[i,0], midpoints[i,2]))
+        point = np.array((midpoints[i,1], midpoints[i,2]))
         dist = np.linalg.norm(point-point_of_rotation)
         dist_to_por.append(dist)
 
@@ -352,29 +353,28 @@ def main():
         print("------Slice Loaded------")
 
         # read slicing params
-        base_thickness = slicing_meta["baselayer_resolution"]
         num_base = slicing_meta["baselayer_num"]
+        base_thickness = slicing_meta["baselayer_resolution"]*num_base
 
         # initialize feedrate and velocity
         feedrate=160
 
         # calculate rotation angle
         to_flat_angle = np.deg2rad(layer_angle*layer)
+        print("Angle: ", to_flat_angle)
 
         # intialize velocity using speed height model
         # model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
         model = SpeedHeightModel(a=-0.4733,b=1.1747)
-        v_nom = model.dh2v(slicing_meta["layer_resolution"])
+        v_nom = model.dh2v(dh_nom)
 
         # generate a nominal height profile for populating
 
-        build_height = layer*slicing_meta["layer_resolution"]\
-                        +slicing_meta["baselayer_num"]*slicing_meta["baselayer_resolution"]
-        height_profile = np.ones(slicing_meta["layer_length"])*build_height
+        height_profile = np.zeros_like(dh_nom)
 
         if layer == 0:
             start_dir=True
-            height_err= np.zeros(slicing_meta["layer_length"])
+            height_err= np.zeros_like(dh_nom)
             try:
                 flame_3d_prev, _, job_no_prev = flame_tracking_stream(
                         f"{recorded_dir}baselayer_1/",
@@ -384,21 +384,22 @@ def main():
                         flir_intrinsic,
                         height_offset
                         )
+                fig, ax = plt.subplots()
+                ax.plot3D(flame_3d_prev[:,0], flame_3d_prev[:,1], flame_3d_prev[:,2])
+                plt.show()
                 if flame_3d_prev.shape[0] == 0:
                     raise ValueError("No flame detected")
             except ValueError as e:
                 print(e)
                 flame_3d_prev = None
                 ir_error_flag = True
-                height_err = np.zeros(slicing_meta["layer_length"])
+                height_err = np.zeros_like(dh_nom)
             else:
                 averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-2,len(rob1_js)-1))
                 heights_prev = averages_prev[:,2]
                 heights_prev = np.flip(heights_prev)
 
                 # TODO fix this error
-                print(height_profile)
-                print(heights_prev)
                 heights_prev = interpolate_heights(height_profile, heights_prev)
                 print(heights_prev)
                 # height error based on the build height of the previous layer
@@ -416,29 +417,33 @@ def main():
                         flir_intrinsic,
                         height_offset
                         )
+                # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+                # ax.plot3D(flame_3d_prev[:,0], flame_3d_prev[:,1], flame_3d_prev[:,2])
                 if flame_3d_prev.shape[0] == 0:
                     raise ValueError("No flame detected")
             except ValueError as e:
                 print(e)
                 flame_3d_prev = None
                 ir_error_flag = True
-                height_err = np.zeros(slicing_meta["layer_length"])
+                height_err = np.zeros_like(dh_nom)
             else:
                 # rotate to flame_tracking_stream
                 new_x, new_z = rotate(
-                    point_of_rotation, (flame_3d_prev[:, 0], flame_3d_prev[:, 2]), to_flat_angle
+                    point_of_rotation, (flame_3d_prev[:, 1], flame_3d_prev[:, 2]), to_flat_angle
                 )
-                flame_3d_prev[:, 0] = new_x
+                flame_3d_prev[:, 1] = new_x
                 flame_3d_prev[:, 2] = new_z - base_thickness
 
                 averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-2,len(rob1_js)-1))
                 heights_prev = averages_prev[:,2]
                 heights_prev = np.flip(heights_prev)
+                # ax.plot3D(averages_prev[:,0], averages_prev[:,1],averages_prev[:,2])
+                # plt.show()
 
                 # TODO fix this error
                 heights_prev = interpolate_heights(height_profile, heights_prev)
                 # height error based on the build height of the previous layer
-                height_err = np.ones(len(heights_prev))*build_height-heights_prev
+                height_err = -heights_prev
                 print(height_err)
 
         if start_dir:
@@ -568,7 +573,7 @@ def main():
         if ONLINE:
             SS.init_motion()
         while lam_cur<lam_relative[-1] - v_cmd/STREAMING_RATE:
-            loop_start = time.time()
+            loop_start = time.perf_counter()
 
             # calculate which index we are on
             seg_idx = np.where(lam_relative<=lam_cur)[0][-1]
@@ -580,7 +585,7 @@ def main():
                 if flame_3d[0]!=0:
                     new_x, new_z = rotate(
                         point_of_rotation,
-                        (flame_3d[0], flame_3d[2]),
+                        (flame_3d[1], flame_3d[2]),
                         to_flat_angle
                     )
                     
@@ -657,12 +662,12 @@ def main():
             q_cmd = np.hstack((q1, q2, q_positioner))
 
             # log q_cmd
-            q_cmd_all.append(np.hstack((time.time(),q_cmd)))
+            q_cmd_all.append(np.hstack((time.perf_counter()+t_offset,q_cmd)))
             job_no.append(seg_idx)
 
             # this function has a delay when loop_start is passed in. 
             # Ensures the update frequency is consistent
-            if (loop_start-time.time())>1/STREAMING_RATE: 
+            if (loop_start-time.perf_counter())>1/STREAMING_RATE: 
                 print("Stopping: Loop Time exceeded streaming period")
                 break
 
@@ -697,7 +702,7 @@ def main():
                 job_no_exe,
                 js_recording[:,1:]
                 ))
-            print(f"V Command: {v_cmds}")
+            # print(f"V Command: {v_cmds}")
             np.savetxt(save_path+'weld_js_cmd.csv',cmd_out,delimiter=',')
             np.savetxt(save_path+'weld_js_exe.csv',exe_out,delimiter=',')
             np.savetxt(save_path + "start_dir.csv", [start_dir], delimiter=",")

@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    dataset='wall/'
-    sliced_alg='1_55mm_slice/'
+    dataset='bent_tube/'
+    sliced_alg='slice_ER_4043_lstm/'
     data_dir='../data/'+dataset+sliced_alg
     num_layers=100
     num_baselayers=2
