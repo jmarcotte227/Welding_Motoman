@@ -23,7 +23,7 @@ def rotate(origin, point, angle):
     return qx, qy
 
 def PointsInCircum(r,n):
-    return [(np.cos(2*np.pi/n*x+np.pi/n)*r,np.sin(2*np.pi/n*x+np.pi/n)*r) for x in range(0,n+1)]
+    return [(np.cos(2*np.pi/n*x)*r,np.sin(2*np.pi/n*x)*r) for x in range(0,n+1)]
 ########################################################################
 # limits of welding bead height (based on min and Max estimate speed from Eric)
     # needs to be modified based on actual limits from Eric 
@@ -85,23 +85,14 @@ def main():
     base_layer = np.zeros((points_per_layer,6))
     
 
-    circle_points = PointsInCircum(tube_diameter/2, points_per_layer)
-    dist_to_por = []
+    circle_points = PointsInCircum(tube_diameter/2, points_per_layer-1)
 
+    print(len(circle_points))
     #base layer
-    print(len(circle_points)-1)
     for i in range(len(circle_points)):
         base_layer[i,0]=circle_points[i][0]
         base_layer[i,1]=circle_points[i][1]
         base_layer[i,-1]=-1
-        # checking height and distance to por
-        point = np.array((curve_sliced[i, 0], curve_sliced[i, 2]))
-        dist = np.linalg.norm(point - point_of_rotation)
-        dist_to_por.append(dist)
-    
-    height_profile = []
-    for distance in dist_to_por:
-        height_profile.append(distance * np.sin(np.deg2rad(layer_angle)))
 
     #first layer
     for i in range(len(circle_points)):
@@ -109,8 +100,9 @@ def main():
         curve_curved[i,1]=circle_points[i][1]
         curve_curved[i,-1]=-1
         curve_curved[i,2]=vertical_shift
+
     fig,ax = plt.subplots()
-    ax.plot(curve_curved[0:points_per_layer,0],curve_curved[0:points_per_layer,1],'r.-')
+    ax.plot(curve_curved[:points_per_layer,0],curve_curved[:points_per_layer,1],'r.-')
     ax.set_aspect('equal')
     ax.set_xlabel('x (mm)')
     ax.set_ylabel('y (mm)')
@@ -118,39 +110,39 @@ def main():
     plt.show()
     
 
-    for layer in range(num_layers*slices_per_layer):
+    for layer in range(1,num_layers*slices_per_layer):
         for point in range(points_per_layer):
             #rotate x coordinates
             dx,dz = rotate(
                 [rot_point, vertical_shift], 
                 (
-                    curve_curved[layer*points_per_layer+point,0],
-                    curve_curved[layer*points_per_layer+point,2]
+                    curve_curved[(layer-1)*points_per_layer+point,0],
+                    curve_curved[(layer-1)*points_per_layer+point,2]
                 ),
                 -layer_angle
             )
 
-            curve_curved[(layer+1)*points_per_layer+point,0] = dx
-            curve_curved[(layer+1)*points_per_layer+point,2] = dz
+            curve_curved[(layer)*points_per_layer+point,0] = dx
+            curve_curved[(layer)*points_per_layer+point,2] = dz
 
             grav_dx,grav_dz = rotate(
                 (0,0),
                 (
-                    curve_curved[layer*points_per_layer+point,3],
-                    curve_curved[layer*points_per_layer+point,5]
+                    curve_curved[(layer-1)*points_per_layer+point,3],
+                    curve_curved[(layer-1)*points_per_layer+point,5]
                 ),
                 -layer_angle
             )
-            curve_curved[(layer+1)*points_per_layer+point,3] = grav_dx
-            curve_curved[(layer+1)*points_per_layer+point,5] = grav_dz
+            curve_curved[(layer)*points_per_layer+point,3] = grav_dx
+            curve_curved[(layer)*points_per_layer+point,5] = grav_dz
 
             # assign previous layer's y coordinate
-            curve_curved[(layer+1)*points_per_layer+point,1] = curve_curved[layer*points_per_layer+point,1]
+            curve_curved[(layer)*points_per_layer+point,1] = curve_curved[(layer-1)*points_per_layer+point,1]
     vis_step=1
     #plt.rc('text', usetex=True)
     #plt.rc('font', family='serif')
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    ax.plot3D(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],'r.-')
+    ax.plot3D(curve_curved[:,0],curve_curved[:,1],curve_curved[:,2],'r.-')
     #ax.quiver(curve_curved[::vis_step,0],curve_curved[::vis_step,1],curve_curved[::vis_step,2],curve_curved[::vis_step,3],curve_curved[::vis_step,4],curve_curved[::vis_step,5],length=10, normalize=True)
     ax.quiver(X=rot_point,Y=-20,Z=0,U=0,V=1,W=0,length = 40,color='g')
 
@@ -168,7 +160,7 @@ def main():
 
     for layer in range(num_layers*slices_per_layer):
         np.savetxt(
-                'slice_ER_4043_lstm/curve_sliced_relative/slice'+str(layer+1)+'_0.csv',
+                'slice_ER_4043_lstm/curve_sliced_relative/slice'+str(layer)+'_0.csv',
                 curve_curved[layer*points_per_layer:(layer+1)*points_per_layer],delimiter=','
                 )
     

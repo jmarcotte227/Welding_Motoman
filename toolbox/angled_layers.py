@@ -56,6 +56,18 @@ def avg_by_line(labels, data_array, bins):
             output[idx, :] = total / avg_idxs.shape[0]
     return output
 
+def extract_midpoints(curve_sliced):
+    '''
+    Extracts the midpoints of segments in curve_sliced and returns 
+        an array with those points.
+    '''
+    # number of segments is one less than the number of points
+    N = curve_sliced.shape[0]-1
+    midpoints = np.zeros((N,3))
+    for i in range(N):
+        midpoints[i,:] = np.mean(curve_sliced[[i,i+1],:3], axis=0)
+
+    return midpoints
 
 class SpeedHeightModel:
     """

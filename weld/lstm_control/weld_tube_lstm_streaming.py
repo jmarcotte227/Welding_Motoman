@@ -18,7 +18,7 @@ from qpsolvers import solve_qp
 sys.path.append("../../toolbox")
 from angled_layers import SpeedHeightModel, flame_tracking_stream,  \
     avg_by_line, interpolate_heights, LiveAverageFilterPos,         \
-    LiveAverageFilterScalar
+    LiveAverageFilterScalar, extract_midpoints
 from lstm_model_next_step_fast import WeldLSTM
 from linearization import lstm_linearization_inc
 from model_utils import DataReg
@@ -45,18 +45,18 @@ def main():
     global ir_updated_flag, ir_process_packet, ir_process_output, pos_filter
 
     ######## Welding Parameters ########
-    ARCON = True
+    ARCON = False
     BASE_LAYERS = False
-    RECORDING = True
-    ONLINE = True # Used to test without connecting to RR services
+    RECORDING = False
+    ONLINE = False # Used to test without connecting to RR services
     BASE_VEL = 3
     BASE_FEEDRATE= 300
     FEEDRATE = 160
     JOB_OFFSET = 200
     STREAMING_RATE = 125.
 
-    DATASET = 'wall/'
-    SLICED_ALG = '1_55mm_slice/'
+    DATASET = 'bent_tube/'
+    SLICED_ALG = 'slice_ER_4043_lstm/'
     DATA_DIR='../../data/'+DATASET+SLICED_ALG
     CONT_MODEL = "model_h-8_part-1_loss-0.0684"
 
@@ -303,6 +303,27 @@ def main():
     ######## NORMAL LAYERS ########
     num_layer_start = int(0)
     num_layer_end = int(105)
+    
+    # construct dh_nom from initial layer
+    curve_sliced_relative = np.loadtxt(
+        DATA_DIR+f'curve_sliced_relative/slice0_0.csv',
+        delimiter=','
+    )
+    point_of_rotation = np.array(
+        (slicing_meta["point_of_rotation"], slicing_meta["baselayer_thickness"])
+    )
+    layer_angle = slicing_meta["layer_angle"]
+    midpoints = extract_midpoints(curve_sliced_relative)
+    dist_to_por = []
+    for i in range(len(curve_sliced_relative)-1):
+        point = np.array((midpoints[i,0], midpoints[i,2]))
+        dist = np.linalg.norm(point-point_of_rotation)
+        dist_to_por.append(dist)
+
+    dh_nom = []
+    for distance in dist_to_por:
+        dh_nom.append(distance*np.tan(np.deg2rad(layer_angle)))
+    dh_nom = np.array(dh_nom)
 
     start_dir = True
     for layer in range(num_layer_start, num_layer_end):
@@ -336,6 +357,9 @@ def main():
 
         # initialize feedrate and velocity
         feedrate=160
+
+        # calculate rotation angle
+        to_flat_angle = np.deg2rad(layer_angle*layer)
 
         # intialize velocity using speed height model
         # model = SpeedHeightModel(a=-0.36997977, b=1.21532975)
@@ -400,15 +424,19 @@ def main():
                 ir_error_flag = True
                 height_err = np.zeros(slicing_meta["layer_length"])
             else:
+                # rotate to flame_tracking_stream
+                new_x, new_z = rotate(
+                    point_of_rotation, (flame_3d_prev[:, 0], flame_3d_prev[:, 2]), to_flat_angle
+                )
+                flame_3d_prev[:, 0] = new_x
+                flame_3d_prev[:, 2] = new_z - base_thickness
+
                 averages_prev = avg_by_line(job_no_prev, flame_3d_prev, np.linspace(0,len(rob1_js)-2,len(rob1_js)-1))
                 heights_prev = averages_prev[:,2]
                 heights_prev = np.flip(heights_prev)
 
                 # TODO fix this error
-                print(height_profile)
-                print(heights_prev)
                 heights_prev = interpolate_heights(height_profile, heights_prev)
-                print(heights_prev)
                 # height error based on the build height of the previous layer
                 height_err = np.ones(len(heights_prev))*build_height-heights_prev
                 print(height_err)
@@ -420,7 +448,8 @@ def main():
             rob2_js = np.flip(rob2_js,axis=0)
 
         ### Calculate dh desired based on the target height, and the error in the previous layer.
-        dh_d = torch.tensor(ALPHA*height_err+slicing_meta["layer_resolution"])
+        
+        dh_d = torch.tensor(ALPHA*height_err+dh_nom)
         print(dh_d)
         np.savetxt(save_path+'dh_d.csv',dh_d.detach().numpy(),delimiter=',')
 
@@ -547,10 +576,16 @@ def main():
             if seg_idx != v_cor_idx:
                 v_cor_idx = seg_idx
                 flame_3d = pos_filter.read_filter()
-                filt_ir_height.append(np.squeeze(flame_3d))
                 # print(flame_3d)
                 if flame_3d[0]!=0:
-                    dh_prev = torch.tensor(flame_3d[2]-heights_prev[v_cor_idx-1], dtype=torch.float32)
+                    new_x, new_z = rotate(
+                        point_of_rotation,
+                        (flame_3d[0], flame_3d[2]),
+                        to_flat_angle
+                    )
+                    
+                    filt_ir_height.append(np.squeeze(flame_3d))
+                    dh_prev = torch.tensor(new_z-base_thickness-heights_prev[v_cor_idx-1], dtype=torch.float32)
                     # print(error)
                 else:
                     print("flame error")
