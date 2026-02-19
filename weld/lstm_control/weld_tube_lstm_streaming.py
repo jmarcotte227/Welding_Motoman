@@ -8,6 +8,8 @@ from RobotRaconteur.Client import *
 from weldRRSensor import *
 from dual_robot import *
 from traj_manipulation import *
+# package_path = 'C:/ws/jack/convergent_manufacturing_utils/src'
+# sys.path.insert(0, package_path)
 from StreamingSend import StreamingSend
 from robotics_utils import H_inv, VectorPlaneProjection
 from dx200_motion_program_exec_client import *
@@ -45,8 +47,8 @@ def main():
     global ir_updated_flag, ir_process_packet, ir_process_output, pos_filter
 
     ######## Welding Parameters ########
-    ARCON = True
-    BASE_LAYERS = False
+    ARCON = False
+    BASE_LAYERS = True
     RECORDING = True
     ONLINE = True # Used to test without connecting to RR services
     BASE_VEL = 3
@@ -72,12 +74,12 @@ def main():
     ALPHA = 1.25
 
     ######## Create Directories ########
-    # now = datetime.now()
-    # recorded_dir = now.strftime(
-    #     "../../../recorded_data/%Y_%m_%d_%H_%M_%S_tube_lstm_control/"
-    # )
-    # os.makedirs(recorded_dir)
-    recorded_dir = "../../../recorded_data/2026_02_12_16_06_04_tube_lstm_control/"
+    now = datetime.now()
+    recorded_dir = now.strftime(
+        "../../../recorded_data/%Y_%m_%d_%H_%M_%S_tube_lstm_control/"
+    )
+    os.makedirs(recorded_dir)
+    # recorded_dir = "../../../recorded_data/2026_02_19_10_41_06_tube_lstm_control/"
 
     ######## SENSORS ########
     t_offset = RRN.NowNodeTime().timestamp()-time.perf_counter()
@@ -215,7 +217,7 @@ def main():
 
                 # adding delay to counteract delay in streaming send
                 if ONLINE: 
-                    SS.position_cmd(q_cmd, loop_start) 
+                    SS.position_cmd(q_cmd) 
             if ARCON:
                 fronius_client.stop_weld()
             if ONLINE:
@@ -302,7 +304,7 @@ def main():
         client = MotionProgramExecClient()
 
     ######## NORMAL LAYERS ########
-    num_layer_start = int(31)
+    num_layer_start = int(0)
     num_layer_end = int(105)
     
     # construct dh_nom from initial layer
@@ -384,9 +386,9 @@ def main():
                         flir_intrinsic,
                         height_offset
                         )
-                fig, ax = plt.subplots()
-                ax.plot3D(flame_3d_prev[:,0], flame_3d_prev[:,1], flame_3d_prev[:,2])
-                plt.show()
+                # fig, ax = plt.subplots()
+                # ax.plot3D(flame_3d_prev[:,0], flame_3d_prev[:,1], flame_3d_prev[:,2])
+                # plt.show()
                 if flame_3d_prev.shape[0] == 0:
                     raise ValueError("No flame detected")
             except ValueError as e:
@@ -672,7 +674,7 @@ def main():
                 break
 
             # adding delay to counteract delay in streaming send
-            if ONLINE: SS.position_cmd(q_cmd, loop_start) 
+            if ONLINE: SS.position_cmd(q_cmd) 
         if ARCON:
             fronius_client.stop_weld()
         if ONLINE:
