@@ -19,7 +19,7 @@ from qpsolvers import solve_qp
 sys.path.append("../../toolbox")
 from angled_layers import SpeedHeightModel, flame_tracking_stream,  \
     avg_by_line, interpolate_heights, LiveAverageFilterPos,         \
-    LiveAverageFilterScalar, extract_midpoints, rotate
+    LiveAverageFilterScalar, extract_midpoints, rotate, delta_v
 from lstm_model_next_step_fast import WeldLSTM
 from linearization import lstm_linearization_inc
 from model_utils import DataReg
@@ -47,7 +47,7 @@ def main():
 
     ######## Welding Parameters ########
     ARCON = True
-    BASE_LAYERS = False
+    BASE_LAYERS = True
     RECORDING = True
     ONLINE = True # Used to test without connecting to RR services
     BASE_VEL = 3
@@ -86,7 +86,7 @@ def main():
         "../../../recorded_data/%Y_%m_%d_%H_%M_%S_tube_baseline_control/"
     )
     os.makedirs(recorded_dir)
-    # recorded_dir = "../../../recorded_data/2026_02_12_16_06_04_tube_lstm_control/"
+    # recorded_dir = "../../../recorded_data/2026_02_23_12_47_51_tube_baseline_control/"
 
     ######## SENSORS ########
     t_offset = RRN.NowNodeTime().timestamp()-time.perf_counter()
@@ -224,7 +224,7 @@ def main():
 
                 # adding delay to counteract delay in streaming send
                 if ONLINE: 
-                    SS.position_cmd(q_cmd, loop_start) 
+                    SS.position_cmd(q_cmd) 
             if ARCON:
                 fronius_client.stop_weld()
             if ONLINE:
@@ -290,8 +290,7 @@ def main():
     #     print("Height Offset:", height_offset)
     # except:
     #     height_offset = float(input("Enter height offset: ")) 
-    # height_offset = -6.318382754974749
-    height_offset = -8.058484994710991
+    height_offset = -7.505279694036279
     print("height offset set manually")
 
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
@@ -505,7 +504,7 @@ def main():
         ######## SET INITIAL V #######
         v_cmd=velocity_profile[v_cor_idx]
         # Looping through the entire path of the sliced part
-        input("press enter to start layer")
+        # input("press enter to start layer")
         if RECORDING:
             rr_sensors.start_all_sensors()
             SS.start_recording()
@@ -551,7 +550,7 @@ def main():
                 break
 
             # adding delay to counteract delay in streaming send
-            if ONLINE: SS.position_cmd(q_cmd, loop_start) 
+            if ONLINE: SS.position_cmd(q_cmd) 
         if ARCON:
             fronius_client.stop_weld()
         if ONLINE:
@@ -599,7 +598,7 @@ def main():
             q_0[1] = q_0[1] - np.pi / 8
             SS.jog2q(np.hstack((q_0, q2, positioner_js[-1])))
 
-        input("enter to continue")
+        # input("enter to continue")
         # time.sleep(15)
 
 

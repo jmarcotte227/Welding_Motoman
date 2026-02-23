@@ -47,7 +47,7 @@ def main():
     global ir_updated_flag, ir_process_packet, ir_process_output, pos_filter
 
     ######## Welding Parameters ########
-    ARCON = False
+    ARCON = True
     BASE_LAYERS = True
     RECORDING = True
     ONLINE = True # Used to test without connecting to RR services
@@ -168,6 +168,7 @@ def main():
             ## jog to start position
             input("Press Enter to jog to start position")
             if ONLINE:
+                time.sleep(1)
                 SS.jog2q(np.hstack((rob1_js[0], rob2_js[0], positioner_js[0])))
 
             lam_cur=0
@@ -278,14 +279,13 @@ def main():
             avg_base_height = np.mean(flame_3d[:, 2])
             height_offset = base_thickness - avg_base_height
 
-    # try:
-    #     print("Average Base Height:", avg_base_height)
-    #     print("Height Offset:", height_offset)
-    # except:
-    #     height_offset = float(input("Enter height offset: ")) 
-    # height_offset = -6.318382754974749
-    height_offset = -8.058484994710991
-    print("height offset set manually")
+    try:
+        print("Average Base Height:", avg_base_height)
+        print("Height Offset:", height_offset)
+    except:
+        height_offset = float(input("Enter height offset: ")) 
+    # height_offset = -7.505279694036279
+    # print("height offset set manually")
 
     ######## UPDATE HEIGHT OFFSET IN SEPARATE SCRIPT AND CONNECT TO FLIR #######
     input("Fix height offset, then press enter to continue")
@@ -461,7 +461,7 @@ def main():
         np.savetxt(save_path+'dh_d.csv',dh_d.detach().numpy(),delimiter=',')
 
         # jog to start position
-        input("Press Enter to jog to start position")
+        # input("Press Enter to jog to start position")
         if ONLINE:
             SS.jog2q(np.hstack((rob1_js[0], rob2_js[0], positioner_js[0])))
 
@@ -565,7 +565,7 @@ def main():
         lstm_pred.append(torch.squeeze(y_out.detach()))
 
         # Looping through the entire path of the sliced part
-        input("press enter to start layer")
+        # input("press enter to start layer")
         if RECORDING:
             rr_sensors.start_all_sensors()
             SS.start_recording()
@@ -727,7 +727,7 @@ def main():
             q_0[1] = q_0[1] - np.pi / 8
             SS.jog2q(np.hstack((q_0, q2, positioner_js[-1])))
 
-        input("enter to continue")
+        # input("enter to continue")
         # time.sleep(15)
 
 
