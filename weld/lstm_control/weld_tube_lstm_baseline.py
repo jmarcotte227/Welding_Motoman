@@ -175,7 +175,8 @@ def main():
             ## jog to start position
             input("Press Enter to jog to start position")
             if ONLINE:
-                SS.jog2q(np.hstack((rob1_js[0], rob2_js[0], positioner_js[0])))
+                time.sleep(1)
+                SS.jog2q(np.hstack((rob1_js[0], rob2_js[0], positioner_js[0])), 0.05)
 
             lam_cur=0
             q_cmd_all = []
